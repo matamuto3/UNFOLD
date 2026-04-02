@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <section class="hero card">
+      <div>
+        <p class="eyebrow">UNFOLD PROTOTYPE</p>
+        <h1>UNFOLD</h1>
+        <p class="lead">
+          展開図を広げて陣地を増やし、駒の移動と配置で相手を追い詰める対戦ボードゲームです。
+          オリジナル駒と将棋駒の 2 モードを切り替えながら、ローカル対戦とオンライン対戦を遊べます。
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="newGameBtn" class="primary" type="button">新しい対局を始める</button>
+        <button id="runTestsBtn" type="button">ルールテストを表示</button>
+        <button id="toggleModeBtn" type="button">駒モード切替</button>
+        <button id="waitBtn" type="button">待った</button>
+        <a class="button-link" href="rules.html">ルール説明</a>
+      </div>
+    </section>
+
+    <section class="card online-card">
+      <div class="online-header">
+        <div>
+          <p class="label">オンライン対戦</p>
+          <p id="onlineStatus" class="online-status">ローカル対戦中</p>
+        </div>
+        <div class="online-meta">
+          <span>部屋: <strong id="onlineRoomCode">-</strong></span>
+          <span>陣営: <strong id="onlineSideLabel">-</strong></span>
+        </div>
+      </div>
+      <div class="online-controls">
+        <label class="field">
+          <span>プレイヤー名</span>
+          <input id="onlineNameInput" type="text" maxlength="20" placeholder="プレイヤー名">
+        </label>
+        <label class="field">
+          <span>駒モード</span>
+          <select id="onlineModeSelect">
+            <option value="original">オリジナル駒</option>
+            <option value="shogi">将棋駒</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>部屋コード</span>
+          <input id="onlineRoomInput" type="text" maxlength="6" placeholder="例: AB12CD">
+        </label>
+        <div class="online-buttons">
+          <button id="createRoomBtn" type="button">部屋を作る</button>
+          <button id="joinRoomBtn" type="button">部屋に入る</button>
+          <button id="leaveRoomBtn" type="button">部屋を退出</button>
+          <button id="disbandRoomBtn" type="button" hidden>部屋を解散</button>
+          <button id="waitApproveBtn" type="button" hidden>待った承認</button>
+          <button id="waitRejectBtn" type="button" hidden>待った却下</button>
+        </div>
+      </div>
+      <p class="scene-note">
+        レンタルサーバーへアップロードするときは、このフォルダ一式を配置し、同じ階層の `api.php` を使ってください。
+      </p>
+    </section>
+
+    <section class="status-grid compact-status">
+      <article id="turnCard" class="card status-card">
+        <p class="label">手番</p>
+        <p id="turnLabel" class="value">-</p>
+      </article>
+      <article class="card status-card">
+        <p class="label">選択中</p>
+        <p id="modeLabel" class="value">-</p>
+      </article>
+      <article class="card status-card">
+        <p class="label">勝者</p>
+        <p id="winnerLabel" class="value">-</p>
+      </article>
+    </section>
+
+    <section class="layout">
+      <aside id="p1Panel" class="card panel">
+        <h2>プレイヤー1 <span class="camp-chip camp-p1">先手</span></h2>
+        <p class="subtle">持ち駒</p>
+        <div id="p1Reserve" class="list"></div>
+        <p class="subtle">手札</p>
+        <div id="p1Hand" class="list"></div>
+        <p class="subtle">山札</p>
+        <p id="p1DeckCount" class="count">0枚</p>
+        <p class="subtle">補助行動</p>
+        <div class="action-list">
+          <button id="p1MulliganBtn" type="button">手札入れ替え</button>
+          <button id="p1RecoverPieceBtn" type="button">駒回収</button>
+          <button id="p1RecoverFragmentBtn" type="button">展開図回収</button>
+        </div>
+      </aside>
+
+      <section class="center">
+        <div class="card board-card">
+          <div class="board-tools">
+            <div class="inline-guide">
+              <p id="messageLabel" class="inline-guide-text">新しい対局を始めると盤面が初期化されます。</p>
+            </div>
+            <button id="toggle3DLabelsBtn" type="button">立体文字: ON</button>
+          </div>
+          <div id="pendingPieceBanner" class="pending-piece-banner" hidden></div>
+          <div id="sceneViewport" class="scene-viewport" aria-label="UNFOLD 3D盤面"></div>
+          <div id="board" class="board" aria-label="UNFOLD盤面"></div>
+          <div id="winnerOverlay" class="winner-overlay" hidden>
+            <p class="winner-overlay-label">勝敗</p>
+            <p id="winnerOverlayText" class="winner-overlay-text">-</p>
+            <p id="winnerOverlayReason" class="winner-overlay-reason">-</p>
+          </div>
+          <div id="contextMenu" class="context-menu" hidden>
+            <button id="contextRotateBtn" type="button">形を回転</button>
+            <button id="contextCancelBtn" type="button">選択を解除</button>
+          </div>
+          <div id="placementConfirm" class="context-menu confirm-pop" hidden>
+            <p id="confirmText" class="confirm-text">この形で設置を確定しますか？</p>
+            <button id="confirmPlaceBtn" type="button">設置する</button>
+            <button id="cancelPlaceBtn" type="button">やめる</button>
+          </div>
+        </div>
+        <div class="card log-card">
+          <p class="label">行動ログ</p>
+          <ol id="logList" class="log-list"></ol>
+        </div>
+        <div id="historyCard" class="card test-card">
+          <div class="history-head">
+            <p class="label">棋譜</p>
+            <div class="history-nav">
+              <button id="historyPrevBtn" type="button">前へ</button>
+              <button id="historyNextBtn" type="button">次へ</button>
+            </div>
+          </div>
+          <p id="historyTitle" class="choice-subtitle">開始局面</p>
+          <div id="historyBoard" class="history-board"></div>
+          <div id="historyList" class="history-list"></div>
+        </div>
+        <div class="card test-card">
+          <p class="label">ルールテスト</p>
+          <pre id="testOutput" class="test-output">まだ実行していません。</pre>
+        </div>
+        <div class="card test-card">
+          <p class="label">駒の移動サマリー</p>
+          <div id="movementSummary" class="summary-list"></div>
+        </div>
+        <div class="card test-card">
+          <p class="label">展開図カタログ</p>
+          <div id="fragmentCatalog" class="fragment-catalog"></div>
+        </div>
+      </section>
+
+      <aside id="p2Panel" class="card panel">
+        <h2>プレイヤー2 <span class="camp-chip camp-p2">後手</span></h2>
+        <p class="subtle">持ち駒</p>
+        <div id="p2Reserve" class="list"></div>
+        <p class="subtle">手札</p>
+        <div id="p2Hand" class="list"></div>
+        <p class="subtle">山札</p>
+        <p id="p2DeckCount" class="count">0枚</p>
+        <p class="subtle">補助行動</p>
+        <div class="action-list">
+          <button id="p2MulliganBtn" type="button">手札入れ替え</button>
+          <button id="p2RecoverPieceBtn" type="button">駒回収</button>
+          <button id="p2RecoverFragmentBtn" type="button">展開図回収</button>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>window.__UNFOLD_BOOTED = false;</script>
+  <script src="test2/three.min.js"></script>
+  <script src="app.js?v=20260402a"></script>
+  <script src="three-board.js?v=20260402a"></script>
+  <script>
+    if (!window.__UNFOLD_BOOTED) {
+      var message = document.getElementById("messageLabel");
+      var tests = document.getElementById("testOutput");
+      if (message) {
+        message.textContent = "JavaScript initialization failed. Please reload the page.";
+      }
+      if (tests) {
+        tests.textContent = "INIT ERROR\napp.js did not boot correctly.";
+      }
+    }
+  </script>
+</body>
+</html>
