@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD 3D Prototype</title>
+  <link rel="stylesheet" href="styles.css?v=3d-fix-3">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero card">
+      <div>
+        <p class="eyebrow">UNFOLD 3D PROTOTYPE</p>
+        <h1>立体視点で見る対戦ボードゲーム</h1>
+        <p class="lead">
+          Three.js で盤面を 3D 表示する試作版です。展開図の重なり、駒の移動、
+          本陣占領を立体的に確認しながら対局できます。
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button id="newGameBtn" class="primary" type="button">新しい対局を始める</button>
+        <button id="runTestsBtn" type="button">ルールテストを確認</button>
+      </div>
+    </section>
+
+    <section class="status-grid">
+      <article class="card status-card">
+        <p class="label">手番</p>
+        <p id="turnLabel" class="value">-</p>
+      </article>
+      <article class="card status-card">
+        <p class="label">操作中</p>
+        <p id="modeLabel" class="value">-</p>
+      </article>
+      <article class="card status-card">
+        <p class="label">勝敗</p>
+        <p id="winnerLabel" class="value">-</p>
+      </article>
+      <article class="card status-card wide">
+        <p class="label">ガイド</p>
+        <p id="messageLabel" class="value small">「新しい対局を始める」を押して開始してください。</p>
+      </article>
+    </section>
+
+    <section class="workspace">
+      <aside class="card panel">
+        <h2>先手 <span class="camp-chip camp-p1">青緑陣</span></h2>
+        <p class="subtle">持ち駒</p>
+        <div id="p1Reserve" class="list"></div>
+        <p class="subtle">手札</p>
+        <div id="p1Hand" class="list"></div>
+        <p class="subtle">山札</p>
+        <p id="p1DeckCount" class="count">0枚</p>
+      </aside>
+
+      <section class="center-stack">
+        <div class="card scene-card">
+          <div class="scene-toolbar">
+            <button id="serializeBtn" type="button">状態JSONをコピー</button>
+            <p class="scene-note">`server.ps1` を起動したまま `http://localhost:8080/` を開いてください。</p>
+          </div>
+
+          <div class="quick-guide">
+            <p>左ドラッグ: 視点回転</p>
+            <p>ホイール: 拡大縮小</p>
+            <p>左クリック: 駒移動 / 展開図配置 / 駒配置</p>
+            <p>右クリック: 展開図の回転 / 選択解除</p>
+          </div>
+
+          <div id="pendingPieceBanner" class="pending-piece-banner" hidden></div>
+          <div id="sceneViewport" class="scene-viewport" aria-label="UNFOLD 3D 盤面"></div>
+
+          <div id="contextMenu" class="floating-menu" hidden>
+            <button id="contextRotateBtn" type="button">展開図を回転</button>
+            <button id="contextCancelBtn" type="button">選択を解除</button>
+          </div>
+
+          <div id="placementConfirm" class="floating-menu confirm-pop" hidden>
+            <p id="confirmText" class="confirm-text">この操作を確定しますか？</p>
+            <button id="confirmPlaceBtn" type="button">配置する</button>
+            <button id="cancelPlaceBtn" type="button">やめる</button>
+          </div>
+        </div>
+
+        <div class="card strip-card">
+          <div>
+            <p class="label">行動ログ</p>
+            <ol id="logList" class="log-list"></ol>
+          </div>
+          <div>
+            <p class="label">駒の移動サマリー</p>
+            <div id="movementSummary" class="summary-list"></div>
+          </div>
+        </div>
+
+        <div class="card test-card">
+          <p class="label">ルールテスト</p>
+          <pre id="testOutput" class="test-output">まだ実行していません。</pre>
+        </div>
+      </section>
+
+      <aside class="card panel">
+        <h2>後手 <span class="camp-chip camp-p2">朱陣</span></h2>
+        <p class="subtle">持ち駒</p>
+        <div id="p2Reserve" class="list"></div>
+        <p class="subtle">手札</p>
+        <div id="p2Hand" class="list"></div>
+        <p class="subtle">山札</p>
+        <p id="p2DeckCount" class="count">0枚</p>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    window.__UNFOLD3D_BOOTED = false;
+    window.__UNFOLD3D_ERROR = null;
+
+    function showBootError(text) {
+      window.__UNFOLD3D_ERROR = text;
+      var message = document.getElementById("messageLabel");
+      var tests = document.getElementById("testOutput");
+      if (message) {
+        message.textContent = text;
+      }
+      if (tests) {
+        tests.textContent = "INIT ERROR\n" + text;
+      }
+    }
+
+    window.addEventListener("error", function (event) {
+      var message = event && event.error && event.error.stack
+        ? event.error.stack
+        : (event && event.message ? event.message : "Unknown runtime error");
+      showBootError(message);
+    });
+
+    window.addEventListener("unhandledrejection", function (event) {
+      var reason = event && event.reason && event.reason.stack
+        ? event.reason.stack
+        : String(event.reason || "Unhandled promise rejection");
+      showBootError(reason);
+    });
+
+    setTimeout(function () {
+      if (!window.__UNFOLD3D_BOOTED && !window.__UNFOLD3D_ERROR) {
+        showBootError("three-app.js did not boot. Local module initialization failed.");
+      }
+    }, 2000);
+  </script>
+  <script src="three.min.js"></script>
+  <script>
+    if (!window.THREE) {
+      showBootError("Three.js のローカル読込に失敗しました。");
+    }
+  </script>
+  <script src="three-app.js?v=3d-fix-15"></script>
+</body>
+</html>
