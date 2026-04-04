@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD ルール説明</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .rules-stack { display: grid; gap: 12px; }
+    .rules-section { padding: 16px; }
+    .rules-intro { display: grid; gap: 10px; }
+    .rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+    .rules-step-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+    .rules-step,
+    .rules-card,
+    .rules-fragment-card,
+    .rules-move-card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(82, 60, 26, 0.12);
+      background: rgba(255, 255, 255, 0.66);
+    }
+    .rules-step h3,
+    .rules-card h3,
+    .rules-mode-head h3 { margin: 0; font-size: 1rem; }
+    .rules-step p,
+    .rules-card p,
+    .rules-note,
+    .rules-fragment-meta,
+    .rules-move-meta { margin: 0; line-height: 1.5; }
+    .rules-board {
+      display: grid;
+      gap: 3px;
+      justify-content: start;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(233, 223, 204, 0.6);
+    }
+    .rules-cell {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid rgba(86, 58, 18, 0.18);
+      display: grid;
+      place-items: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.35);
+      color: #2b2216;
+    }
+    .rules-cell.base-p1 { background: rgba(45, 125, 111, 0.2); }
+    .rules-cell.base-p2 { background: rgba(163, 78, 47, 0.2); }
+    .rules-cell.fragment-p1 { background: linear-gradient(180deg, #d9efe8, #bddfd7); }
+    .rules-cell.fragment-p2 { background: linear-gradient(180deg, #f4dfd4, #e8c0ac); }
+    .rules-cell.origin { background: #f1d9a7; }
+    .rules-cell.move { background: #dce7ff; color: #375ba9; }
+    .rules-cell.jump { background: #efe0ff; color: #7043b0; }
+    .rules-cell.capture { background: #ffe2dd; color: #a13e28; }
+    .rules-cell.confirm { outline: 3px solid #d9a622; }
+    .rules-cell.empty-dim { opacity: 0.35; }
+    .rules-chip-row,
+    .rules-legend,
+    .rules-mode-switch {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .rules-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(82, 60, 26, 0.12);
+      font-size: 0.86rem;
+    }
+    .rules-mode-panel {
+      display: grid;
+      gap: 12px;
+    }
+    .rules-mode-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+    .rules-fragment-grid,
+    .rules-move-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .rules-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid rgba(86, 58, 18, 0.18);
+    }
+    .swatch-move { background: #dce7ff; }
+    .swatch-jump { background: #efe0ff; }
+    .swatch-capture { background: #ffe2dd; }
+    .swatch-fragment-p1 { background: linear-gradient(180deg, #d9efe8, #bddfd7); }
+    .swatch-origin { background: #f1d9a7; }
+    .rules-mode-switch button.active {
+      background: var(--accent);
+      color: white;
+      border-color: transparent;
+    }
+    @media (max-width: 800px) {
+      .rules-cell {
+        width: 24px;
+        height: 24px;
+        font-size: 0.72rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app rules-stack">
+    <section class="hero card">
+      <div class="rules-intro">
+        <p class="eyebrow">RULES</p>
+        <h1>UNFOLD ルール説明</h1>
+        <p class="lead">
+          このページでは、UNFOLD の基本ルールを図で確認できます。
+          手番の流れ、駒の動き、展開図と対応駒の組み合わせをまとめています。
+        </p>
+        <div class="rules-chip-row">
+          <span class="rules-chip">9 × 15 盤面</span>
+          <span class="rules-chip">展開図で陣地拡張</span>
+          <span class="rules-chip">オリジナル駒 / 将棋駒 切替</span>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <a class="button-link" href="index.html">ゲームに戻る</a>
+      </div>
+    </section>
+
+    <section class="card rules-section">
+      <p class="label">勝利条件</p>
+      <div class="rules-grid">
+        <article class="rules-card">
+          <h3>1. 相手の王を取る</h3>
+          <p>相手の展界者、または将棋駒モード時の王将を取ると勝利です。</p>
+          <div class="rules-board" data-board="win-capture"></div>
+        </article>
+        <article class="rules-card">
+          <h3>2. 相手本陣の中央を支配する</h3>
+          <p>相手本陣中央のマスを自分の駒で占有している状態でも勝利になります。</p>
+          <div class="rules-board" data-board="win-base"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card rules-section">
+      <p class="label">1手の流れ</p>
+      <div class="rules-step-grid">
+        <article class="rules-step">
+          <h3>手順1. 駒か手札を選ぶ</h3>
+          <p>自分の駒、持ち駒、手札の展開図のどれを使うかを選びます。</p>
+          <div class="rules-board" data-board="step-select"></div>
+        </article>
+        <article class="rules-step">
+          <h3>手順2. 候補マスを確認する</h3>
+          <p>移動できるマス、取れるマス、展開図を置ける形が盤面上に表示されます。</p>
+          <div class="rules-board" data-board="step-preview"></div>
+          <div class="rules-legend">
+            <span class="rules-chip"><span class="rules-swatch swatch-origin"></span> 選択中</span>
+            <span class="rules-chip"><span class="rules-swatch swatch-move"></span> 移動先</span>
+            <span class="rules-chip"><span class="rules-swatch swatch-capture"></span> 取り</span>
+          </div>
+        </article>
+        <article class="rules-step">
+          <h3>手順3. 展開図を置く</h3>
+          <p>手札の展開図を置くと、6マスが自分の陣地として広がります。</p>
+          <div class="rules-board" data-board="step-fragment"></div>
+        </article>
+        <article class="rules-step">
+          <h3>手順4. 対応駒を置く</h3>
+          <p>展開図を置いた直後は、その展開図に対応した駒を1体だけ空きマスに配置します。</p>
+          <div class="rules-board" data-board="step-piece-place"></div>
+        </article>
+        <article class="rules-step">
+          <h3>手順5. 補助行動を使う</h3>
+          <p>手札入れ替え、駒回収、展開図回収も1手として選べます。</p>
+          <div class="rules-board" data-board="step-support"></div>
+        </article>
+        <article class="rules-step">
+          <h3>手順6. 手番交代</h3>
+          <p>1手が終わると手番が相手へ移ります。オンライン対戦でも同じ流れです。</p>
+          <div class="rules-board" data-board="step-end"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card rules-section">
+      <div class="rules-mode-head">
+        <div>
+          <p class="label">駒移動サマリー</p>
+          <p class="rules-note">モードを切り替えると同じ盤面で移動ルールだけが変わります。</p>
+        </div>
+        <div class="rules-mode-switch">
+          <button id="showOriginalBtn" class="active" type="button">オリジナル駒</button>
+          <button id="showShogiBtn" type="button">将棋駒</button>
+        </div>
+      </div>
+      <div id="movementSummaryPanel" class="rules-mode-panel"></div>
+    </section>
+
+    <section class="card rules-section">
+      <p class="label">展開図カタログ</p>
+      <p class="rules-note">各展開図には対応駒があります。鏡像ありの形は通常形とミラー形を区別します。</p>
+      <div id="fragmentCatalogPanel" class="rules-fragment-grid"></div>
+    </section>
+
+    <section class="card rules-section">
+      <p class="label">オンライン対戦と公開構成</p>
+      <div class="rules-grid">
+        <article class="rules-card">
+          <h3>必要ファイル</h3>
+          <p>Laravel 版では `public/index.html`、`public/app.js`、`public/three-board.js`、`public/styles.css`、`public/rules.html` を使います。</p>
+        </article>
+        <article class="rules-card">
+          <h3>対戦データ保存</h3>
+          <p>部屋データは `/api` 経由で処理し、`storage/app/private/rooms.json` に保存します。</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var currentMode = "original";
+      var BOARD_DEMOS = {
+        "win-capture": {
+          cols: 5,
+          rows: 5,
+          cells: {
+            "2,2": { cls: "origin", text: "王" },
+            "2,3": { cls: "capture", text: "敵" }
+          }
+        },
+        "win-base": {
+          cols: 5,
+          rows: 5,
+          cells: {
+            "1,1": { cls: "base-p2" },
+            "1,2": { cls: "base-p2" },
+            "1,3": { cls: "base-p2" },
+            "2,1": { cls: "base-p2" },
+            "2,2": { cls: "confirm", text: "占" },
+            "2,3": { cls: "base-p2" },
+            "3,1": { cls: "base-p2" },
+            "3,2": { cls: "base-p2" },
+            "3,3": { cls: "base-p2" }
+          }
+        },
+        "step-select": {
+          cols: 5,
+          rows: 5,
+          cells: {
+            "1,1": { cls: "fragment-p1", text: "札" },
+            "2,2": { cls: "origin", text: "駒" },
+            "3,1": { cls: "base-p1", text: "持" }
+          }
+        },
+        "step-preview": {
+          cols: 5,
+          rows: 5,
+          cells: {
+            "2,2": { cls: "origin", text: "駒" },
+            "2,1": { cls: "move" },
+            "2,3": { cls: "move" },
+            "1,2": { cls: "move" },
+            "3,2": { cls: "capture", text: "敵" }
+          }
+        },
+        "step-fragment": {
+          cols: 6,
+          rows: 5,
+          cells: {
+            "1,2": { cls: "fragment-p1" },
+            "2,0": { cls: "fragment-p1" },
+            "2,1": { cls: "fragment-p1" },
+            "2,2": { cls: "fragment-p1 confirm" },
+            "2,3": { cls: "fragment-p1" },
+            "3,1": { cls: "fragment-p1" }
+          }
+        },
+        "step-piece-place": {
+          cols: 6,
+          rows: 5,
+          cells: {
+            "1,2": { cls: "fragment-p1" },
+            "2,0": { cls: "fragment-p1" },
+            "2,1": { cls: "fragment-p1" },
+            "2,2": { cls: "fragment-p1 confirm", text: "駒" },
+            "2,3": { cls: "fragment-p1" },
+            "3,1": { cls: "fragment-p1" }
+          }
+        },
+        "step-support": {
+          cols: 5,
+          rows: 5,
+          cells: {
+            "1,1": { cls: "base-p1", text: "札" },
+            "2,2": { cls: "fragment-p1", text: "駒" },
+            "3,3": { cls: "origin", text: "補" }
+          }
+        },
+        "step-end": {
+          cols: 5,
+          rows: 5,
+          cells: {
+            "2,1": { cls: "base-p1", text: "先" },
+            "2,3": { cls: "base-p2 confirm", text: "後" }
+          }
+        }
+      };
+
+      var FRAGMENTS = [
+        { key: "net01", label: "ティー", piece: "混沌獣", mirror: "なし", cells: [[0,0],[1,0],[1,1],[1,2],[1,3],[2,0]] },
+        { key: "net02", label: "クランク", piece: "護衛士", mirror: "あり", cells: [[0,1],[1,0],[1,1],[1,2],[1,3],[2,0]] },
+        { key: "net03", label: "サイス", piece: "結界士", mirror: "あり", cells: [[0,2],[1,0],[1,1],[1,2],[1,3],[2,0]] },
+        { key: "net04", label: "ジェイ", piece: "突撃士", mirror: "あり", cells: [[0,3],[1,0],[1,1],[1,2],[1,3],[2,0]] },
+        { key: "net05", label: "ジグザグ", piece: "前衛士", mirror: "あり", cells: [[0,2],[1,0],[1,1],[1,2],[1,3],[2,1]] },
+        { key: "net06", label: "クロス", piece: "滅界者", mirror: "なし", cells: [[0,1],[1,0],[1,1],[1,2],[1,3],[2,1]] },
+        { key: "net07", label: "スピア", piece: "騎乗士", mirror: "あり", cells: [[0,1],[1,1],[1,2],[1,3],[2,0],[2,1]] },
+        { key: "net08", label: "ソー", piece: "界騎士", mirror: "なし", cells: [[0,2],[1,1],[1,2],[1,3],[2,0],[2,1]] },
+        { key: "net09", label: "フック", piece: "側撃士", mirror: "あり", cells: [[0,2],[0,3],[1,0],[1,1],[1,2],[2,0]] },
+        { key: "net10", label: "ステップ", piece: "攪乱士", mirror: "あり", cells: [[0,2],[0,3],[1,1],[1,2],[2,0],[2,1]] },
+        { key: "net11", label: "ブロック", piece: "誘引士", mirror: "あり", cells: [[0,2],[0,3],[0,4],[1,0],[1,1],[1,2]] }
+      ];
+
+      var MOVES = {
+        original: [
+          { label: "誘引士", short: "誘", kind: "step", vectors: [[0,-1],[0,-2]], text: "後ろへ 1〜2 マス。" },
+          { label: "側撃士", short: "側", kind: "step", vectors: [[1,0],[1,1],[-1,0],[-1,1]], text: "上下 1 マスと前斜め 2 方向。" },
+          { label: "護衛士", short: "護", kind: "step", vectors: [[1,0],[1,-1],[-1,0],[-1,-1],[0,-1]], text: "上下 1 マス、後方 1 マス、後斜め 2 方向。" },
+          { label: "前衛士", short: "前", kind: "step", vectors: [[0,1],[0,-1],[1,0],[-1,0]], text: "十字 1 マス。" },
+          { label: "騎乗士", short: "騎", kind: "jump", vectors: [[0,2],[2,0],[-2,0]], text: "前 2 マス、上下 2 マスに跳躍。" },
+          { label: "突撃士", short: "突", kind: "step", vectors: [[0,1],[0,2],[0,3]], text: "前方へ 1〜3 マス直進。" },
+          { label: "攪乱士", short: "攪", kind: "step", vectors: [[-1,-1],[1,-1],[-1,1],[1,1],[2,-2],[-2,-2]], text: "斜め 1 マスと後斜め 2 マス。" },
+          { label: "結界士", short: "結", kind: "step", vectors: [[0,1],[0,-1],[-1,-1],[1,-1],[-1,1],[1,1]], text: "前後 1 マスと斜め 4 方向。" },
+          { label: "界騎士", short: "界", kind: "step", vectors: [[0,1],[0,2],[-1,1],[1,1],[-1,0],[1,0]], text: "前 1〜2 マス、前斜め 2 方向、上下 1 マス。" },
+          { label: "混沌獣", short: "混", kind: "mixed", vectors: [[1,0],[-1,0],[0,1],[0,-1]], jumpVectors: [[1,2],[-1,2],[1,-2],[-1,-2]], text: "十字 1 マス + 4 方向跳躍。" },
+          { label: "滅界者", short: "滅", kind: "ray", vectors: [[0,1],[-1,1],[1,1]], text: "前方と前斜め 2 方向へ何マスでも。" },
+          { label: "展界者", short: "展", kind: "step", vectors: [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]], text: "全方向 1 マス。" }
+        ],
+        shogi: [
+          { label: "香車", short: "香", kind: "ray", vectors: [[0,1]], text: "前方に何マスでも直進。" },
+          { label: "銀将", short: "銀", kind: "step", vectors: [[0,1],[-1,1],[1,1],[-1,-1],[1,-1]], text: "前 1 マス、前斜め、後斜め。" },
+          { label: "金将", short: "金", kind: "step", vectors: [[0,1],[-1,1],[1,1],[-1,0],[1,0],[0,-1]], text: "前、横、後ろ、前斜め。" },
+          { label: "歩兵", short: "歩", kind: "step", vectors: [[0,1]], text: "前へ 1 マス。" },
+          { label: "桂馬", short: "桂", kind: "jump", vectors: [[-1,2],[1,2]], text: "前に跳ぶ。" },
+          { label: "飛車", short: "飛", kind: "ray", vectors: [[0,1],[0,-1],[-1,0],[1,0]], text: "縦横に何マスでも。" },
+          { label: "角行", short: "角", kind: "ray", vectors: [[-1,1],[1,1],[-1,-1],[1,-1]], text: "斜めに何マスでも。" },
+          { label: "と金", short: "と", kind: "step", vectors: [[0,1],[-1,1],[1,1],[-1,0],[1,0],[0,-1]], text: "金将と同じ。" },
+          { label: "成桂", short: "成", kind: "step", vectors: [[0,1],[-1,1],[1,1],[-1,0],[1,0],[0,-1]], text: "金将と同じ。" },
+          { label: "龍王", short: "龍", kind: "mixed", vectors: [[-1,1],[1,1],[-1,-1],[1,-1]], jumpVectors: [[0,1],[0,-1],[-1,0],[1,0]], text: "飛車 + 斜め 1 マス。" },
+          { label: "龍馬", short: "馬", kind: "mixed", vectors: [[0,1],[0,-1],[-1,0],[1,0]], jumpVectors: [[-1,1],[1,1],[-1,-1],[1,-1]], text: "角行 + 縦横 1 マス。" },
+          { label: "王将", short: "王", kind: "step", vectors: [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]], text: "全方向 1 マス。" }
+        ]
+      };
+
+      function buildBoard(container, demo) {
+        container.style.gridTemplateColumns = "repeat(" + demo.cols + ", 28px)";
+        for (var row = 0; row < demo.rows; row += 1) {
+          for (var col = 0; col < demo.cols; col += 1) {
+            var key = row + "," + col;
+            var def = demo.cells[key] || {};
+            var cell = document.createElement("div");
+            cell.className = "rules-cell" + (def.cls ? " " + def.cls : " empty-dim");
+            cell.textContent = def.text || "";
+            container.appendChild(cell);
+          }
+        }
+      }
+
+      function buildShape(cells, cls, text) {
+        var maxRow = 0;
+        var maxCol = 0;
+        cells.forEach(function (cell) {
+          maxRow = Math.max(maxRow, cell[0]);
+          maxCol = Math.max(maxCol, cell[1]);
+        });
+        var wrap = document.createElement("div");
+        wrap.className = "rules-board";
+        wrap.style.gridTemplateColumns = "repeat(" + (maxCol + 1) + ", 28px)";
+        for (var row = 0; row <= maxRow; row += 1) {
+          for (var col = 0; col <= maxCol; col += 1) {
+            var active = cells.some(function (cell) { return cell[0] === row && cell[1] === col; });
+            var div = document.createElement("div");
+            div.className = "rules-cell" + (active ? " " + cls : " empty-dim");
+            div.textContent = active && text && row === cells[0][0] && col === cells[0][1] ? text : "";
+            wrap.appendChild(div);
+          }
+        }
+        return wrap;
+      }
+
+      function renderMovementCards() {
+        var panel = document.getElementById("movementSummaryPanel");
+        panel.innerHTML = "";
+        var grid = document.createElement("div");
+        grid.className = "rules-move-grid";
+        MOVES[currentMode].forEach(function (piece) {
+          var card = document.createElement("article");
+          card.className = "rules-move-card";
+          var title = document.createElement("h3");
+          title.textContent = piece.label;
+          var meta = document.createElement("p");
+          meta.className = "rules-move-meta";
+          meta.textContent = piece.text;
+          var board = document.createElement("div");
+          board.className = "rules-board";
+          board.style.gridTemplateColumns = "repeat(5, 28px)";
+          var marks = {};
+          piece.vectors.forEach(function (vector) {
+            marks[(2 - vector[1]) + "," + (2 + vector[0])] = piece.kind === "jump" ? "jump" : "move";
+          });
+          (piece.jumpVectors || []).forEach(function (vector) {
+            marks[(2 - vector[1]) + "," + (2 + vector[0])] = "jump";
+          });
+          for (var row = 0; row < 5; row += 1) {
+            for (var col = 0; col < 5; col += 1) {
+              var key = row + "," + col;
+              var cell = document.createElement("div");
+              if (row === 2 && col === 2) {
+                cell.className = "rules-cell origin";
+                cell.textContent = piece.short;
+              } else if (marks[key]) {
+                cell.className = "rules-cell " + marks[key];
+                cell.textContent = marks[key] === "jump" ? "跳" : "";
+              } else {
+                cell.className = "rules-cell empty-dim";
+              }
+              board.appendChild(cell);
+            }
+          }
+          card.appendChild(title);
+          card.appendChild(board);
+          card.appendChild(meta);
+          grid.appendChild(card);
+        });
+        panel.appendChild(grid);
+      }
+
+      function renderFragmentCards() {
+        var panel = document.getElementById("fragmentCatalogPanel");
+        FRAGMENTS.forEach(function (fragment) {
+          var card = document.createElement("article");
+          card.className = "rules-fragment-card";
+          var title = document.createElement("h3");
+          title.textContent = fragment.label;
+          var meta = document.createElement("p");
+          meta.className = "rules-fragment-meta";
+          meta.textContent = "対応駒: " + fragment.piece + " / ミラー: " + fragment.mirror;
+          card.appendChild(title);
+          card.appendChild(buildShape(fragment.cells, "fragment-p1", ""));
+          card.appendChild(meta);
+          panel.appendChild(card);
+        });
+      }
+
+      Object.keys(BOARD_DEMOS).forEach(function (key) {
+        var container = document.querySelector('[data-board="' + key + '"]');
+        if (container) {
+          buildBoard(container, BOARD_DEMOS[key]);
+        }
+      });
+
+      renderMovementCards();
+      renderFragmentCards();
+
+      document.getElementById("showOriginalBtn").addEventListener("click", function () {
+        currentMode = "original";
+        document.getElementById("showOriginalBtn").classList.add("active");
+        document.getElementById("showShogiBtn").classList.remove("active");
+        renderMovementCards();
+      });
+
+      document.getElementById("showShogiBtn").addEventListener("click", function () {
+        currentMode = "shogi";
+        document.getElementById("showShogiBtn").classList.add("active");
+        document.getElementById("showOriginalBtn").classList.remove("active");
+        renderMovementCards();
+      });
+    })();
+  </script>
+</body>
+</html>
