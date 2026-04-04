@@ -226,8 +226,12 @@
   var HAND_LIMIT = 3;
 
   var els = {
+    lobbyView: document.getElementById("lobbyView"),
+    gameView: document.getElementById("gameView"),
     sceneViewport: document.getElementById("sceneViewport"),
     board: document.getElementById("board"),
+    matchTitle: document.getElementById("matchTitle"),
+    matchMeta: document.getElementById("matchMeta"),
     turnCard: document.getElementById("turnCard"),
     turnLabel: document.getElementById("turnLabel"),
     modeLabel: document.getElementById("modeLabel"),
@@ -250,6 +254,9 @@
     p1Panel: document.getElementById("p1Panel"),
     p2Panel: document.getElementById("p2Panel"),
     newGameBtn: document.getElementById("newGameBtn"),
+    backToLobbyBtn: document.getElementById("backToLobbyBtn"),
+    practiceRestartBtn: document.getElementById("practiceRestartBtn"),
+    practiceModeBtn: document.getElementById("practiceModeBtn"),
       runTestsBtn: document.getElementById("runTestsBtn"),
       waitBtn: document.getElementById("waitBtn"),
       waitApproveBtn: document.getElementById("waitApproveBtn"),
@@ -264,20 +271,31 @@
     p1MulliganBtn: document.getElementById("p1MulliganBtn"),
     p1RecoverPieceBtn: document.getElementById("p1RecoverPieceBtn"),
     p1RecoverFragmentBtn: document.getElementById("p1RecoverFragmentBtn"),
+    p1WaitBtn: document.getElementById("p1WaitBtn"),
     p2MulliganBtn: document.getElementById("p2MulliganBtn"),
     p2RecoverPieceBtn: document.getElementById("p2RecoverPieceBtn"),
     p2RecoverFragmentBtn: document.getElementById("p2RecoverFragmentBtn"),
+    p2WaitBtn: document.getElementById("p2WaitBtn"),
     toggleModeBtn: document.getElementById("toggleModeBtn"),
+    onlineRoomNameInput: document.getElementById("onlineRoomNameInput"),
     onlineNameInput: document.getElementById("onlineNameInput"),
     onlineModeSelect: document.getElementById("onlineModeSelect"),
+    onlineRoomPasswordInput: document.getElementById("onlineRoomPasswordInput"),
     onlineRoomInput: document.getElementById("onlineRoomInput"),
     createRoomBtn: document.getElementById("createRoomBtn"),
     joinRoomBtn: document.getElementById("joinRoomBtn"),
+    refreshRoomsBtn: document.getElementById("refreshRoomsBtn"),
+    deleteRoomCodeInput: document.getElementById("deleteRoomCodeInput"),
+    deleteRoomKeyInput: document.getElementById("deleteRoomKeyInput"),
+    deleteRoomByKeyBtn: document.getElementById("deleteRoomByKeyBtn"),
+    lobbyNotice: document.getElementById("lobbyNotice"),
+    roomList: document.getElementById("roomList"),
     leaveRoomBtn: document.getElementById("leaveRoomBtn"),
     disbandRoomBtn: document.getElementById("disbandRoomBtn"),
     onlineStatus: document.getElementById("onlineStatus"),
-      onlineRoomCode: document.getElementById("onlineRoomCode"),
       onlineSideLabel: document.getElementById("onlineSideLabel"),
+      matchRoomCode: document.getElementById("matchRoomCode"),
+      matchAdminKey: document.getElementById("matchAdminKey"),
       historyCard: document.getElementById("historyCard"),
       historyTitle: document.getElementById("historyTitle"),
       historyBoard: document.getElementById("historyBoard"),
@@ -288,10 +306,15 @@
 
   var uiState = {
     state: null,
+    screen: "lobby",
+    practiceMode: false,
     ruleMode: "original",
-      online: {
+    lobbyRooms: [],
+    roomAdminKeys: {},
+    online: {
         enabled: false,
         roomId: null,
+        roomName: null,
         playerId: null,
         side: null,
         roomStatus: "offline",
@@ -425,6 +448,52 @@
     return els.onlineNameInput.value.trim();
   }
 
+  function getOnlineRoomName() {
+    if (!els.onlineRoomNameInput || !els.onlineRoomNameInput.value.trim()) {
+      return "";
+    }
+    return els.onlineRoomNameInput.value.trim();
+  }
+
+  function getLobbyPassword() {
+    return els.onlineRoomPasswordInput ? els.onlineRoomPasswordInput.value.trim() : "";
+  }
+
+  function loadRoomAdminKeys() {
+    try {
+      return JSON.parse(window.localStorage.getItem("unfoldRoomAdminKeys") || "{}");
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function saveRoomAdminKeys() {
+    window.localStorage.setItem("unfoldRoomAdminKeys", JSON.stringify(uiState.roomAdminKeys));
+  }
+
+  function setLobbyNotice(text) {
+    if (!els.lobbyNotice) {
+      return;
+    }
+    els.lobbyNotice.textContent = text || "";
+  }
+
+  function rememberAdminKey(roomId, adminKey) {
+    if (!roomId || !adminKey) {
+      return;
+    }
+    uiState.roomAdminKeys[roomId] = adminKey;
+    saveRoomAdminKeys();
+  }
+
+  function forgetAdminKey(roomId) {
+    if (!roomId || !uiState.roomAdminKeys[roomId]) {
+      return;
+    }
+    delete uiState.roomAdminKeys[roomId];
+    saveRoomAdminKeys();
+  }
+
   function getStarterDeck(mode) {
     return STARTER_DECK;
   }
@@ -535,6 +604,140 @@
     hidePlacementConfirm();
   }
 
+  function setScreen(screen) {
+    var changed = false;
+    if (els.lobbyView) {
+      changed = changed || els.lobbyView.hidden !== (screen !== "lobby");
+    }
+    if (els.gameView) {
+      changed = changed || els.gameView.hidden !== (screen !== "game");
+    }
+    uiState.screen = screen;
+    if (els.lobbyView) {
+      els.lobbyView.hidden = screen !== "lobby";
+    }
+    if (els.gameView) {
+      els.gameView.hidden = screen !== "game";
+    }
+    if (screen === "game" && changed) {
+      window.setTimeout(function () {
+        window.dispatchEvent(new Event("resize"));
+        if (window.UNFOLD_3D_RENDERER && typeof window.UNFOLD_3D_RENDERER.renderScene === "function") {
+          window.UNFOLD_3D_RENDERER.renderScene();
+        }
+      }, 0);
+    }
+  }
+
+  function getRoomStatusLabel(status) {
+    return status === "playing" ? "対戦中" : "募集中";
+  }
+
+  function formatExpiryText(expiresAt) {
+    var date = expiresAt ? new Date(expiresAt) : null;
+    if (!date || isNaN(date.getTime())) {
+      return "自動削除: 不明";
+    }
+    return "自動削除: " +
+      date.getFullYear() + "/" +
+      String(date.getMonth() + 1).padStart(2, "0") + "/" +
+      String(date.getDate()).padStart(2, "0") + " " +
+      String(date.getHours()).padStart(2, "0") + ":" +
+      String(date.getMinutes()).padStart(2, "0");
+  }
+
+  function renderRoomList() {
+    if (!els.roomList) {
+      return;
+    }
+    els.roomList.innerHTML = "";
+    if (!uiState.lobbyRooms.length) {
+      els.roomList.innerHTML = "<p class=\"room-empty\">公開中の部屋はまだありません。部屋を作るとここに並びます。</p>";
+      return;
+    }
+
+    uiState.lobbyRooms.forEach(function (room) {
+      var item = document.createElement("article");
+      var meta = document.createElement("div");
+      var title = document.createElement("div");
+      var sub = document.createElement("div");
+      var badgeRow = document.createElement("div");
+      var statusBadge = document.createElement("span");
+      var modeBadge = document.createElement("span");
+      var lockBadge = document.createElement("span");
+      var expiry = document.createElement("div");
+      var actions = document.createElement("div");
+      var joinBtn = document.createElement("button");
+      var deleteBtn = document.createElement("button");
+      var adminKey = uiState.roomAdminKeys[room.id];
+
+      item.className = "room-item";
+      meta.className = "room-item-meta";
+      title.className = "room-item-title";
+      sub.className = "room-item-sub";
+      badgeRow.className = "room-badge-row";
+      expiry.className = "room-item-expire";
+      actions.className = "room-item-actions";
+
+      title.textContent = (room.name || ("部屋 " + room.id)) + " [" + room.id + "]";
+      sub.textContent = "ホスト: " + (room.hostName || "-") + " / 参加: " + (room.guestName || "募集中");
+
+      statusBadge.className = "room-badge room-item-status";
+      statusBadge.textContent = getRoomStatusLabel(room.status);
+      badgeRow.appendChild(statusBadge);
+
+      modeBadge.className = "room-badge";
+      modeBadge.textContent = GAME_MODE_LABELS[room.ruleMode] || room.ruleMode || "-";
+      badgeRow.appendChild(modeBadge);
+
+      if (room.hasPassword) {
+        lockBadge.className = "room-badge";
+        lockBadge.textContent = "鍵あり";
+        badgeRow.appendChild(lockBadge);
+      }
+
+      expiry.textContent = formatExpiryText(room.expiresAt);
+
+      joinBtn.type = "button";
+      joinBtn.className = "ghost-button";
+      joinBtn.textContent = room.isFull ? "満室" : "入室";
+      joinBtn.disabled = !!room.isFull || isOnlineGame();
+      joinBtn.addEventListener("click", function () {
+        var password = "";
+        if (room.hasPassword) {
+          password = window.prompt("この部屋は鍵付きです。合言葉を入力してください。", "") || "";
+          if (!password) {
+            return;
+          }
+        }
+        joinOnlineRoom(room.id, password);
+      });
+      actions.appendChild(joinBtn);
+
+      if (adminKey) {
+        deleteBtn.type = "button";
+        deleteBtn.className = "ghost-button";
+        deleteBtn.textContent = "削除";
+        deleteBtn.disabled = isOnlineGame();
+        deleteBtn.addEventListener("click", function () {
+          if (!window.confirm("部屋 " + room.id + " を削除しますか？")) {
+            return;
+          }
+          deleteRoomByKey(room.id, adminKey);
+        });
+        actions.appendChild(deleteBtn);
+      }
+
+      meta.appendChild(title);
+      meta.appendChild(sub);
+      meta.appendChild(badgeRow);
+      meta.appendChild(expiry);
+      item.appendChild(meta);
+      item.appendChild(actions);
+      els.roomList.appendChild(item);
+    });
+  }
+
   function render() {
     renderStatus();
     renderPendingPieceBanner();
@@ -545,7 +748,9 @@
     renderHistoryPanel();
     renderMovementSummary();
     renderFragmentCatalog();
+    renderRoomList();
     renderOnlineStatus();
+    setScreen(uiState.screen || "lobby");
     syncContextMenuState();
     if (window.UNFOLD_3D_RENDERER && typeof window.UNFOLD_3D_RENDERER.renderScene === "function") {
       window.UNFOLD_3D_RENDERER.renderScene();
@@ -914,11 +1119,21 @@
 
   function renderOnlineStatus() {
     var modeText = GAME_MODE_LABELS[getCurrentRuleMode()];
-    var statusText = "ローカル対戦中 (" + modeText + ")";
+    var statusText = "オンライン対戦ロビー (" + modeText + ")";
+    var matchTitle = "オンライン対戦";
+    var matchMeta = "部屋を作るか、部屋一覧から参加してください。";
+    if (!isOnlineGame() && uiState.screen === "game" && uiState.practiceMode) {
+      statusText = "ひとりテストプレイ (" + modeText + ")";
+      matchTitle = "ひとりテストプレイ";
+      matchMeta = "1人で盤面や駒挙動を確認するための練習用ルームです。";
+    }
     if (isOnlineGame()) {
       statusText = "オンライン対戦中";
+      matchTitle = "オンライン対戦";
+      matchMeta = (uiState.online.roomName || ("部屋 " + uiState.online.roomId)) + " / " + uiState.online.roomId + " / " + (uiState.online.side ? PLAYER_LABELS[uiState.online.side] : "-") + " / " + modeText;
       if (uiState.online.roomStatus === "waiting") {
         statusText += " / 相手待ち (" + modeText + ")";
+        matchMeta += " / 相手待ち";
       } else if (uiState.online.roomStatus === "playing") {
         statusText += " / 対戦中 (" + modeText + ")";
       } else {
@@ -928,22 +1143,38 @@
     if (els.onlineStatus) {
       els.onlineStatus.textContent = statusText;
     }
-    if (els.onlineRoomCode) {
-      els.onlineRoomCode.textContent = uiState.online.roomId || "-";
+    if (els.matchRoomCode) {
+      els.matchRoomCode.textContent = uiState.online.roomId || "-";
+    }
+    if (els.matchAdminKey) {
+      els.matchAdminKey.textContent = uiState.online.roomId && uiState.roomAdminKeys[uiState.online.roomId]
+        ? uiState.roomAdminKeys[uiState.online.roomId]
+        : "-";
     }
     if (els.onlineSideLabel) {
       els.onlineSideLabel.textContent = uiState.online.side ? PLAYER_LABELS[uiState.online.side] : "-";
+    }
+    if (els.matchTitle) {
+      els.matchTitle.textContent = matchTitle;
+    }
+    if (els.matchMeta) {
+      els.matchMeta.textContent = matchMeta;
     }
     if (els.onlineModeSelect) {
       els.onlineModeSelect.value = getCurrentRuleMode();
       els.onlineModeSelect.disabled = isOnlineGame();
     }
-    if (els.toggleModeBtn) {
-      els.toggleModeBtn.textContent = "駒モード: " + GAME_MODE_LABELS[getCurrentRuleMode()];
-      els.toggleModeBtn.disabled = isOnlineGame();
-    }
     if (els.newGameBtn) {
-      els.newGameBtn.disabled = isOnlineGame();
+      els.newGameBtn.textContent = "ひとりテストプレイを始める（" + modeText + "）";
+      els.newGameBtn.title = "現在の駒モード: " + modeText;
+    }
+    if (els.practiceRestartBtn) {
+      els.practiceRestartBtn.hidden = !(uiState.screen === "game" && uiState.practiceMode && !isOnlineGame());
+    }
+    if (els.practiceModeBtn) {
+      els.practiceModeBtn.hidden = !(uiState.screen === "game" && uiState.practiceMode && !isOnlineGame());
+      els.practiceModeBtn.textContent = "駒タイプ変更（" + modeText + "）";
+      els.practiceModeBtn.title = "現在の駒モード: " + modeText;
     }
     if (els.createRoomBtn) {
       els.createRoomBtn.disabled = isOnlineGame();
@@ -951,8 +1182,15 @@
     if (els.joinRoomBtn) {
       els.joinRoomBtn.disabled = isOnlineGame();
     }
+    if (els.refreshRoomsBtn) {
+      els.refreshRoomsBtn.disabled = isOnlineGame();
+    }
+    if (els.deleteRoomByKeyBtn) {
+      els.deleteRoomByKeyBtn.disabled = isOnlineGame();
+    }
     if (els.leaveRoomBtn) {
       els.leaveRoomBtn.disabled = !isOnlineGame();
+      els.leaveRoomBtn.hidden = !isOnlineGame();
     }
     if (els.disbandRoomBtn) {
       els.disbandRoomBtn.disabled = !(isOnlineGame() && uiState.online.side === "P1");
@@ -961,17 +1199,57 @@
     if (els.onlineRoomInput) {
       els.onlineRoomInput.disabled = isOnlineGame();
     }
+    if (els.onlineRoomPasswordInput) {
+      els.onlineRoomPasswordInput.disabled = isOnlineGame();
+    }
+    if (els.onlineRoomNameInput) {
+      els.onlineRoomNameInput.disabled = isOnlineGame();
+    }
     if (els.waitBtn) {
+      els.waitBtn.hidden = true;
       els.waitBtn.disabled = isOnlineGame()
         ? !canUseWait() || !!uiState.online.waitRequest || uiState.state.currentPlayer !== uiState.online.side
         : !canUseWait();
     }
+    if (els.p1WaitBtn) {
+      els.p1WaitBtn.disabled = uiState.state.currentPlayer !== "P1"
+        || (isOnlineGame() ? (!canUseWait() || !!uiState.online.waitRequest || uiState.online.side !== "P1") : !canUseWait());
+    }
+    if (els.p2WaitBtn) {
+      els.p2WaitBtn.disabled = uiState.state.currentPlayer !== "P2"
+        || (isOnlineGame() ? (!canUseWait() || !!uiState.online.waitRequest || uiState.online.side !== "P2") : !canUseWait());
+    }
     if (els.waitApproveBtn) {
       els.waitApproveBtn.hidden = !(isOnlineGame() && uiState.online.waitRequest && uiState.online.waitRequest.requestedTo === uiState.online.side);
     }
-    if (els.waitRejectBtn) {
-      els.waitRejectBtn.hidden = !(isOnlineGame() && uiState.online.waitRequest && uiState.online.waitRequest.requestedTo === uiState.online.side);
-    }
+      if (els.waitRejectBtn) {
+        els.waitRejectBtn.hidden = !(isOnlineGame() && uiState.online.waitRequest && uiState.online.waitRequest.requestedTo === uiState.online.side);
+      }
+  }
+
+  function refreshRoomList(options) {
+    var silent = !!(options && options.silent);
+    return apiRequest(buildApiUrl("room.list"), {
+      method: "GET"
+    }).then(function (data) {
+      uiState.lobbyRooms = (data.rooms || []).slice().sort(function (a, b) {
+        if ((a.isFull ? 1 : 0) !== (b.isFull ? 1 : 0)) {
+          return (a.isFull ? 1 : 0) - (b.isFull ? 1 : 0);
+        }
+        return String(a.id || "").localeCompare(String(b.id || ""));
+      });
+      if (!silent) {
+        setLobbyNotice("部屋一覧を更新しました。");
+      }
+      renderRoomList();
+    }).catch(function (error) {
+      if (!silent) {
+        setLobbyNotice("部屋一覧の取得に失敗しました。");
+      }
+      if (els.testOutput) {
+        els.testOutput.textContent = "ROOM ERROR\n" + error.message;
+      }
+    });
   }
 
   function appendFragmentMiniBoard(container, cells) {
@@ -2195,11 +2473,36 @@
     return "OK: \u65B0\u3057\u3044\u5BFE\u5C40\u3092\u59CB\u3081\u308B\nOK: \u76E4\u9762\u8868\u793A\nOK: \u6301\u3061\u99D2\u30FB\u624B\u672D\u8868\u793A\nOK: " + GAME_MODE_LABELS[getCurrentRuleMode()] + " \u306E\u79FB\u52D5\u30EB\u30FC\u30EB\u3092\u8868\u793A";
   }
 
+  function buildRequestError(response, payload, rawText) {
+    var parts = [];
+    var headline = payload && payload.error ? payload.error : response.status + " " + (response.statusText || "Request failed");
+    parts.push(headline);
+    parts.push("HTTP " + response.status + (response.statusText ? " " + response.statusText : ""));
+    if (payload && payload.exception) {
+      parts.push("Exception: " + payload.exception);
+    }
+    if (payload && payload.file) {
+      parts.push("File: " + payload.file + (payload.line ? ":" + payload.line : ""));
+    }
+    if (rawText && (!payload || !payload.error)) {
+      parts.push(rawText.slice(0, 500));
+    }
+    return new Error(parts.join("\n"));
+  }
+
   function apiRequest(url, options) {
     return fetch(url, options).then(function (response) {
-      return response.json().then(function (data) {
-        if (!response.ok || !data.ok) {
-          throw new Error(data && data.error ? data.error : "Request failed");
+      return response.text().then(function (rawText) {
+        var data = null;
+        if (rawText) {
+          try {
+            data = JSON.parse(rawText);
+          } catch (error) {
+            data = null;
+          }
+        }
+        if (!response.ok || !data || !data.ok) {
+          throw buildRequestError(response, data, rawText);
         }
         return data;
       });
@@ -2263,6 +2566,7 @@
     stopRoomPolling();
     uiState.online.enabled = true;
     uiState.online.roomId = room.id;
+    uiState.online.roomName = room.name || null;
     uiState.online.playerId = playerId;
     uiState.online.side = side;
     uiState.online.roomStatus = room.status || (room.players && room.players.P2 && room.players.P2.id ? "playing" : "waiting");
@@ -2270,7 +2574,9 @@
     uiState.online.version = room.version;
     uiState.ruleMode = room.gameState.ruleMode || uiState.ruleMode || "original";
     uiState.state = room.gameState;
+    uiState.practiceMode = false;
     uiState.replayIndex = uiState.state.history ? uiState.state.history.length - 1 : -1;
+    uiState.screen = "game";
     clearSelection();
     scheduleRoomPolling();
     render();
@@ -2280,18 +2586,22 @@
     stopRoomPolling();
     uiState.online.enabled = false;
     uiState.online.roomId = null;
+    uiState.online.roomName = null;
     uiState.online.playerId = null;
     uiState.online.side = null;
     uiState.online.roomStatus = "offline";
     uiState.online.waitRequest = null;
     uiState.online.version = 0;
     uiState.online.syncing = false;
+    uiState.screen = "lobby";
+    uiState.practiceMode = false;
     if (message) {
       uiState.state = createGame(uiState.ruleMode);
       clearSelection();
       pushLog(message);
     }
     render();
+    refreshRoomList({ silent: !!message });
   }
 
   function scheduleRoomPolling() {
@@ -2372,18 +2682,27 @@
   function createOnlineRoom() {
     var mode = els.onlineModeSelect ? els.onlineModeSelect.value : getCurrentRuleMode();
     var localState = createGame(mode);
+    var roomName = getOnlineRoomName();
+    var password = getLobbyPassword();
     uiState.ruleMode = mode;
     return apiRequest(buildApiUrl("room.create"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: getOnlinePlayerName(),
+        roomName: roomName,
+        password: password,
         ruleMode: mode,
         gameState: localState
       })
     }).then(function (data) {
+      rememberAdminKey(data.room.id, data.adminKey);
       applyOnlineRoom(data.room, data.playerId, data.side);
       pushLog("オンライン対戦の部屋 " + data.room.id + " を作成");
+      setLobbyNotice("部屋 " + data.room.id + " を作成しました。管理キー: " + data.adminKey);
+      if (els.testOutput) {
+        els.testOutput.textContent = "ROOM READY\n参加コード: " + data.room.id + "\n管理キー: " + data.adminKey;
+      }
     }).catch(function (error) {
       if (els.testOutput) {
         els.testOutput.textContent = "ROOM ERROR\n" + error.message;
@@ -2391,11 +2710,12 @@
     });
   }
 
-  function joinOnlineRoom() {
-    var roomId = els.onlineRoomInput ? els.onlineRoomInput.value.trim().toUpperCase() : "";
+  function joinOnlineRoom(roomIdOverride, passwordOverride) {
+    var roomId = roomIdOverride || (els.onlineRoomInput ? els.onlineRoomInput.value.trim().toUpperCase() : "");
+    var password = typeof passwordOverride === "string" ? passwordOverride : getLobbyPassword();
     if (!roomId) {
       if (els.testOutput) {
-        els.testOutput.textContent = "ROOM ERROR\n部屋コードを入力してください。";
+        els.testOutput.textContent = "ROOM ERROR\n参加コードを入力してください。";
       }
       return Promise.resolve();
     }
@@ -2404,15 +2724,52 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         roomId: roomId,
-        name: getOnlinePlayerName()
+        name: getOnlinePlayerName(),
+        password: password
       })
     }).then(function (data) {
       applyOnlineRoom(data.room, data.playerId, data.side);
       pushLog("オンライン対戦の部屋 " + data.room.id + " に参加");
+      setLobbyNotice("");
+      if (els.testOutput) {
+        els.testOutput.textContent = "ROOM JOINED\n参加コード: " + data.room.id;
+      }
     }).catch(function (error) {
       if (els.testOutput) {
         els.testOutput.textContent = "ROOM ERROR\n" + error.message;
       }
+    });
+  }
+
+  function deleteRoomByKey(roomIdOverride, adminKeyOverride) {
+    var roomId = roomIdOverride || (els.deleteRoomCodeInput ? els.deleteRoomCodeInput.value.trim().toUpperCase() : "");
+    var adminKey = adminKeyOverride || (els.deleteRoomKeyInput ? els.deleteRoomKeyInput.value.trim().toUpperCase() : "");
+    if (!roomId || !adminKey) {
+      setLobbyNotice("削除したい参加コードと管理キーを入力してください。");
+      return Promise.resolve();
+    }
+    return apiRequest(buildApiUrl("room.deleteByKey"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomId: roomId,
+        adminKey: adminKey
+      })
+    }).then(function (data) {
+      forgetAdminKey(roomId);
+      if (els.deleteRoomCodeInput && !roomIdOverride) {
+        els.deleteRoomCodeInput.value = "";
+      }
+      if (els.deleteRoomKeyInput && !adminKeyOverride) {
+        els.deleteRoomKeyInput.value = "";
+      }
+      setLobbyNotice(data.message || ("部屋 " + roomId + " を削除しました。"));
+      return refreshRoomList({ silent: true });
+    }).catch(function (error) {
+      if (els.testOutput) {
+        els.testOutput.textContent = "ROOM ERROR\n" + error.message;
+      }
+      setLobbyNotice("部屋削除に失敗しました。");
     });
   }
 
@@ -2517,29 +2874,79 @@
   function init() {
     uiState.state = createGame(uiState.ruleMode);
     uiState.replayIndex = uiState.state.history.length - 1;
+    uiState.roomAdminKeys = loadRoomAdminKeys();
+    setScreen("lobby");
 
-    els.newGameBtn.addEventListener("click", function () {
-      uiState.state = createGame(uiState.ruleMode);
-      uiState.replayIndex = uiState.state.history.length - 1;
-      clearSelection();
-      pushLog("新しい対局を始めました");
-      render();
-    });
+    if (els.newGameBtn) {
+      els.newGameBtn.addEventListener("click", function () {
+        uiState.practiceMode = true;
+        uiState.ruleMode = els.onlineModeSelect ? els.onlineModeSelect.value : uiState.ruleMode;
+        uiState.state = createGame(uiState.ruleMode);
+        uiState.replayIndex = uiState.state.history.length - 1;
+        clearSelection();
+        pushLog("ひとりテストプレイを開始");
+        uiState.screen = "game";
+        render();
+      });
+    }
+
+    if (els.backToLobbyBtn) {
+      els.backToLobbyBtn.addEventListener("click", function () {
+        if (isOnlineGame()) {
+          if (uiState.online.side === "P1") {
+            if (!window.confirm("部屋を解散してロビーへ戻りますか？")) {
+              return;
+            }
+            disbandOnlineRoom();
+            return;
+          }
+          if (!window.confirm("部屋から退出してロビーへ戻りますか？")) {
+            return;
+          }
+          leaveOnlineRoom();
+          return;
+        }
+        uiState.screen = "lobby";
+        render();
+      });
+    }
+
+    if (els.practiceRestartBtn) {
+      els.practiceRestartBtn.addEventListener("click", function () {
+        if (!(uiState.screen === "game" && uiState.practiceMode && !isOnlineGame())) {
+          return;
+        }
+        uiState.state = createGame(uiState.ruleMode);
+        uiState.replayIndex = uiState.state.history.length - 1;
+        clearSelection();
+        pushLog("ひとりテストプレイを新しく開始");
+        render();
+      });
+    }
+
+    if (els.practiceModeBtn) {
+      els.practiceModeBtn.addEventListener("click", function () {
+        if (!(uiState.screen === "game" && uiState.practiceMode && !isOnlineGame())) {
+          return;
+        }
+        if (!window.confirm("駒タイプを変更すると、いまの盤面はリセットされます。変更しますか？")) {
+          return;
+        }
+        uiState.ruleMode = uiState.ruleMode === "original" ? "shogi" : "original";
+        if (els.onlineModeSelect) {
+          els.onlineModeSelect.value = uiState.ruleMode;
+        }
+        uiState.state = createGame(uiState.ruleMode);
+        uiState.replayIndex = uiState.state.history.length - 1;
+        clearSelection();
+        pushLog("ひとりテストプレイの駒モードを " + GAME_MODE_LABELS[uiState.ruleMode] + " に変更");
+        render();
+      });
+    }
 
     els.runTestsBtn.addEventListener("click", function () {
       els.testOutput.textContent = runTests();
     });
-
-    if (els.toggleModeBtn) {
-      els.toggleModeBtn.addEventListener("click", function () {
-        uiState.ruleMode = getCurrentRuleMode() === "original" ? "shogi" : "original";
-        uiState.state = createGame(uiState.ruleMode);
-        uiState.replayIndex = uiState.state.history.length - 1;
-        clearSelection();
-        pushLog(GAME_MODE_LABELS[getCurrentRuleMode()] + " モードに切り替え");
-        render();
-      });
-    }
 
     if (els.onlineModeSelect) {
       els.onlineModeSelect.value = getCurrentRuleMode();
@@ -2564,6 +2971,16 @@
         joinOnlineRoom();
       });
     }
+    if (els.refreshRoomsBtn) {
+      els.refreshRoomsBtn.addEventListener("click", function () {
+        refreshRoomList();
+      });
+    }
+    if (els.deleteRoomByKeyBtn) {
+      els.deleteRoomByKeyBtn.addEventListener("click", function () {
+        deleteRoomByKey();
+      });
+    }
     if (els.leaveRoomBtn) {
       els.leaveRoomBtn.addEventListener("click", function () {
         if (!window.confirm("この部屋から退出しますか？")) {
@@ -2582,6 +2999,16 @@
     }
     if (els.waitBtn) {
       els.waitBtn.addEventListener("click", function () {
+        requestWait();
+      });
+    }
+    if (els.p1WaitBtn) {
+      els.p1WaitBtn.addEventListener("click", function () {
+        requestWait();
+      });
+    }
+    if (els.p2WaitBtn) {
+      els.p2WaitBtn.addEventListener("click", function () {
         requestWait();
       });
     }
@@ -2735,6 +3162,7 @@
     });
 
     els.testOutput.textContent = runTests();
+    refreshRoomList({ silent: true });
     window.UNFOLD_3D_API = {
       boardRows: BOARD_ROWS,
       boardCols: BOARD_COLS,

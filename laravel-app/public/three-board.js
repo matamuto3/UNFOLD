@@ -33,7 +33,18 @@
     pieceAnimations: new Map(),
     hiddenPlacementIds: {},
     labelsEnabled: true,
-    orbit: { yaw: -0.65, pitch: 0.92, distance: 15.5, dragging: false, moved: false, lastX: 0, lastY: 0 }
+    orbit: {
+      yaw: -0.65,
+      pitch: 0.98,
+      distance: 14.2,
+      dragging: false,
+      moved: false,
+      lastX: 0,
+      lastY: 0,
+      mode: "rotate",
+      targetX: 0,
+      targetZ: 0
+    }
   };
 
   function boardToWorld(row, col) {
@@ -82,7 +93,7 @@
     var scene = new THREE.Scene();
     scene.background = new THREE.Color(0x5c452d);
 
-    var camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    var camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
     var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.shadowMap.enabled = true;
@@ -856,8 +867,8 @@
     var x = Math.cos(orbit.yaw) * Math.sin(orbit.pitch) * orbit.distance;
     var y = Math.cos(orbit.pitch) * orbit.distance;
     var z = Math.sin(orbit.yaw) * Math.sin(orbit.pitch) * orbit.distance;
-    sceneData.camera.position.set(x, y, z);
-    sceneData.camera.lookAt(0, 0, 0);
+    sceneData.camera.position.set(x + orbit.targetX, y, z + orbit.targetZ);
+    sceneData.camera.lookAt(orbit.targetX, 0, orbit.targetZ);
   }
 
   function pickCell(event) {
@@ -875,6 +886,7 @@
     }
     sceneData.orbit.dragging = true;
     sceneData.orbit.moved = false;
+    sceneData.orbit.mode = event.shiftKey ? "pan" : "rotate";
     sceneData.orbit.lastX = event.clientX;
     sceneData.orbit.lastY = event.clientY;
   }
@@ -893,8 +905,15 @@
       }
       orbit.lastX = event.clientX;
       orbit.lastY = event.clientY;
-      orbit.yaw -= dx * 0.008;
-      orbit.pitch = Math.max(0.52, Math.min(1.28, orbit.pitch + dy * 0.008));
+      if (orbit.mode === "pan") {
+        orbit.targetX -= dx * 0.018;
+        orbit.targetZ -= dy * 0.018;
+        orbit.targetX = Math.max(-4.5, Math.min(4.5, orbit.targetX));
+        orbit.targetZ = Math.max(-3.5, Math.min(3.5, orbit.targetZ));
+      } else {
+        orbit.yaw -= dx * 0.008;
+        orbit.pitch = Math.max(0.52, Math.min(1.28, orbit.pitch + dy * 0.008));
+      }
       updateCameraPosition();
       return;
     }

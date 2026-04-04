@@ -9,8 +9,8 @@ use Throwable;
 
 class RoomApiController extends Controller
 {
-    private const WAITING_ROOM_TTL = 21600;
-    private const ROOM_TTL = 172800;
+    private const WAITING_ROOM_TTL = 1800;
+    private const ROOM_TTL = 1800;
 
     public function handle(Request $request): JsonResponse
     {
@@ -32,11 +32,18 @@ class RoomApiController extends Controller
 
                 $newRoomId = $this->newRoomId($rooms);
                 $playerId = $this->newPlayerId();
+                $adminKey = $this->newAdminKey();
                 $gameState = $body['gameState'];
                 $gameState['ruleMode'] = (string) ($body['ruleMode'] ?? ($gameState['ruleMode'] ?? 'original'));
+                $roomName = trim((string) ($body['roomName'] ?? ''));
+                $password = (string) ($body['password'] ?? '');
 
                 $room = [
                     'id' => $newRoomId,
+                    'name' => $roomName !== '' ? mb_substr($roomName, 0, 40) : '部屋 ' . $newRoomId,
+                    'hasPassword' => $password !== '',
+                    'passwordHash' => $password !== '' ? password_hash($password, PASSWORD_DEFAULT) : null,
+                    'adminKey' => $adminKey,
                     'version' => 1,
                     'createdAt' => $this->nowIso(),
                     'updatedAt' => $this->nowIso(),
@@ -60,7 +67,23 @@ class RoomApiController extends Controller
                 $rooms[$newRoomId] = $room;
                 $this->saveRooms($dataFile, $rooms);
 
-                return $this->jsonResponse(['ok' => true, 'room' => $room, 'playerId' => $playerId, 'side' => 'P1']);
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'room' => $this->sanitizeRoom($room, true),
+                    'playerId' => $playerId,
+                    'side' => 'P1',
+                    'adminKey' => $adminKey,
+                ]);
+            }
+
+            if ($action === 'room.list') {
+                $this->saveRooms($dataFile, $rooms);
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'rooms' => array_values(array_map(function (array $room): array {
+                        return $this->roomSummary($room);
+                    }, $rooms)),
+                ]);
             }
 
             if ($action === 'room.join') {
@@ -68,6 +91,12 @@ class RoomApiController extends Controller
                 $room = $this->assertRoomExists($rooms, $joinRoomId);
                 if (!empty($room['players']['P2']['id'])) {
                     throw new RuntimeException('Room is full');
+                }
+                if (!empty($room['passwordHash'])) {
+                    $submittedPassword = (string) ($body['password'] ?? '');
+                    if ($submittedPassword === '' || !password_verify($submittedPassword, (string) $room['passwordHash'])) {
+                        throw new RuntimeException('Password is incorrect');
+                    }
                 }
 
                 $playerId = $this->newPlayerId();
@@ -81,7 +110,7 @@ class RoomApiController extends Controller
                 $rooms[$joinRoomId] = $room;
                 $this->saveRooms($dataFile, $rooms);
 
-                return $this->jsonResponse(['ok' => true, 'room' => $room, 'playerId' => $playerId, 'side' => 'P2']);
+                return $this->jsonResponse(['ok' => true, 'room' => $this->sanitizeRoom($room, true), 'playerId' => $playerId, 'side' => 'P2']);
             }
 
             if ($action === 'room.get') {
@@ -92,7 +121,7 @@ class RoomApiController extends Controller
                 $rooms[$roomId] = $room;
                 $this->saveRooms($dataFile, $rooms);
 
-                return $this->jsonResponse(['ok' => true, 'room' => $room]);
+                return $this->jsonResponse(['ok' => true, 'room' => $this->sanitizeRoom($room, true)]);
             }
 
             if ($action === 'room.state') {
@@ -117,7 +146,7 @@ class RoomApiController extends Controller
                 $rooms[$roomId] = $room;
                 $this->saveRooms($dataFile, $rooms);
 
-                return $this->jsonResponse(['ok' => true, 'room' => $room]);
+                return $this->jsonResponse(['ok' => true, 'room' => $this->sanitizeRoom($room, true)]);
             }
 
             if ($action === 'room.leave') {
@@ -154,13 +183,13 @@ class RoomApiController extends Controller
                 $this->closeRoomIfEmpty($rooms, $leaveRoomId);
                 $this->saveRooms($dataFile, $rooms);
 
-                return $this->jsonResponse([
-                    'ok' => true,
-                    'disbanded' => false,
-                    'room' => $rooms[$leaveRoomId] ?? null,
-                    'message' => 'Left the room',
-                ]);
-            }
+                    return $this->jsonResponse([
+                        'ok' => true,
+                        'disbanded' => false,
+                        'room' => isset($rooms[$leaveRoomId]) ? $this->sanitizeRoom($rooms[$leaveRoomId], true) : null,
+                        'message' => 'Left the room',
+                    ]);
+                }
 
             if ($action === 'room.disband') {
                 $disbandRoomId = strtoupper((string) ($body['roomId'] ?? $roomId));
@@ -174,6 +203,19 @@ class RoomApiController extends Controller
                 $this->saveRooms($dataFile, $rooms);
 
                 return $this->jsonResponse(['ok' => true, 'disbanded' => true, 'message' => 'Room disbanded']);
+            }
+
+            if ($action === 'room.deleteByKey') {
+                $deleteRoomId = strtoupper((string) ($body['roomId'] ?? $roomId));
+                $room = $this->assertRoomExists($rooms, $deleteRoomId);
+                $adminKey = trim((string) ($body['adminKey'] ?? ''));
+                if ($adminKey === '' || !hash_equals((string) ($room['adminKey'] ?? ''), $adminKey)) {
+                    throw new RuntimeException('Admin key is incorrect');
+                }
+                unset($rooms[$deleteRoomId]);
+                $this->saveRooms($dataFile, $rooms);
+
+                return $this->jsonResponse(['ok' => true, 'disbanded' => true, 'message' => 'Room deleted from lobby']);
             }
 
             if ($action === 'room.wait.request') {
@@ -201,7 +243,7 @@ class RoomApiController extends Controller
                 $rooms[$waitRoomId] = $room;
                 $this->saveRooms($dataFile, $rooms);
 
-                return $this->jsonResponse(['ok' => true, 'room' => $room]);
+                return $this->jsonResponse(['ok' => true, 'room' => $this->sanitizeRoom($room, true)]);
             }
 
             if ($action === 'room.wait.respond') {
@@ -232,7 +274,7 @@ class RoomApiController extends Controller
                 $rooms[$waitRoomId] = $room;
                 $this->saveRooms($dataFile, $rooms);
 
-                return $this->jsonResponse(['ok' => true, 'room' => $room]);
+                return $this->jsonResponse(['ok' => true, 'room' => $this->sanitizeRoom($room, true)]);
             }
 
             return $this->jsonResponse(['ok' => false, 'error' => 'Endpoint not found'], 404);
@@ -294,6 +336,16 @@ class RoomApiController extends Controller
     private function newPlayerId(): string
     {
         return bin2hex(random_bytes(16));
+    }
+
+    private function newAdminKey(): string
+    {
+        $chars = str_split('ABCDEFGHJKLMNPQRSTUVWXYZ23456789');
+        $key = '';
+        for ($i = 0; $i < 8; $i++) {
+            $key .= $chars[random_int(0, count($chars) - 1)];
+        }
+        return $key;
     }
 
     private function nowIso(): string
@@ -370,6 +422,45 @@ class RoomApiController extends Controller
     {
         $room['players'][$side]['lastSeenAt'] = $this->nowIso();
         return $this->touchRoom($room);
+    }
+
+    private function roomSummary(array $room): array
+    {
+        $updatedAt = (string) ($room['updatedAt'] ?? $this->nowIso());
+        $updatedTs = strtotime($updatedAt) ?: time();
+        $ttl = $this->isRoomWaiting($room) ? self::WAITING_ROOM_TTL : self::ROOM_TTL;
+
+        return [
+            'id' => (string) ($room['id'] ?? ''),
+            'name' => (string) ($room['name'] ?? ('部屋 ' . ($room['id'] ?? ''))),
+            'status' => (string) ($room['status'] ?? 'waiting'),
+            'ruleMode' => (string) ($room['gameState']['ruleMode'] ?? 'original'),
+            'hostName' => (string) ($room['players']['P1']['name'] ?? 'Player 1'),
+            'guestName' => (string) ($room['players']['P2']['name'] ?? 'Waiting'),
+            'hasPassword' => !empty($room['hasPassword']),
+            'isFull' => !empty($room['players']['P2']['id']),
+            'updatedAt' => $updatedAt,
+            'expiresAt' => gmdate('c', $updatedTs + $ttl),
+        ];
+    }
+
+    private function sanitizeRoom(array $room, bool $includeGameState = false): array
+    {
+        $payload = [
+            'id' => (string) ($room['id'] ?? ''),
+            'name' => (string) ($room['name'] ?? ('部屋 ' . ($room['id'] ?? ''))),
+            'hasPassword' => !empty($room['hasPassword']),
+            'version' => (int) ($room['version'] ?? 1),
+            'createdAt' => (string) ($room['createdAt'] ?? $this->nowIso()),
+            'updatedAt' => (string) ($room['updatedAt'] ?? $this->nowIso()),
+            'status' => (string) ($room['status'] ?? 'waiting'),
+            'players' => $room['players'] ?? [],
+            'waitRequest' => $room['waitRequest'] ?? null,
+        ];
+        if ($includeGameState) {
+            $payload['gameState'] = $room['gameState'] ?? [];
+        }
+        return $payload;
     }
 
     private function closeRoomIfEmpty(array &$rooms, string $roomId): bool
