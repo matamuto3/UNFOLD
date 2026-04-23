@@ -47,6 +47,28 @@
     }
   };
 
+  function applyCameraPreset() {
+    var preset = window.UNFOLD_3D_CAMERA_PRESET;
+    if (!preset) {
+      return;
+    }
+    if (typeof preset.yaw === "number") {
+      sceneData.orbit.yaw = preset.yaw;
+    }
+    if (typeof preset.pitch === "number") {
+      sceneData.orbit.pitch = preset.pitch;
+    }
+    if (typeof preset.distance === "number") {
+      sceneData.orbit.distance = preset.distance;
+    }
+    if (typeof preset.targetX === "number") {
+      sceneData.orbit.targetX = preset.targetX;
+    }
+    if (typeof preset.targetZ === "number") {
+      sceneData.orbit.targetZ = preset.targetZ;
+    }
+  }
+
   function boardToWorld(row, col) {
     return {
       x: (col - (BOARD_COLS - 1) / 2) * CELL_SIZE,
@@ -407,10 +429,14 @@
   }
 
   function easeInOutCubic(value) {
-    return value < 0.5
-      ? 4 * value * value * value
-      : 1 - Math.pow(-2 * value + 2, 3) / 2;
-  }
+      return value < 0.5
+        ? 4 * value * value * value
+        : 1 - Math.pow(-2 * value + 2, 3) / 2;
+    }
+
+    function easeInCubic(value) {
+      return value * value * value;
+    }
 
   function applyPieceAnimation(group, animation, state) {
     if (animation.kind === "move") {
@@ -437,21 +463,25 @@
     }
   }
 
-  function updateAnimations(now) {
-    if (sceneData.animations.length) {
-      sceneData.animations = sceneData.animations.filter(function (animation) {
-        var elapsed = now - animation.startTime;
-        var overall = Math.max(0, Math.min(1, elapsed / animation.duration));
-        var easedDrop = easeOutCubic(overall);
-        animation.group.position.y = animation.startY + (animation.endY - animation.startY) * easedDrop;
-        animation.faces.forEach(function (face) {
-          var local = Math.max(0, Math.min(1, (elapsed - face.delay) / face.duration));
-          var eased = easeOutCubic(local);
-          face.pivot.rotation[face.axis] = face.startAngle * (1 - eased);
-        });
-        if (overall >= 1) {
-          sceneData.scene.remove(animation.group);
-          delete sceneData.hiddenPlacementIds[animation.placementId];
+    function updateAnimations(now) {
+      if (sceneData.animations.length) {
+        sceneData.animations = sceneData.animations.filter(function (animation) {
+          var elapsed = now - animation.startTime;
+          var overall = Math.max(0, Math.min(1, elapsed / animation.duration));
+          var easedDrop = overall < 0.72
+            ? easeInCubic(overall / 0.72) * 0.56
+            : 0.56 + easeOutCubic((overall - 0.72) / 0.28) * 0.44;
+          animation.group.position.y = animation.startY + (animation.endY - animation.startY) * easedDrop;
+          animation.faces.forEach(function (face) {
+            var local = Math.max(0, Math.min(1, (elapsed - face.delay) / face.duration));
+            var eased = local < 0.74
+              ? easeInOutCubic(local / 0.74) * 0.64
+              : 0.64 + easeOutCubic((local - 0.74) / 0.26) * 0.36;
+            face.pivot.rotation[face.axis] = face.startAngle * (1 - eased);
+          });
+          if (overall >= 1) {
+            sceneData.scene.remove(animation.group);
+            delete sceneData.hiddenPlacementIds[animation.placementId];
           return false;
         }
         return true;
@@ -525,17 +555,17 @@
     var faces = [];
     buildAnimationChildren(tree, rootIndex, rootFace, faces, owner);
 
-    return {
-      placementId: placementId,
-      group: group,
-      faces: faces,
-      startTime: performance.now(),
-      duration: 1680,
-      startY: rootTop + 1.15,
-      endY: rootTop + STACK_HEIGHT / 2,
-      rootRow: rootCell.row,
-      rootCol: rootCell.col
-    };
+      return {
+        placementId: placementId,
+        group: group,
+        faces: faces,
+        startTime: performance.now(),
+        duration: 2260,
+        startY: rootTop + 1.15,
+        endY: rootTop + STACK_HEIGHT / 2,
+        rootRow: rootCell.row,
+        rootCol: rootCell.col
+      };
   }
 
   function buildAnimationChildren(tree, nodeIndex, parentFrame, faces, owner) {
@@ -552,13 +582,13 @@
 
       var rotationInfo = getFoldRotation(edge.dr, edge.dc);
       pivot.rotation[rotationInfo.axis] = rotationInfo.angle;
-      faces.push({
-        pivot: pivot,
-        axis: rotationInfo.axis,
-        startAngle: rotationInfo.angle,
-        delay: tree[childIndex].depth * 180,
-        duration: 760
-      });
+        faces.push({
+          pivot: pivot,
+          axis: rotationInfo.axis,
+          startAngle: rotationInfo.angle,
+          delay: tree[childIndex].depth * 240,
+          duration: 1080
+        });
 
       buildAnimationChildren(tree, childIndex, faceFrame, faces, owner);
     });
@@ -958,6 +988,7 @@
 
   createScene();
   buildCells();
+  applyCameraPreset();
   resizeRenderer();
   updateCameraPosition();
   window.addEventListener("resize", resizeRenderer);

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD Hand Scene</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #f2e9d8;
+      overflow: hidden;
+      font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+    }
+    .wrap {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      box-sizing: border-box;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,0.68), transparent 42%),
+        linear-gradient(180deg, #f8f2e7, #efe1ca);
+    }
+    .card {
+      width: min(1280px, 100%);
+      display: grid;
+      gap: 18px;
+      padding: 20px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid rgba(82,60,26,0.12);
+      box-shadow: 0 22px 50px rgba(82,60,26,0.12);
+      box-sizing: border-box;
+    }
+    .title {
+      margin: 0;
+      font-size: 28px;
+      color: #5f4321;
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .hand-panel,
+    .board-panel {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.76), rgba(241,232,217,0.86));
+      border: 1px solid rgba(82,60,26,0.1);
+    }
+    .label {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 800;
+      color: #7a5a2e;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .hand-list {
+      display: grid;
+      gap: 10px;
+    }
+    .hand-card {
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid rgba(82,60,26,0.12);
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 10px 20px rgba(82,60,26,0.06);
+    }
+    .hand-card.active {
+      border-color: rgba(217,166,34,0.88);
+      background: linear-gradient(180deg, rgba(255,250,236,0.98), rgba(247,236,205,0.92));
+      box-shadow: 0 0 0 3px rgba(217,166,34,0.16), 0 10px 20px rgba(82,60,26,0.06);
+    }
+    .hand-card h2 {
+      margin: 0;
+      font-size: 22px;
+      color: #5b3d17;
+    }
+    .hand-card p {
+      margin: 0;
+      color: #6c5843;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .mini-shape {
+      display: grid;
+      gap: 3px;
+      padding: 8px;
+      width: fit-content;
+      border-radius: 14px;
+      background: rgba(231, 221, 200, 0.75);
+    }
+    .mini-shape.grid4x3 { grid-template-columns: repeat(4, 22px); }
+    .mini-cell {
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      border: 1px solid rgba(86, 58, 18, 0.14);
+      background: rgba(255,255,255,0.26);
+    }
+    .mini-cell.fill {
+      background: linear-gradient(180deg, #d9efe8, #bddfd7);
+    }
+    .board-shot {
+      display: block;
+      width: 100%;
+      border-radius: 18px;
+      border: 1px solid rgba(82,60,26,0.12);
+      box-shadow: 0 10px 24px rgba(82,60,26,0.12);
+      background: #f4ead7;
+    }
+    .flow {
+      margin: 0;
+      color: #6c5843;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(217,166,34,0.14);
+      color: #8a6514;
+      font-weight: 800;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card">
+      <h1 id="sceneTitle" class="title">手札からティーを選んで盤面へ置く</h1>
+      <div class="layout">
+        <div class="hand-panel">
+          <p id="handLabel" class="label">手札</p>
+          <div id="handList" class="hand-list"></div>
+        </div>
+        <div class="board-panel">
+          <p id="boardLabel" class="label">盤面</p>
+          <img id="boardShot" class="board-shot" src="assets/rules/fragment-place.png" alt="ティーを初期陣地に隣接配置した3D盤面">
+          <p id="flowText" class="flow">手札でティーを選ぶと、その形を初期陣地に接するように盤面へ置きます。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+    (function () {
+      var mode = new URLSearchParams(window.location.search).get("mode") || "select";
+      var handList = document.getElementById("handList");
+      var title = document.getElementById("sceneTitle");
+      var boardShot = document.getElementById("boardShot");
+      var flowText = document.getElementById("flowText");
+      var handLabel = document.getElementById("handLabel");
+      var boardLabel = document.getElementById("boardLabel");
+
+      function shapeHtml(type) {
+        if (type === "tee") {
+          return '<div class="mini-shape grid4x3">' +
+            '<span class="mini-cell fill"></span><span class="mini-cell"></span><span class="mini-cell"></span><span class="mini-cell"></span>' +
+            '<span class="mini-cell fill"></span><span class="mini-cell fill"></span><span class="mini-cell fill"></span><span class="mini-cell fill"></span>' +
+            '<span class="mini-cell fill"></span><span class="mini-cell"></span><span class="mini-cell"></span><span class="mini-cell"></span>' +
+            '</div>';
+        }
+        if (type === "hook") {
+          return '<div class="mini-shape grid4x3">' +
+            '<span class="mini-cell"></span><span class="mini-cell"></span><span class="mini-cell fill"></span><span class="mini-cell fill"></span>' +
+            '<span class="mini-cell fill"></span><span class="mini-cell fill"></span><span class="mini-cell fill"></span><span class="mini-cell"></span>' +
+            '<span class="mini-cell fill"></span><span class="mini-cell"></span><span class="mini-cell"></span><span class="mini-cell"></span>' +
+            '</div>';
+        }
+        return '<div class="mini-shape grid4x3">' +
+          '<span class="mini-cell"></span><span class="mini-cell fill"></span><span class="mini-cell"></span><span class="mini-cell"></span>' +
+          '<span class="mini-cell fill"></span><span class="mini-cell fill"></span><span class="mini-cell fill"></span><span class="mini-cell fill"></span>' +
+          '<span class="mini-cell fill"></span><span class="mini-cell"></span><span class="mini-cell"></span><span class="mini-cell"></span>' +
+          '</div>';
+      }
+
+      function renderCards(cards) {
+        handList.innerHTML = cards.map(function (card) {
+          return '<article class="hand-card' + (card.active ? ' active' : '') + '">' +
+            (card.badge ? '<span class="badge">' + card.badge + '</span>' : '') +
+            '<h2>' + card.name + '</h2>' +
+            '<p>対応駒: ' + card.piece + '</p>' +
+            shapeHtml(card.shape) +
+            '</article>';
+        }).join('');
+      }
+
+      if (mode === "mulligan-before") {
+        title.textContent = "手札を山札へ戻す";
+        handLabel.textContent = "いまの手札 3 枚";
+        boardLabel.textContent = "操作";
+        boardShot.src = "assets/rules/fragment-before.png";
+        boardShot.alt = "本陣が見える盤面";
+        flowText.textContent = "この3枚をいったん山札へ戻してシャッフルします。";
+        renderCards([
+          { name: "ティー", piece: "混沌獣", shape: "tee", badge: "戻す", active: true },
+          { name: "フック", piece: "側撃士", shape: "hook" },
+          { name: "クランク", piece: "護衛士", shape: "crank" }
+        ]);
+      } else if (mode === "mulligan-after") {
+        title.textContent = "3枚引き直す";
+        handLabel.textContent = "新しい手札 3 枚";
+        boardLabel.textContent = "結果";
+        boardShot.src = "assets/rules/fragment-before.png";
+        boardShot.alt = "本陣が見える盤面";
+        flowText.textContent = "山札をシャッフルしたあと、新しい手札を3枚引きます。";
+        renderCards([
+          { name: "サイス", piece: "結界士", shape: "crank", badge: "引き直し後", active: true },
+          { name: "ジェイ", piece: "突撃士", shape: "hook" },
+          { name: "ブロック", piece: "誘引士", shape: "tee" }
+        ]);
+      } else {
+        renderCards([
+          { name: "フック", piece: "側撃士", shape: "hook" },
+          { name: "ティー", piece: "混沌獣", shape: "tee", badge: "選択中", active: true },
+          { name: "クランク", piece: "護衛士", shape: "crank" }
+        ]);
+      }
+    }());
+  </script>
+</body>
+</html>

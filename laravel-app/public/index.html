@@ -8,28 +8,53 @@
 </head>
 <body>
   <main class="app">
-    <section class="card site-warning" aria-label="生成AI利用に関する注意">
-      <p class="site-warning-eyebrow">IMPORTANT NOTICE</p>
-      <h2>このサイトは CODEX などの生成AIを使って制作・調整しています</h2>
-      <p>
-        生成AIの利用に抵抗がある方、AI生成物を避けたい方はご注意ください。
-      </p>
-    </section>
-
     <section id="lobbyView" class="view-stack">
       <section class="hero card">
         <div>
           <p class="eyebrow">UNFOLD PROTOTYPE</p>
-          <h1>UNFOLD</h1>
+          <div class="hero-title-row">
+            <h1>UNFOLD</h1>
+            <div class="access-mini" aria-label="アクセス数">
+              <span>総 <strong id="accessTotalLabel">-</strong></span>
+              <span>今日 <strong id="accessTodayLabel">-</strong></span>
+              <span>昨日 <strong id="accessYesterdayLabel">-</strong></span>
+            </div>
+          </div>
           <p class="lead">
             将棋のように駒を動かし、立体の展開図を盤面へ広げながら陣地を競う対戦ボードゲームです。
             ここではオンライン対戦の部屋を作成したり、公開中の部屋へ参加したりできます。
           </p>
-        </div>
-        <div class="hero-actions">
-          <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">ルール説明</a>
+          <div class="hero-actions">
+            <a class="button-link" href="rules-summary.html" target="_blank" rel="noopener noreferrer">簡易ルール</a>
+            <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">詳細ルール</a>
+            <a class="button-link" href="feedback.html" target="_blank" rel="noopener noreferrer">意見掲示板</a>
+          </div>
         </div>
       </section>
+
+      <section class="card site-info-card" aria-label="アクセスカウンタと意見掲示板">
+        <div class="site-count-box">
+          <p class="label">アクセスカウンタ</p>
+          <p class="site-count"><span id="accessCountLabel">-</span><span class="site-count-unit"> visits</span></p>
+          <p id="accessUpdatedLabel" class="scene-note">読み込み中...</p>
+        </div>
+        <div class="feedback-box">
+          <p class="label">意見掲示板</p>
+          <p class="scene-note">名前を出さずに、感想・改善案・気になった点を投稿できます。</p>
+          <textarea id="feedbackInput" maxlength="400" placeholder="意見・感想を書く"></textarea>
+          <div class="panel-actions">
+            <button id="submitFeedbackBtn" class="primary" type="button">投稿する</button>
+            <button id="refreshFeedbackBtn" type="button">掲示板を更新</button>
+          </div>
+          <p id="feedbackStatus" class="scene-note"></p>
+          <div id="feedbackList" class="feedback-list" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <div class="lobby-utility-bar" aria-label="サイト情報">
+        <span>アクセス <strong id="accessCountSubtleLabel">-</strong></span>
+        <a href="feedback.html" target="_blank" rel="noopener noreferrer">意見掲示板</a>
+      </div>
 
       <section class="card online-card">
         <div class="online-header">
@@ -51,8 +76,11 @@
               <input id="onlineNameInput" type="text" maxlength="20" placeholder="プレイヤー名">
             </label>
           </div>
-          <div class="panel-actions">
-            <button id="newGameBtn" type="button">ひとりテストプレイを始める</button>
+          <div class="solo-play-grid">
+            <button id="newGameBtn" type="button">ひとりテストプレイ（オリジナル駒）</button>
+            <button id="newGameShogiBtn" type="button">ひとりテストプレイ（将棋駒）</button>
+            <button id="npcGameBtn" type="button">NPC と対戦する（オリジナル駒）</button>
+            <button id="npcGameShogiBtn" type="button">NPC と対戦する（将棋駒）</button>
           </div>
         </section>
 
@@ -133,6 +161,7 @@
             <p id="matchMeta" class="scene-note">オンライン対戦の情報がここに表示されます。</p>
           </div>
           <div class="match-actions">
+            <button id="startMatchBtn" class="primary" type="button" hidden>対戦を始める</button>
             <button id="backToLobbyBtn" type="button">ロビーへ戻る</button>
             <button id="practiceRestartBtn" type="button" hidden>新しく始める</button>
             <button id="practiceModeBtn" type="button" hidden>駒タイプ変更</button>
@@ -142,13 +171,18 @@
             <button id="disbandRoomBtn" type="button" hidden>部屋を解散</button>
             <button id="waitApproveBtn" type="button" hidden>待った承認</button>
             <button id="waitRejectBtn" type="button" hidden>待った却下</button>
-            <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">ルール説明</a>
+            <a class="button-link" href="rules-summary.html" target="_blank" rel="noopener noreferrer">簡易ルール</a>
+            <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">詳細ルール</a>
           </div>
         </div>
         <div class="match-code-bar">
           <div class="match-code-item">
             <span class="label">参加コード</span>
             <strong id="matchRoomCode">-</strong>
+          </div>
+          <div class="match-code-item">
+            <span class="label">参加中メンバー</span>
+            <strong id="matchPlayers">-</strong>
           </div>
           <div class="match-code-item">
             <span class="label">管理キー</span>
@@ -174,7 +208,7 @@
 
       <section class="layout">
         <aside id="p1Panel" class="card panel">
-          <h2>プレイヤー1 <span class="camp-chip camp-p1">先手</span></h2>
+          <h2><span id="p1NameLabel">プレイヤー1</span> <span class="camp-chip camp-p1">先手</span></h2>
           <p class="subtle">持ち駒</p>
           <div id="p1Reserve" class="list"></div>
           <p class="subtle">手札</p>
@@ -252,7 +286,7 @@
         </section>
 
         <aside id="p2Panel" class="card panel">
-          <h2>プレイヤー2 <span class="camp-chip camp-p2">後手</span></h2>
+          <h2><span id="p2NameLabel">プレイヤー2</span> <span class="camp-chip camp-p2">後手</span></h2>
           <p class="subtle">持ち駒</p>
           <div id="p2Reserve" class="list"></div>
           <p class="subtle">手札</p>
@@ -269,12 +303,18 @@
         </aside>
       </section>
     </section>
+
+    <section class="card site-footer-note" aria-label="サイト情報">
+      <p class="site-footer-title">UNFOLD Prototype</p>
+      <p>個人制作の試作版です。表示やルールは予告なく更新されることがあります。</p>
+      <p>© 2026 UNFOLD Prototype</p>
+    </section>
   </main>
 
   <script>window.__UNFOLD_BOOTED = false;</script>
   <script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
-  <script src="app.js?v=20260404c"></script>
-  <script src="three-board.js?v=20260404c"></script>
+  <script src="app.js?v=20260424b"></script>
+  <script src="three-board.js?v=20260422a"></script>
   <script>
     if (!window.__UNFOLD_BOOTED) {
       var message = document.getElementById("messageLabel");

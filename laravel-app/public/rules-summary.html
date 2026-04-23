@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD 簡易ルール</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body.rules-body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,0.72), transparent 40%),
+        linear-gradient(180deg, #f6efe4 0%, #ead9be 100%);
+      color: #2e2419;
+      font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+    }
+    .rules-shell {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+      display: grid;
+      gap: 16px;
+    }
+    .hero,
+    .section {
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.84);
+      border: 1px solid rgba(95, 67, 33, 0.12);
+      box-shadow: 0 18px 42px rgba(82, 60, 26, 0.08);
+      display: grid;
+      gap: 12px;
+    }
+    .hero h1,
+    .section h2,
+    .card h3 { margin: 0; }
+    .hero p,
+    .section p,
+    .card p,
+    .card ul { margin: 0; line-height: 1.7; }
+    .hero-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      width: min(360px, 100%);
+    }
+    .hero-actions a { text-decoration: none; text-align: center; }
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+      display: grid;
+      gap: 14px;
+    }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(244,236,223,0.96));
+      border: 1px solid rgba(95, 67, 33, 0.1);
+      align-content: start;
+    }
+    .card img {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 16px;
+      border: 1px solid rgba(95, 67, 33, 0.12);
+      background: #efe4d1;
+      box-shadow: 0 10px 24px rgba(82, 60, 26, 0.08);
+    }
+    .list {
+      padding-left: 1.2rem;
+      display: grid;
+      gap: 8px;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(95, 67, 33, 0.12);
+      font-size: 0.92rem;
+    }
+    .callout {
+      padding: 12px 14px;
+      border-left: 4px solid #a97c3c;
+      border-radius: 14px;
+      background: rgba(251, 244, 232, 0.96);
+    }
+    @media (max-width: 900px) {
+      .grid-2,
+      .grid-3,
+      .grid-4 {
+        grid-template-columns: 1fr;
+      }
+      .hero-actions {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="rules-body">
+  <main class="rules-shell">
+    <section class="hero">
+      <h1>UNFOLD 簡易ルール</h1>
+      <p>対局前にざっと確認したい人向けの短いまとめです。細かい条件まで見たいときは詳細ルールを開いてください。</p>
+      <div class="hero-actions">
+        <a class="button secondary" href="rules.html" target="_blank" rel="noopener">詳細ルール</a>
+        <a class="button secondary" href="index.html" target="_blank" rel="noopener">ゲームへ戻る</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. このゲームで使うもの</h2>
+      <div class="grid-4">
+        <article class="card">
+          <h3>盤面</h3>
+          <img src="assets/rules/board-only.png" alt="盤面の画像">
+          <p>展開図を置ける範囲の上限です。</p>
+        </article>
+        <article class="card">
+          <h3>本陣</h3>
+          <img src="assets/rules/base-only.png" alt="本陣の画像">
+          <p>最初から自分の陣地になっている 3×3 のエリアです。</p>
+        </article>
+        <article class="card">
+          <h3>展開図</h3>
+          <img src="assets/rules/fragment-only.png" alt="展開図の画像">
+          <p>手札から置いて、自分の陣地を広げます。</p>
+        </article>
+        <article class="card">
+          <h3>駒</h3>
+          <img src="assets/rules/piece-only.png" alt="駒の画像">
+          <p>展開図や本陣の上で動きます。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2. 勝利条件</h2>
+      <div class="grid-2">
+        <article class="card">
+          <h3>相手の王を取る</h3>
+          <img src="assets/rules/win-capture.png" alt="相手の王を取る勝利条件の画像">
+          <p>自分の駒で相手の王を取ったら勝利です。</p>
+        </article>
+        <article class="card">
+          <h3>相手本陣中心を上書きする</h3>
+          <img src="assets/rules/win-base.png" alt="相手本陣中心を展開図で上書きする勝利条件の画像">
+          <p>相手本陣中心を、自分の展開図で上書きできたら勝利です。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>3. ゲーム開始時</h2>
+      <div class="grid-2">
+        <article class="card">
+          <img src="assets/rules/start-state.png" alt="ゲーム開始時の盤面画像">
+          <p>本陣に初期駒を置いた状態から始めます。中央に展界者または王将を置き、その斜め前 2 マスに界騎士と護衛士、将棋駒モードでは銀将と金将を配置します。</p>
+        </article>
+        <article class="card">
+          <ul class="list">
+            <li>山札は各プレイヤー 18 枚です。</li>
+            <li>最初に手札を 3 枚引きます。</li>
+            <li>持ち駒は最初はありません。</li>
+            <li>護衛士 1 体は山札から外し、初期配置に使います。</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>4. 1手でできること</h2>
+      <div class="callout">
+        <p>手番では、次の 6 つから 1 つだけ選びます。<strong>展開図を置く</strong> だけは、置いたあとに対応駒を 1 体置いてから手番終了です。</p>
+      </div>
+      <div class="chips">
+        <span class="chip">展開図を置く</span>
+        <span class="chip">駒を移動する</span>
+        <span class="chip">持ち駒を打つ</span>
+        <span class="chip">手札を入れ替える</span>
+        <span class="chip">駒を回収する</span>
+        <span class="chip">展開図を回収する</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>5. 展開図を置く流れ</h2>
+      <div class="grid-2">
+        <article class="card">
+          <h3>手札から 1 枚選ぶ</h3>
+          <img src="assets/rules/hand-select.png" alt="手札から展開図を1枚選んでいる画像">
+          <p>展開図は 0度 / 90度 / 180度 / 270度で回転して置けます。</p>
+        </article>
+        <article class="card">
+          <h3>自分の陣地に一辺で接するように置く</h3>
+          <img src="assets/rules/fragment-place.png" alt="本陣に接するように展開図を置いた画像">
+          <p>角だけ触れているのは隣接ではありません。</p>
+        </article>
+      </div>
+      <div class="grid-3">
+        <article class="card">
+          <h3>置けない例1</h3>
+          <img src="assets/rules/fragment-illegal.png" alt="陣地に触れていないので置けない例の画像">
+          <p>自分の陣地に接していません。</p>
+        </article>
+        <article class="card">
+          <h3>置けない例2</h3>
+          <img src="assets/rules/fragment-on-base-ng.png" alt="自分の陣地の上に置いてしまっているので置けない例の画像">
+          <p>自分の陣地の上には置けません。</p>
+        </article>
+        <article class="card">
+          <h3>置けない例3</h3>
+          <img src="assets/rules/fragment-corner-ng.png" alt="角だけ触れていて置けない例の画像">
+          <p>角だけ接していて、一辺が接していません。</p>
+        </article>
+      </div>
+      <div class="grid-2">
+        <article class="card">
+          <h3>対応駒を 1 体置く</h3>
+          <img src="assets/rules/fragment-piece.png" alt="置いた展開図の上に対応駒を置く候補表示が出ている画像">
+          <p>置いたばかりの展開図の上から 1 マス選んで置きます。</p>
+        </article>
+        <article class="card">
+          <h3>相手展開図への上書き</h3>
+          <img src="assets/rules/overwrite-after.png" alt="相手展開図に上書きした画像">
+          <p>自分の陣地に接していて、上書きしたい場所に駒がなければ上書きできます。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>6. 補助行動の要点</h2>
+      <div class="grid-2">
+        <article class="card">
+          <h3>駒を移動する</h3>
+          <img src="assets/rules/move-before.png" alt="展開図の上を駒が移動して相手駒を取れる画像">
+          <p>展開図や本陣の上だけ移動できます。相手駒を取ったら持ち駒になります。</p>
+        </article>
+        <article class="card">
+          <h3>持ち駒を打つ</h3>
+          <img src="assets/rules/drop-before.png" alt="本陣を含めた自陣に持ち駒を打てる候補表示が出ている画像">
+          <p>本陣を含めた自陣にだけ打てます。</p>
+        </article>
+        <article class="card">
+          <h3>手札を入れ替える</h3>
+          <img src="assets/rules/mulligan-before.png" alt="手札を入れ替える前の画像">
+          <p>手札を全部戻してから 3 枚引き直します。</p>
+        </article>
+        <article class="card">
+          <h3>駒を回収する</h3>
+          <img src="assets/rules/recover-piece-before.png" alt="自陣の駒を回収できる候補表示が出ている画像">
+          <p>自陣上の自駒だけ回収できます。王は回収できません。</p>
+        </article>
+        <article class="card">
+          <h3>展開図を回収する</h3>
+          <img src="assets/rules/recover-fragment-before.png" alt="展開図回収の候補表示が出ている画像">
+          <p>手札 3 枚未満で、駒がなく、さらに上に別の展開図が重なっていないときだけ回収できます。</p>
+        </article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

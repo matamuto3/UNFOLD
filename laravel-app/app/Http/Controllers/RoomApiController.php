@@ -15,6 +15,7 @@ class RoomApiController extends Controller
     public function handle(Request $request): JsonResponse
     {
         $dataFile = storage_path('app/private/rooms.json');
+        $siteDataFile = storage_path('app/private/site.json');
         $action = (string) $request->query('action', '');
         $roomId = strtoupper((string) $request->query('roomId', ''));
 
@@ -23,6 +24,55 @@ class RoomApiController extends Controller
             $body = $request->json()->all();
             if (!is_array($body)) {
                 $body = [];
+            }
+
+            if ($action === 'site.visit') {
+                $site = $this->loadSiteData($siteDataFile);
+                $today = $this->siteDateKey();
+                $site['accessCount'] = (int) ($site['accessCount'] ?? 0) + 1;
+                $site['dailyAccess'] = is_array($site['dailyAccess'] ?? null) ? $site['dailyAccess'] : [];
+                $site['dailyAccess'][$today] = (int) ($site['dailyAccess'][$today] ?? 0) + 1;
+                $site['updatedAt'] = $this->nowIso();
+                $this->saveSiteData($siteDataFile, $site);
+
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'stats' => $this->sanitizeSiteStats($site),
+                    'feedback' => $this->sanitizeFeedbackList($site),
+                ]);
+            }
+
+            if ($action === 'site.stats' || $action === 'feedback.list') {
+                $site = $this->loadSiteData($siteDataFile);
+
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'stats' => $this->sanitizeSiteStats($site),
+                    'feedback' => $this->sanitizeFeedbackList($site),
+                ]);
+            }
+
+            if ($action === 'feedback.post') {
+                $message = trim((string) ($body['message'] ?? ''));
+                if ($message === '') {
+                    throw new RuntimeException('Message is required');
+                }
+
+                $site = $this->loadSiteData($siteDataFile);
+                $site['feedback'][] = [
+                    'id' => bin2hex(random_bytes(6)),
+                    'message' => mb_substr($message, 0, 400),
+                    'createdAt' => $this->nowIso(),
+                ];
+                $site['feedback'] = array_slice($site['feedback'], -100);
+                $site['updatedAt'] = $this->nowIso();
+                $this->saveSiteData($siteDataFile, $site);
+
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'stats' => $this->sanitizeSiteStats($site),
+                    'feedback' => $this->sanitizeFeedbackList($site),
+                ]);
             }
 
             if ($action === 'room.create') {
@@ -44,6 +94,7 @@ class RoomApiController extends Controller
                     'hasPassword' => $password !== '',
                     'passwordHash' => $password !== '' ? password_hash($password, PASSWORD_DEFAULT) : null,
                     'adminKey' => $adminKey,
+                    'ownerPlayerId' => $playerId,
                     'version' => 1,
                     'createdAt' => $this->nowIso(),
                     'updatedAt' => $this->nowIso(),
@@ -103,7 +154,7 @@ class RoomApiController extends Controller
                 $room['players']['P2']['id'] = $playerId;
                 $room['players']['P2']['name'] = (string) ($body['name'] ?? 'Player 2');
                 $room['players']['P2']['lastSeenAt'] = $this->nowIso();
-                $room['status'] = 'playing';
+                $room['status'] = 'ready';
                 $room['waitRequest'] = null;
                 $room['version'] = (int) $room['version'] + 1;
                 $room = $this->touchRoom($room);
@@ -111,6 +162,41 @@ class RoomApiController extends Controller
                 $this->saveRooms($dataFile, $rooms);
 
                 return $this->jsonResponse(['ok' => true, 'room' => $this->sanitizeRoom($room, true), 'playerId' => $playerId, 'side' => 'P2']);
+            }
+
+            if ($action === 'room.start') {
+                $startRoomId = strtoupper((string) ($body['roomId'] ?? $roomId));
+                $room = $this->assertRoomExists($rooms, $startRoomId);
+                $playerId = (string) ($body['playerId'] ?? '');
+                $side = $this->assertPlayer($room, $playerId);
+                if ($this->getOwnerPlayerId($room) !== $playerId) {
+                    throw new RuntimeException('Only the host can start the match');
+                }
+                if (empty($room['players']['P2']['id'])) {
+                    throw new RuntimeException('Another player has not joined yet');
+                }
+                if (($room['status'] ?? 'waiting') === 'playing') {
+                    throw new RuntimeException('The match has already started');
+                }
+
+                if (random_int(0, 1) === 1) {
+                    $first = $room['players']['P1'];
+                    $room['players']['P1'] = $room['players']['P2'];
+                    $room['players']['P2'] = $first;
+                }
+
+                $room['status'] = 'playing';
+                $room['waitRequest'] = null;
+                $room['version'] = (int) $room['version'] + 1;
+                $room = $this->touchRoom($room);
+                $rooms[$startRoomId] = $room;
+                $this->saveRooms($dataFile, $rooms);
+
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'room' => $this->sanitizeRoom($room, true),
+                    'side' => $this->findPlayerSide($room, $playerId),
+                ]);
             }
 
             if ($action === 'room.get') {
@@ -130,6 +216,9 @@ class RoomApiController extends Controller
                 $side = $this->assertPlayer($room, $playerId);
                 if ((int) ($body['version'] ?? -1) !== (int) $room['version']) {
                     throw new RuntimeException('Board version mismatch. Please sync again.');
+                }
+                if (($room['status'] ?? 'waiting') !== 'playing') {
+                    throw new RuntimeException('The match has not started yet');
                 }
                 if (($room['gameState']['currentPlayer'] ?? '') !== $side) {
                     throw new RuntimeException('It is not your turn');
@@ -156,7 +245,7 @@ class RoomApiController extends Controller
                 $side = $this->assertPlayer($room, $playerId);
                 $hasStarted = ((int) ($room['gameState']['turnNumber'] ?? 1) > 1) || !empty($room['gameState']['actionLog']);
 
-                if ($side === 'P1') {
+                if ($this->getOwnerPlayerId($room) === $playerId) {
                     unset($rooms[$leaveRoomId]);
                     $this->saveRooms($dataFile, $rooms);
 
@@ -196,7 +285,7 @@ class RoomApiController extends Controller
                 $room = $this->assertRoomExists($rooms, $disbandRoomId);
                 $playerId = (string) ($body['playerId'] ?? '');
                 $side = $this->assertPlayer($room, $playerId);
-                if ($side !== 'P1') {
+                if ($this->getOwnerPlayerId($room) !== $playerId) {
                     throw new RuntimeException('Only the host can disband the room');
                 }
                 unset($rooms[$disbandRoomId]);
@@ -291,6 +380,85 @@ class RoomApiController extends Controller
             [],
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
         );
+    }
+
+    private function loadSiteData(string $dataFile): array
+    {
+        $default = [
+            'accessCount' => 0,
+            'dailyAccess' => [],
+            'feedback' => [],
+            'updatedAt' => $this->nowIso(),
+        ];
+        if (!file_exists($dataFile)) {
+            return $default;
+        }
+
+        $raw = file_get_contents($dataFile);
+        if ($raw === false || trim($raw) === '') {
+            return $default;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return $default;
+        }
+
+        $decoded['accessCount'] = (int) ($decoded['accessCount'] ?? 0);
+        $decoded['dailyAccess'] = is_array($decoded['dailyAccess'] ?? null) ? $decoded['dailyAccess'] : [];
+        $decoded['feedback'] = is_array($decoded['feedback'] ?? null) ? $decoded['feedback'] : [];
+        $decoded['updatedAt'] = (string) ($decoded['updatedAt'] ?? $default['updatedAt']);
+
+        return $decoded;
+    }
+
+    private function saveSiteData(string $dataFile, array $site): void
+    {
+        $dir = dirname($dataFile);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+
+        file_put_contents(
+            $dataFile,
+            json_encode($site, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT),
+            LOCK_EX
+        );
+    }
+
+    private function sanitizeSiteStats(array $site): array
+    {
+        $today = $this->siteDateKey();
+        $yesterday = $this->siteDateKey('-1 day');
+        $dailyAccess = is_array($site['dailyAccess'] ?? null) ? $site['dailyAccess'] : [];
+
+        return [
+            'accessCount' => (int) ($site['accessCount'] ?? 0),
+            'todayAccess' => (int) ($dailyAccess[$today] ?? 0),
+            'yesterdayAccess' => (int) ($dailyAccess[$yesterday] ?? 0),
+            'updatedAt' => (string) ($site['updatedAt'] ?? ''),
+        ];
+    }
+
+    private function siteDateKey(string $modify = 'now'): string
+    {
+        $date = new \DateTimeImmutable($modify, new \DateTimeZone('Asia/Tokyo'));
+        return $date->format('Y-m-d');
+    }
+
+    private function sanitizeFeedbackList(array $site): array
+    {
+        $feedback = is_array($site['feedback'] ?? null) ? $site['feedback'] : [];
+        $feedback = array_slice($feedback, -30);
+        $feedback = array_reverse($feedback);
+
+        return array_values(array_map(function (array $item): array {
+            return [
+                'id' => (string) ($item['id'] ?? ''),
+                'message' => mb_substr((string) ($item['message'] ?? ''), 0, 400),
+                'createdAt' => (string) ($item['createdAt'] ?? ''),
+            ];
+        }, $feedback));
     }
 
     private function loadRooms(string $dataFile): array
@@ -424,6 +592,23 @@ class RoomApiController extends Controller
         return $this->touchRoom($room);
     }
 
+    private function findPlayerSide(array $room, string $playerId): ?string
+    {
+        foreach (['P1', 'P2'] as $side) {
+            if (($room['players'][$side]['id'] ?? null) === $playerId) {
+                return $side;
+            }
+        }
+
+        return null;
+    }
+
+    private function getOwnerPlayerId(array $room): ?string
+    {
+        $ownerPlayerId = $room['ownerPlayerId'] ?? ($room['players']['P1']['id'] ?? null);
+        return is_string($ownerPlayerId) && $ownerPlayerId !== '' ? $ownerPlayerId : null;
+    }
+
     private function roomSummary(array $room): array
     {
         $updatedAt = (string) ($room['updatedAt'] ?? $this->nowIso());
@@ -454,6 +639,7 @@ class RoomApiController extends Controller
             'createdAt' => (string) ($room['createdAt'] ?? $this->nowIso()),
             'updatedAt' => (string) ($room['updatedAt'] ?? $this->nowIso()),
             'status' => (string) ($room['status'] ?? 'waiting'),
+            'ownerPlayerId' => (string) ($this->getOwnerPlayerId($room) ?? ''),
             'players' => $room['players'] ?? [],
             'waitRequest' => $room['waitRequest'] ?? null,
         ];

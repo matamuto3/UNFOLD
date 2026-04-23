@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>意見掲示板 | UNFOLD</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="feedback-page">
+  <main class="app feedback-app">
+    <section class="hero card feedback-hero">
+      <div>
+        <p class="eyebrow">UNFOLD FEEDBACK</p>
+        <h1>意見掲示板</h1>
+        <p class="lead">
+          名前を出さずに、感想・改善案・気になった点を投稿できます。ゲーム制作の調整材料として確認します。
+        </p>
+        <div class="hero-actions">
+          <a class="button-link" href="index.html">ロビーへ戻る</a>
+          <button id="refreshFeedbackBtn" type="button">掲示板を更新</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card site-info-card" aria-label="意見掲示板">
+      <div class="site-count-box">
+        <p class="label">アクセスカウンタ</p>
+        <p class="site-count"><span id="accessCountLabel">-</span><span class="site-count-unit"> visits</span></p>
+        <p id="accessUpdatedLabel" class="scene-note">読み込み中...</p>
+      </div>
+      <div class="feedback-box">
+        <p class="label">投稿する</p>
+        <p class="scene-note">400文字まで投稿できます。個人情報や相手を傷つける内容は書かないでください。</p>
+        <textarea id="feedbackInput" maxlength="400" placeholder="意見・感想を書く"></textarea>
+        <div class="panel-actions">
+          <button id="submitFeedbackBtn" class="primary" type="button">投稿する</button>
+        </div>
+        <p id="feedbackStatus" class="scene-note"></p>
+        <div id="feedbackList" class="feedback-list" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="feedback.js?v=20260417a"></script>
+</body>
+</html>

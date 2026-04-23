@@ -203,7 +203,6 @@
   var STARTER_DECK = [
     { fragmentType: "net01", pieceType: "chaosBeast" },
     { fragmentType: "net02", pieceType: "guard" },
-    { fragmentType: "net02m", pieceType: "guard" },
     { fragmentType: "net03", pieceType: "barrier" },
     { fragmentType: "net03m", pieceType: "barrier" },
     { fragmentType: "net04", pieceType: "charger" },
@@ -221,6 +220,12 @@
     { fragmentType: "net11", pieceType: "decoy" },
     { fragmentType: "net11m", pieceType: "decoy" }
   ];
+  var SHOGI_STARTER_DECK = STARTER_DECK.map(function (card) {
+    if (card.pieceType === "realmKnight") {
+      return { fragmentType: card.fragmentType, pieceType: "guard" };
+    }
+    return { fragmentType: card.fragmentType, pieceType: card.pieceType };
+  });
   var BOARD_ROWS = 9;
   var BOARD_COLS = 15;
   var HAND_LIMIT = 3;
@@ -254,7 +259,11 @@
     p1Panel: document.getElementById("p1Panel"),
     p2Panel: document.getElementById("p2Panel"),
     newGameBtn: document.getElementById("newGameBtn"),
+    newGameShogiBtn: document.getElementById("newGameShogiBtn"),
+    npcGameBtn: document.getElementById("npcGameBtn"),
+    npcGameShogiBtn: document.getElementById("npcGameShogiBtn"),
     backToLobbyBtn: document.getElementById("backToLobbyBtn"),
+    startMatchBtn: document.getElementById("startMatchBtn"),
     practiceRestartBtn: document.getElementById("practiceRestartBtn"),
     practiceModeBtn: document.getElementById("practiceModeBtn"),
       runTestsBtn: document.getElementById("runTestsBtn"),
@@ -290,12 +299,26 @@
     deleteRoomByKeyBtn: document.getElementById("deleteRoomByKeyBtn"),
     lobbyNotice: document.getElementById("lobbyNotice"),
     roomList: document.getElementById("roomList"),
+    accessCountLabel: document.getElementById("accessCountLabel"),
+    accessTotalLabel: document.getElementById("accessTotalLabel"),
+    accessTodayLabel: document.getElementById("accessTodayLabel"),
+    accessYesterdayLabel: document.getElementById("accessYesterdayLabel"),
+    accessCountSubtleLabel: document.getElementById("accessCountSubtleLabel"),
+    accessUpdatedLabel: document.getElementById("accessUpdatedLabel"),
+    feedbackInput: document.getElementById("feedbackInput"),
+    submitFeedbackBtn: document.getElementById("submitFeedbackBtn"),
+    refreshFeedbackBtn: document.getElementById("refreshFeedbackBtn"),
+    feedbackStatus: document.getElementById("feedbackStatus"),
+    feedbackList: document.getElementById("feedbackList"),
     leaveRoomBtn: document.getElementById("leaveRoomBtn"),
     disbandRoomBtn: document.getElementById("disbandRoomBtn"),
     onlineStatus: document.getElementById("onlineStatus"),
       onlineSideLabel: document.getElementById("onlineSideLabel"),
       matchRoomCode: document.getElementById("matchRoomCode"),
+      matchPlayers: document.getElementById("matchPlayers"),
       matchAdminKey: document.getElementById("matchAdminKey"),
+      p1NameLabel: document.getElementById("p1NameLabel"),
+      p2NameLabel: document.getElementById("p2NameLabel"),
       historyCard: document.getElementById("historyCard"),
       historyTitle: document.getElementById("historyTitle"),
       historyBoard: document.getElementById("historyBoard"),
@@ -308,6 +331,12 @@
     state: null,
     screen: "lobby",
     practiceMode: false,
+    npc: {
+      enabled: false,
+      side: "P2",
+      thinking: false,
+      timer: null
+    },
     ruleMode: "original",
     lobbyRooms: [],
     roomAdminKeys: {},
@@ -317,6 +346,7 @@
         roomName: null,
         playerId: null,
         side: null,
+        room: null,
         roomStatus: "offline",
         waitRequest: null,
         version: 0,
@@ -340,9 +370,12 @@
   };
 
   function createGame(mode) {
+    var ruleMode = mode || uiState.ruleMode || "original";
+    var supportPiece = ruleMode === "shogi" ? "flanker" : "realmKnight";
+    var guardPiece = "guard";
     var state = {
       board: [],
-      ruleMode: mode || uiState.ruleMode || "original",
+      ruleMode: ruleMode,
       currentPlayer: "P1",
       winner: null,
       winReason: null,
@@ -351,8 +384,8 @@
       history: [],
       placements: [],
       players: {
-        P1: createPlayer("P1", mode || uiState.ruleMode || "original"),
-        P2: createPlayer("P2", mode || uiState.ruleMode || "original")
+        P1: createPlayer("P1", ruleMode),
+        P2: createPlayer("P2", ruleMode)
       }
     };
 
@@ -376,8 +409,10 @@
     seedBase(state, "P2");
     addPiece(state, "P1", "king", 4, 1);
     addPiece(state, "P2", "king", 4, 13);
-    addPiece(state, "P1", "realmKnight", 4, 2);
-    addPiece(state, "P2", "realmKnight", 4, 12);
+    addPiece(state, "P1", supportPiece, 3, 2);
+    addPiece(state, "P2", supportPiece, 5, 12);
+    addPiece(state, "P1", guardPiece, 5, 2);
+    addPiece(state, "P2", guardPiece, 3, 12);
     fillHand(state, "P1");
     fillHand(state, "P2");
     recordHistorySnapshot(state, "初期局面");
@@ -448,6 +483,16 @@
     return els.onlineNameInput.value.trim();
   }
 
+  function restoreStoredOnlineName() {
+    if (!els.onlineNameInput) {
+      return;
+    }
+    var savedName = loadOnlineName();
+    if (savedName) {
+      els.onlineNameInput.value = savedName;
+    }
+  }
+
   function getOnlineRoomName() {
     if (!els.onlineRoomNameInput || !els.onlineRoomNameInput.value.trim()) {
       return "";
@@ -469,6 +514,53 @@
 
   function saveRoomAdminKeys() {
     window.localStorage.setItem("unfoldRoomAdminKeys", JSON.stringify(uiState.roomAdminKeys));
+  }
+
+  function saveOnlineName(name) {
+    try {
+      window.localStorage.setItem("unfoldOnlineName", name || "");
+    } catch (error) {
+      // ignore storage errors
+    }
+  }
+
+  function loadOnlineName() {
+    try {
+      return window.localStorage.getItem("unfoldOnlineName") || "";
+    } catch (error) {
+      return "";
+    }
+  }
+
+  function saveOnlineSession() {
+    if (!isOnlineGame() || !uiState.online.roomId || !uiState.online.playerId) {
+      return;
+    }
+    try {
+      window.localStorage.setItem("unfoldOnlineSession", JSON.stringify({
+        roomId: uiState.online.roomId,
+        playerId: uiState.online.playerId,
+        playerName: getOnlinePlayerName()
+      }));
+    } catch (error) {
+      // ignore storage errors
+    }
+  }
+
+  function loadOnlineSession() {
+    try {
+      return JSON.parse(window.localStorage.getItem("unfoldOnlineSession") || "null");
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function clearOnlineSession() {
+    try {
+      window.localStorage.removeItem("unfoldOnlineSession");
+    } catch (error) {
+      // ignore storage errors
+    }
   }
 
   function setLobbyNotice(text) {
@@ -495,7 +587,7 @@
   }
 
   function getStarterDeck(mode) {
-    return STARTER_DECK;
+    return mode === "shogi" ? SHOGI_STARTER_DECK : STARTER_DECK;
   }
 
   function getMovementRules() {
@@ -630,7 +722,105 @@
   }
 
   function getRoomStatusLabel(status) {
-    return status === "playing" ? "対戦中" : "募集中";
+    if (status === "playing") {
+      return "対戦中";
+    }
+    if (status === "ready") {
+      return "開始待ち";
+    }
+    return "募集中";
+  }
+
+  function resolveRoomSide(room, playerId) {
+    if (!room || !room.players || !playerId) {
+      return null;
+    }
+    if (room.players.P1 && room.players.P1.id === playerId) {
+      return "P1";
+    }
+    if (room.players.P2 && room.players.P2.id === playerId) {
+      return "P2";
+    }
+    return null;
+  }
+
+  function isOnlineMatchStarted() {
+    return !isOnlineGame() || uiState.online.roomStatus === "playing";
+  }
+
+  function isOnlineRoomOwner() {
+    return !!(isOnlineGame()
+      && uiState.online.room
+      && uiState.online.playerId
+      && uiState.online.room.ownerPlayerId === uiState.online.playerId);
+  }
+
+  function isNpcGame() {
+    return !!(uiState.npc && uiState.npc.enabled);
+  }
+
+  function isNpcSide(side) {
+    return isNpcGame() && side === uiState.npc.side;
+  }
+
+  function isNpcTurn() {
+    return isNpcSide(uiState.state.currentPlayer);
+  }
+
+  function isHumanControlledPlayer(side) {
+    return !isNpcSide(side);
+  }
+
+  function clearNpcTurnTimer() {
+    if (uiState.npc && uiState.npc.timer) {
+      window.clearTimeout(uiState.npc.timer);
+      uiState.npc.timer = null;
+    }
+  }
+
+  function resetNpcState() {
+    clearNpcTurnTimer();
+    uiState.npc.enabled = false;
+    uiState.npc.side = "P2";
+    uiState.npc.thinking = false;
+  }
+
+  function shouldLockHumanActions() {
+    return (isOnlineGame() && !isOnlineMatchStarted()) || isNpcTurn() || !!uiState.npc.thinking;
+  }
+
+  function getDisplayedPlayerName(side) {
+    if (isNpcGame() && side === "P2") {
+      return "NPC";
+    }
+    if (isNpcGame() && side === "P1") {
+      return "あなた";
+    }
+    if (isOnlineGame()) {
+      var room = uiState.online.room;
+      if (room && room.players && room.players[side] && room.players[side].name) {
+        return room.players[side].name;
+      }
+    }
+    return side === "P1" ? "プレイヤー1" : "プレイヤー2";
+  }
+
+  function getMatchPlayersText() {
+    if (isNpcGame()) {
+      return getDisplayedPlayerName("P1") + " / " + getDisplayedPlayerName("P2");
+    }
+    if (!isOnlineGame()) {
+      return "-";
+    }
+    var room = uiState.online.room;
+    if (!room || !room.players) {
+      return "-";
+    }
+    var p1Name = room.players.P1 && room.players.P1.name ? room.players.P1.name : "未参加";
+    var p2Name = room.players.P2 && room.players.P2.id
+      ? room.players.P2.name
+      : "募集中";
+    return p1Name + " / " + p2Name;
   }
 
   function formatExpiryText(expiresAt) {
@@ -792,6 +982,16 @@
     if (!els.pendingPieceBanner) {
       return;
     }
+    els.pendingPieceBanner.classList.remove("is-thinking");
+    if (uiState.npc.thinking) {
+      els.pendingPieceBanner.hidden = false;
+      els.pendingPieceBanner.classList.add("is-thinking");
+      els.pendingPieceBanner.innerHTML =
+        "<strong>NPC 思考中</strong>" +
+        "<span class=\"pending-piece-chip\">...</span>" +
+        "<span>次の一手を読んでいます。少し待ってください。</span>";
+      return;
+    }
     if (uiState.pendingFragmentPiece) {
       els.pendingPieceBanner.hidden = false;
       els.pendingPieceBanner.innerHTML =
@@ -905,6 +1105,7 @@
 
   function renderSide(player, reserveEl, handEl, deckEl) {
     var playerState = uiState.state.players[player];
+    var isActionLocked = shouldLockHumanActions();
     reserveEl.innerHTML = "";
     handEl.innerHTML = "";
     deckEl.textContent = playerState.deck.length + "\u679A";
@@ -918,7 +1119,7 @@
         button.classList.add("active");
       }
       button.innerHTML = "<strong>" + getPieceLabel(pieceType) + "</strong><span>\u6301\u3061\u99D2</span><span class=\"choice-count\">x" + playerState.reserve[pieceType] + "</span>";
-      button.disabled = player !== uiState.state.currentPlayer;
+      button.disabled = player !== uiState.state.currentPlayer || isActionLocked || !isHumanControlledPlayer(player);
       button.addEventListener("click", function () {
         uiState.selection = { type: "reserve", player: player, pieceType: pieceType };
         uiState.pendingAnchor = null;
@@ -945,7 +1146,7 @@
       button.innerHTML = "<strong>" + FRAGMENT_LIBRARY[card.fragmentType].label + "</strong>" +
         "<span class=\"choice-subtitle\">\u5BFE\u5FDC\u99D2: " + getPieceLabel(card.pieceType) + "</span>" +
         "<span class=\"fragment-preview\">" + getFragmentPreviewText(card.fragmentType) + "</span>";
-      button.disabled = player !== uiState.state.currentPlayer;
+      button.disabled = player !== uiState.state.currentPlayer || isActionLocked || !isHumanControlledPlayer(player);
       button.addEventListener("click", function () {
         uiState.selection = { type: "fragment", player: player, handIndex: handIndex, card: card };
         uiState.pendingAnchor = null;
@@ -1122,7 +1323,13 @@
     var statusText = "オンライン対戦ロビー (" + modeText + ")";
     var matchTitle = "オンライン対戦";
     var matchMeta = "部屋を作るか、部屋一覧から参加してください。";
-    if (!isOnlineGame() && uiState.screen === "game" && uiState.practiceMode) {
+    if (!isOnlineGame() && uiState.screen === "game" && isNpcGame()) {
+      statusText = "対NPC戦 (" + modeText + ")";
+      matchTitle = "対NPC戦";
+      matchMeta = uiState.npc.thinking
+        ? "NPC が次の一手を考えています。"
+        : "あなたが先手、NPC が後手です。ローカルで練習対局できます。";
+    } else if (!isOnlineGame() && uiState.screen === "game" && uiState.practiceMode) {
       statusText = "ひとりテストプレイ (" + modeText + ")";
       matchTitle = "ひとりテストプレイ";
       matchMeta = "1人で盤面や駒挙動を確認するための練習用ルームです。";
@@ -1134,6 +1341,11 @@
       if (uiState.online.roomStatus === "waiting") {
         statusText += " / 相手待ち (" + modeText + ")";
         matchMeta += " / 相手待ち";
+      } else if (uiState.online.roomStatus === "ready") {
+        statusText += " / 開始待ち (" + modeText + ")";
+        matchMeta += isOnlineRoomOwner()
+          ? " / 参加者がそろいました。対戦を始めるボタンで開始してください。"
+          : " / 参加者がそろいました。ホストが開始するまでお待ちください。";
       } else if (uiState.online.roomStatus === "playing") {
         statusText += " / 対戦中 (" + modeText + ")";
       } else {
@@ -1145,6 +1357,9 @@
     }
     if (els.matchRoomCode) {
       els.matchRoomCode.textContent = uiState.online.roomId || "-";
+    }
+    if (els.matchPlayers) {
+      els.matchPlayers.textContent = getMatchPlayersText();
     }
     if (els.matchAdminKey) {
       els.matchAdminKey.textContent = uiState.online.roomId && uiState.roomAdminKeys[uiState.online.roomId]
@@ -1160,19 +1375,37 @@
     if (els.matchMeta) {
       els.matchMeta.textContent = matchMeta;
     }
+    if (els.p1NameLabel) {
+      els.p1NameLabel.textContent = getDisplayedPlayerName("P1");
+    }
+    if (els.p2NameLabel) {
+      els.p2NameLabel.textContent = getDisplayedPlayerName("P2");
+    }
     if (els.onlineModeSelect) {
       els.onlineModeSelect.value = getCurrentRuleMode();
       els.onlineModeSelect.disabled = isOnlineGame();
     }
     if (els.newGameBtn) {
-      els.newGameBtn.textContent = "ひとりテストプレイを始める（" + modeText + "）";
-      els.newGameBtn.title = "現在の駒モード: " + modeText;
+      els.newGameBtn.disabled = isOnlineGame();
+    }
+    if (els.newGameShogiBtn) {
+      els.newGameShogiBtn.disabled = isOnlineGame();
+    }
+    if (els.npcGameBtn) {
+      els.npcGameBtn.disabled = isOnlineGame();
+    }
+    if (els.npcGameShogiBtn) {
+      els.npcGameShogiBtn.disabled = isOnlineGame();
     }
     if (els.practiceRestartBtn) {
-      els.practiceRestartBtn.hidden = !(uiState.screen === "game" && uiState.practiceMode && !isOnlineGame());
+      var showLocalRestart = uiState.screen === "game" && !isOnlineGame() && (uiState.practiceMode || isNpcGame());
+      els.practiceRestartBtn.hidden = !showLocalRestart;
+      if (showLocalRestart) {
+        els.practiceRestartBtn.textContent = isNpcGame() ? "NPC 戦を新しく始める" : "新しく始める";
+      }
     }
     if (els.practiceModeBtn) {
-      els.practiceModeBtn.hidden = !(uiState.screen === "game" && uiState.practiceMode && !isOnlineGame());
+      els.practiceModeBtn.hidden = !(uiState.screen === "game" && !isOnlineGame() && (uiState.practiceMode || isNpcGame()));
       els.practiceModeBtn.textContent = "駒タイプ変更（" + modeText + "）";
       els.practiceModeBtn.title = "現在の駒モード: " + modeText;
     }
@@ -1193,8 +1426,29 @@
       els.leaveRoomBtn.hidden = !isOnlineGame();
     }
     if (els.disbandRoomBtn) {
-      els.disbandRoomBtn.disabled = !(isOnlineGame() && uiState.online.side === "P1");
-      els.disbandRoomBtn.hidden = !(isOnlineGame() && uiState.online.side === "P1");
+      els.disbandRoomBtn.disabled = !isOnlineRoomOwner();
+      els.disbandRoomBtn.hidden = !isOnlineRoomOwner();
+    }
+    if (els.startMatchBtn) {
+      var showStartMatch = isOnlineGame() && uiState.online.roomStatus !== "playing";
+      var canStartMatch = showStartMatch
+        && isOnlineRoomOwner()
+        && uiState.online.roomStatus === "ready";
+      els.startMatchBtn.hidden = !showStartMatch;
+      els.startMatchBtn.disabled = !canStartMatch;
+      if (showStartMatch) {
+        if (uiState.online.roomStatus === "waiting") {
+          els.startMatchBtn.textContent = isOnlineRoomOwner()
+            ? "対戦を始める（まだそろっていません）"
+            : "対戦開始待ち（まだそろっていません）";
+        } else if (uiState.online.roomStatus === "ready") {
+          els.startMatchBtn.textContent = isOnlineRoomOwner()
+            ? "対戦を始める"
+            : "対戦開始待ち";
+        } else {
+          els.startMatchBtn.textContent = "対戦を始める";
+        }
+      }
     }
     if (els.onlineRoomInput) {
       els.onlineRoomInput.disabled = isOnlineGame();
@@ -1208,16 +1462,18 @@
     if (els.waitBtn) {
       els.waitBtn.hidden = true;
       els.waitBtn.disabled = isOnlineGame()
-        ? !canUseWait() || !!uiState.online.waitRequest || uiState.state.currentPlayer !== uiState.online.side
+        ? !isOnlineMatchStarted() || !canUseWait() || !!uiState.online.waitRequest || uiState.state.currentPlayer !== uiState.online.side
         : !canUseWait();
     }
     if (els.p1WaitBtn) {
       els.p1WaitBtn.disabled = uiState.state.currentPlayer !== "P1"
-        || (isOnlineGame() ? (!canUseWait() || !!uiState.online.waitRequest || uiState.online.side !== "P1") : !canUseWait());
+        || !isHumanControlledPlayer("P1")
+        || (isOnlineGame() ? (!isOnlineMatchStarted() || !canUseWait() || !!uiState.online.waitRequest || uiState.online.side !== "P1") : !canUseWait());
     }
     if (els.p2WaitBtn) {
       els.p2WaitBtn.disabled = uiState.state.currentPlayer !== "P2"
-        || (isOnlineGame() ? (!canUseWait() || !!uiState.online.waitRequest || uiState.online.side !== "P2") : !canUseWait());
+        || !isHumanControlledPlayer("P2")
+        || (isOnlineGame() ? (!isOnlineMatchStarted() || !canUseWait() || !!uiState.online.waitRequest || uiState.online.side !== "P2") : !canUseWait());
     }
     if (els.waitApproveBtn) {
       els.waitApproveBtn.hidden = !(isOnlineGame() && uiState.online.waitRequest && uiState.online.waitRequest.requestedTo === uiState.online.side);
@@ -1225,6 +1481,122 @@
       if (els.waitRejectBtn) {
         els.waitRejectBtn.hidden = !(isOnlineGame() && uiState.online.waitRequest && uiState.online.waitRequest.requestedTo === uiState.online.side);
       }
+  }
+
+  function formatSiteDate(value) {
+    if (!value) {
+      return "";
+    }
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+    return date.toLocaleString("ja-JP");
+  }
+
+  function renderFeedbackList(items) {
+    if (!els.feedbackList) {
+      return;
+    }
+    els.feedbackList.innerHTML = "";
+    if (!items || !items.length) {
+      var empty = document.createElement("p");
+      empty.className = "feedback-empty";
+      empty.textContent = "まだ投稿はありません。最初の感想を書けます。";
+      els.feedbackList.appendChild(empty);
+      return;
+    }
+    items.forEach(function (item) {
+      var article = document.createElement("article");
+      article.className = "feedback-item";
+      var body = document.createElement("p");
+      body.textContent = item.message || "";
+      var time = document.createElement("time");
+      time.textContent = formatSiteDate(item.createdAt);
+      article.appendChild(body);
+      article.appendChild(time);
+      els.feedbackList.appendChild(article);
+    });
+  }
+
+  function renderSiteInfo(data) {
+    var stats = data && data.stats ? data.stats : {};
+    if (els.accessCountLabel) {
+      els.accessCountLabel.textContent = String(stats.accessCount || 0);
+    }
+    if (els.accessTotalLabel) {
+      els.accessTotalLabel.textContent = String(stats.accessCount || 0);
+    }
+    if (els.accessTodayLabel) {
+      els.accessTodayLabel.textContent = String(stats.todayAccess || 0);
+    }
+    if (els.accessYesterdayLabel) {
+      els.accessYesterdayLabel.textContent = String(stats.yesterdayAccess || 0);
+    }
+    if (els.accessCountSubtleLabel) {
+      els.accessCountSubtleLabel.textContent = String(stats.accessCount || 0);
+    }
+    if (els.accessUpdatedLabel) {
+      els.accessUpdatedLabel.textContent = stats.updatedAt ? "最終更新: " + formatSiteDate(stats.updatedAt) : "";
+    }
+    renderFeedbackList(data && data.feedback ? data.feedback : []);
+  }
+
+  function loadSiteInfo(recordVisit) {
+    var action = recordVisit ? "site.visit" : "site.stats";
+    return apiRequest(buildApiUrl(action), {
+      method: "GET"
+    }).then(function (data) {
+      renderSiteInfo(data);
+      if (els.feedbackStatus && !recordVisit) {
+        els.feedbackStatus.textContent = "掲示板を更新しました。";
+      }
+    }).catch(function (error) {
+      if (els.feedbackStatus) {
+        els.feedbackStatus.textContent = "掲示板の取得に失敗しました: " + error.message;
+      }
+      if (els.accessUpdatedLabel) {
+        els.accessUpdatedLabel.textContent = "アクセス数を取得できませんでした。";
+      }
+    });
+  }
+
+  function submitFeedback() {
+    if (!els.feedbackInput) {
+      return Promise.resolve();
+    }
+    var message = els.feedbackInput.value.trim();
+    if (!message) {
+      if (els.feedbackStatus) {
+        els.feedbackStatus.textContent = "投稿内容を入力してください。";
+      }
+      return Promise.resolve();
+    }
+    if (els.submitFeedbackBtn) {
+      els.submitFeedbackBtn.disabled = true;
+    }
+    if (els.feedbackStatus) {
+      els.feedbackStatus.textContent = "投稿中...";
+    }
+    return apiRequest(buildApiUrl("feedback.post"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: message })
+    }).then(function (data) {
+      els.feedbackInput.value = "";
+      if (els.feedbackStatus) {
+        els.feedbackStatus.textContent = "投稿しました。";
+      }
+      renderSiteInfo(data);
+    }).catch(function (error) {
+      if (els.feedbackStatus) {
+        els.feedbackStatus.textContent = "投稿に失敗しました: " + error.message;
+      }
+    }).finally(function () {
+      if (els.submitFeedbackBtn) {
+        els.submitFeedbackBtn.disabled = false;
+      }
+    });
   }
 
   function refreshRoomList(options) {
@@ -1385,6 +1757,7 @@
       els.p1MulliganBtn,
       els.p1RecoverPieceBtn,
       els.p1RecoverFragmentBtn,
+      "P1",
       isP1Turn,
       recoverPieceActive,
       recoverFragmentActive
@@ -1393,29 +1766,35 @@
       els.p2MulliganBtn,
       els.p2RecoverPieceBtn,
       els.p2RecoverFragmentBtn,
+      "P2",
       isP2Turn,
       recoverPieceActive,
       recoverFragmentActive
     );
   }
 
-  function syncPlayerActionButtons(mulliganBtn, recoverPieceBtn, recoverFragmentBtn, isCurrentPlayer, recoverPieceActive, recoverFragmentActive) {
+  function syncPlayerActionButtons(mulliganBtn, recoverPieceBtn, recoverFragmentBtn, player, isCurrentPlayer, recoverPieceActive, recoverFragmentActive) {
+    var canAct = isCurrentPlayer && isOnlineMatchStarted() && isHumanControlledPlayer(player) && !uiState.npc.thinking;
     if (mulliganBtn) {
-      mulliganBtn.disabled = !isCurrentPlayer || !canMulligan();
+      mulliganBtn.disabled = !canAct || !canMulligan();
       mulliganBtn.classList.toggle("active-tool", false);
     }
     if (recoverPieceBtn) {
-      recoverPieceBtn.disabled = !isCurrentPlayer || getRecoverablePieces().length === 0;
-      recoverPieceBtn.classList.toggle("active-tool", isCurrentPlayer && recoverPieceActive);
+      recoverPieceBtn.disabled = !canAct || getRecoverablePieces().length === 0;
+      recoverPieceBtn.classList.toggle("active-tool", canAct && recoverPieceActive);
     }
     if (recoverFragmentBtn) {
-      recoverFragmentBtn.disabled = !isCurrentPlayer || getRecoverablePlacements().length === 0;
-      recoverFragmentBtn.classList.toggle("active-tool", isCurrentPlayer && recoverFragmentActive);
+      recoverFragmentBtn.disabled = !canAct || getRecoverablePlacements().length === 0;
+      recoverFragmentBtn.classList.toggle("active-tool", canAct && recoverFragmentActive);
     }
   }
 
   function canStartUtilityAction() {
-    return !uiState.state.winner && !uiState.pendingFragmentPiece && (!uiState.selection || uiState.selection.type === "recoverPiece" || uiState.selection.type === "recoverFragment");
+    return !uiState.state.winner
+      && !uiState.pendingFragmentPiece
+      && isOnlineMatchStarted()
+      && (!shouldLockHumanActions() || isNpcTurn())
+      && (!uiState.selection || uiState.selection.type === "recoverPiece" || uiState.selection.type === "recoverFragment");
   }
 
   function getBoardAnchorElement() {
@@ -1527,6 +1906,9 @@
 
   function handleBoardCellAction(row, col, event) {
     if (uiState.state.winner) {
+      return;
+    }
+    if (shouldLockHumanActions()) {
       return;
     }
 
@@ -1901,6 +2283,21 @@
     endTurn();
   }
 
+  function placeReservePieceDirect(pieceType, row, col) {
+    var cell = uiState.state.board[row][col];
+    if (cell.controller !== uiState.state.currentPlayer || cell.pieceId) {
+      return false;
+    }
+    if (uiState.state.players[uiState.state.currentPlayer].reserve[pieceType] <= 0) {
+      return false;
+    }
+    uiState.state.players[uiState.state.currentPlayer].reserve[pieceType] -= 1;
+    addPiece(uiState.state, uiState.state.currentPlayer, pieceType, row, col);
+    pushLog(PLAYER_LABELS[uiState.state.currentPlayer] + "\u304C " + getPieceLabel(pieceType) + " \u3092 (" + (row + 1) + ", " + (col + 1) + ") \u306B\u914D\u7F6E");
+    endTurn();
+    return true;
+  }
+
   function getLegalReserveTargets(player, pieceType) {
     var reserve = uiState.state.players[player].reserve[pieceType];
     var targets = [];
@@ -2061,6 +2458,53 @@
     uiState.previewLegal = false;
     pushLog(PLAYER_LABELS[uiState.state.currentPlayer] + "\u304C " + FRAGMENT_LIBRARY[card.fragmentType].label + " \u3092\u914D\u7F6E");
     render();
+  }
+
+  function placeFragmentDirect(card, handIndex, cells, pieceRow, pieceCol) {
+    var placementId = "placement-" + (uiState.state.placements.length + 1);
+    var placement = {
+      id: placementId,
+      owner: uiState.state.currentPlayer,
+      card: {
+        fragmentType: card.fragmentType,
+        pieceType: card.pieceType
+      },
+      cells: cells.map(function (cell) {
+        return { row: cell.row, col: cell.col };
+      })
+    };
+    uiState.state.placements.push(placement);
+
+    placement.cells.forEach(function (placementCell) {
+      var boardCell = uiState.state.board[placementCell.row][placementCell.col];
+      boardCell.controller = uiState.state.currentPlayer;
+      boardCell.stack.push(placementId);
+    });
+
+    uiState.state.players[uiState.state.currentPlayer].hand.splice(handIndex, 1);
+    fillHand(uiState.state, uiState.state.currentPlayer);
+    if (window.UNFOLD_3D_RENDERER && typeof window.UNFOLD_3D_RENDERER.startFragmentUnfoldAnimation === "function") {
+      window.UNFOLD_3D_RENDERER.startFragmentUnfoldAnimation(uiState.state.currentPlayer, placement.cells, card.fragmentType, placementId);
+    }
+    pushLog(PLAYER_LABELS[uiState.state.currentPlayer] + "\u304C " + FRAGMENT_LIBRARY[card.fragmentType].label + " \u3092\u914D\u7F6E");
+
+    uiState.pendingFragmentPiece = {
+      pieceType: card.pieceType,
+      cells: placement.cells
+    };
+    render();
+
+    uiState.npc.timer = window.setTimeout(function () {
+      uiState.npc.timer = null;
+      var pieceId = addPiece(uiState.state, uiState.state.currentPlayer, card.pieceType, pieceRow, pieceCol);
+      if (window.UNFOLD_3D_RENDERER && typeof window.UNFOLD_3D_RENDERER.startPiecePlacementAnimation === "function") {
+        window.UNFOLD_3D_RENDERER.startPiecePlacementAnimation(pieceId, pieceRow, pieceCol);
+      }
+      pushLog(PLAYER_LABELS[uiState.state.currentPlayer] + "\u304C " + getPieceLabel(card.pieceType) + " \u3092 (" + (pieceRow + 1) + ", " + (pieceCol + 1) + ") \u306B\u914D\u7F6E");
+      uiState.pendingFragmentPiece = null;
+      uiState.npc.thinking = false;
+      endTurn();
+      }, 1180);
   }
 
   function tryFragmentPieceDrop(row, col, event) {
@@ -2350,6 +2794,960 @@
     return false;
   }
 
+  function getOpponentPlayer(player) {
+    return player === "P1" ? "P2" : "P1";
+  }
+
+  function getPieceStrategicValue(pieceType) {
+    var values = {
+      king: 1000,
+      destroyer: 90,
+      chaosBeast: 85,
+      charger: 70,
+      disruptor: 68,
+      realmKnight: 58,
+      barrier: 54,
+      rider: 52,
+      guard: 46,
+      flanker: 44,
+      decoy: 38,
+      vanguard: 32
+    };
+    return values[pieceType] || 20;
+  }
+
+  function withTemporaryState(state, callback) {
+    var previousState = uiState.state;
+    var previousThinking = uiState.npc.thinking;
+    uiState.state = state;
+    uiState.npc.thinking = false;
+    try {
+      return callback();
+    } finally {
+      uiState.npc.thinking = previousThinking;
+      uiState.state = previousState;
+    }
+  }
+
+  function findBaseCenterInState(state, player) {
+    for (var row = 0; row < BOARD_ROWS; row += 1) {
+      for (var col = 0; col < BOARD_COLS; col += 1) {
+        var cell = state.board[row][col];
+        if (cell.isBaseCenter && cell.baseOwner === player) {
+          return cell;
+        }
+      }
+    }
+    return null;
+  }
+
+  function getDistanceToEnemyBase(player, row, col) {
+    var center = findBaseCenter(getOpponentPlayer(player));
+    if (!center) {
+      return 99;
+    }
+    return Math.abs(center.row - row) + Math.abs(center.col - col);
+  }
+
+  function getCenterPressureScore(player, row, col) {
+    return Math.max(0, 20 - getDistanceToEnemyBase(player, row, col));
+  }
+
+  function scoreNpcMoveAction(player, piece, row, col) {
+    var cell = uiState.state.board[row][col];
+    var targetPiece = cell.pieceId ? getPiece(uiState.state, cell.pieceId) : null;
+    var score = 40 + getCenterPressureScore(player, row, col) + getPieceStrategicValue(piece.kind) * 0.08;
+    if (cell.controller === player) {
+      score += 6;
+    }
+    if (targetPiece && targetPiece.owner !== player) {
+      score += targetPiece.kind === "king" ? 100000 : 180 + getPieceStrategicValue(targetPiece.kind) * 4;
+    }
+    if (cell.isBaseCenter && cell.baseOwner === getOpponentPlayer(player) && cell.controller === player) {
+      score += 50000;
+    }
+    return score;
+  }
+
+  function scoreNpcReserveAction(player, pieceType, row, col) {
+    var cell = uiState.state.board[row][col];
+    var score = 26 + getCenterPressureScore(player, row, col) + getPieceStrategicValue(pieceType) * 0.22;
+    if (cell.isBaseCenter && cell.baseOwner === getOpponentPlayer(player)) {
+      score += 50000;
+    }
+    return score;
+  }
+
+  function pickNpcPieceDropCell(player, pieceType, cells) {
+    var best = null;
+    cells.forEach(function (cell) {
+      if (uiState.state.board[cell.row][cell.col].pieceId) {
+        return;
+      }
+      var score = 10 + getCenterPressureScore(player, cell.row, cell.col) + getPieceStrategicValue(pieceType) * 0.15;
+      if (uiState.state.board[cell.row][cell.col].isBaseCenter && uiState.state.board[cell.row][cell.col].baseOwner === getOpponentPlayer(player)) {
+        score += 50000;
+      }
+      if (!best || score > best.score) {
+        best = {
+          row: cell.row,
+          col: cell.col,
+          score: score
+        };
+      }
+    });
+    return best;
+  }
+
+  function scoreNpcFragmentAction(player, card, cells, pieceCell) {
+    var score = 48;
+    cells.forEach(function (cell) {
+      var boardCell = uiState.state.board[cell.row][cell.col];
+      score += 5 + getCenterPressureScore(player, cell.row, cell.col) * 0.8;
+      if (boardCell.controller && boardCell.controller !== player) {
+        score += 12;
+      }
+      if (boardCell.isBaseCenter && boardCell.baseOwner === getOpponentPlayer(player) && !boardCell.pieceId) {
+        score += 70000;
+      }
+    });
+    if (pieceCell) {
+      score += pieceCell.score;
+    }
+    score += getPieceStrategicValue(card.pieceType) * 0.12;
+    return score;
+  }
+
+  function scoreNpcRecoverPieceAction(piece) {
+    return 10 + getPieceStrategicValue(piece.kind) * 0.18;
+  }
+
+  function scoreNpcRecoverFragmentAction(placement) {
+    return 8 + getPieceStrategicValue(placement.card.pieceType) * 0.1;
+  }
+
+  function getNpcFrontierCells(player) {
+    var cells = {};
+    for (var row = 0; row < BOARD_ROWS; row += 1) {
+      for (var col = 0; col < BOARD_COLS; col += 1) {
+        if (uiState.state.board[row][col].controller !== player) {
+          continue;
+        }
+        [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(function (dir) {
+          var nr = row + dir[0];
+          var nc = col + dir[1];
+          if (!isInBounds(nr, nc)) {
+            return;
+          }
+          if (uiState.state.board[nr][nc].controller === player) {
+            return;
+          }
+          cells[nr + ":" + nc] = { row: nr, col: nc };
+        });
+      }
+    }
+    return Object.keys(cells).map(function (key) {
+      return cells[key];
+    });
+  }
+
+  function getNormalizedFragmentCells(fragmentType, rotation) {
+    return getFragmentCells(fragmentType, rotation, { row: 0, col: 0 }).map(function (cell) {
+      return { row: cell.row, col: cell.col };
+    });
+  }
+
+  function getNpcFragmentPlacements(player, card) {
+    var frontierCells = getNpcFrontierCells(player);
+    var placements = [];
+    var seen = {};
+    for (var rotation = 0; rotation < 4; rotation += 1) {
+      var normalizedCells = getNormalizedFragmentCells(card.fragmentType, rotation);
+      frontierCells.forEach(function (frontierCell) {
+        normalizedCells.forEach(function (shapeCell) {
+          var anchor = {
+            row: frontierCell.row - shapeCell.row,
+            col: frontierCell.col - shapeCell.col
+          };
+          var key = rotation + ":" + anchor.row + ":" + anchor.col;
+          if (seen[key]) {
+            return;
+          }
+          seen[key] = true;
+          var cells = normalizedCells.map(function (cell) {
+            return {
+              row: anchor.row + cell.row,
+              col: anchor.col + cell.col
+            };
+          });
+          if (!isLegalFragment(cells, player)) {
+            return;
+          }
+          placements.push({
+            rotation: rotation,
+            anchor: anchor,
+            cells: cells
+          });
+        });
+      });
+    }
+    return placements;
+  }
+
+  function getDistanceToEnemyBaseInState(state, player, row, col) {
+    var center = findBaseCenterInState(state, getOpponentPlayer(player));
+    if (!center) {
+      return 99;
+    }
+    return Math.abs(center.row - row) + Math.abs(center.col - col);
+  }
+
+  function findKingInState(state, player) {
+    var pieces = state.players[player].pieces;
+    var pieceIds = Object.keys(pieces);
+    for (var i = 0; i < pieceIds.length; i += 1) {
+      if (pieces[pieceIds[i]].kind === "king") {
+        return pieces[pieceIds[i]];
+      }
+    }
+    return null;
+  }
+
+  function isKingUnderThreatInState(state, player) {
+    var king = findKingInState(state, player);
+    if (!king) {
+      return false;
+    }
+    var opponent = getOpponentPlayer(player);
+    return withTemporaryState(state, function () {
+      var opponentPieces = state.players[opponent].pieces;
+      return Object.keys(opponentPieces).some(function (pieceId) {
+        return canMovePiece(opponentPieces[pieceId], king.row, king.col);
+      });
+    });
+  }
+
+  function checkBaseOccupationWinInState(state) {
+    var players = ["P1", "P2"];
+    for (var i = 0; i < players.length; i += 1) {
+      var attacker = players[i];
+      var defender = getOpponentPlayer(attacker);
+      var center = findBaseCenterInState(state, defender);
+      var occupyingPiece = center && center.pieceId ? getPiece(state, center.pieceId) : null;
+      if (
+        center &&
+        center.controller === attacker &&
+        (!occupyingPiece || occupyingPiece.owner !== defender)
+      ) {
+        state.winner = attacker;
+        state.winReason = "本陣占領";
+        return attacker;
+      }
+    }
+    return null;
+  }
+
+  function refreshCellControllerInState(state, cell) {
+    var topPlacementId;
+    var topPlacement;
+    if (cell.stack.length) {
+      topPlacementId = cell.stack[cell.stack.length - 1];
+      topPlacement = state.placements.find(function (entry) {
+        return entry.id === topPlacementId;
+      }) || null;
+      cell.controller = topPlacement ? topPlacement.owner : null;
+      return;
+    }
+    cell.controller = cell.baseOwner || null;
+  }
+
+  function removePlacementFromBoardInState(state, placement) {
+    placement.cells.forEach(function (placementCell) {
+      var cell = state.board[placementCell.row][placementCell.col];
+      cell.stack = cell.stack.filter(function (stackId) {
+        return stackId !== placement.id;
+      });
+      refreshCellControllerInState(state, cell);
+    });
+    state.placements = state.placements.filter(function (entry) {
+      return entry.id !== placement.id;
+    });
+  }
+
+  function applyNpcActionToState(state, action) {
+    var player = state.currentPlayer;
+    var targetCell;
+    var targetPiece;
+    var piece;
+    var placement;
+    var placementId;
+    if (action.type === "move") {
+      piece = getPiece(state, action.pieceId);
+      if (!piece) {
+        return;
+      }
+      targetCell = state.board[action.row][action.col];
+      targetPiece = targetCell.pieceId ? getPiece(state, targetCell.pieceId) : null;
+      state.board[piece.row][piece.col].pieceId = null;
+      if (targetPiece) {
+        delete state.players[targetPiece.owner].pieces[targetPiece.id];
+        if (targetPiece.kind !== "king") {
+          state.players[player].reserve[targetPiece.kind] += 1;
+        } else {
+          state.winner = player;
+          state.winReason = "王の捕獲";
+        }
+      }
+      piece.row = action.row;
+      piece.col = action.col;
+      targetCell.pieceId = piece.id;
+    } else if (action.type === "reserve") {
+      state.players[player].reserve[action.pieceType] -= 1;
+      addPiece(state, player, action.pieceType, action.row, action.col);
+    } else if (action.type === "fragment") {
+      placementId = "placement-" + (state.placements.length + 1);
+      placement = {
+        id: placementId,
+        owner: player,
+        card: {
+          fragmentType: action.card.fragmentType,
+          pieceType: action.card.pieceType
+        },
+        cells: action.cells.map(function (cell) {
+          return { row: cell.row, col: cell.col };
+        })
+      };
+      state.placements.push(placement);
+      placement.cells.forEach(function (placementCell) {
+        var cell = state.board[placementCell.row][placementCell.col];
+        cell.controller = player;
+        cell.stack.push(placementId);
+      });
+      state.players[player].hand.splice(action.handIndex, 1);
+      fillHand(state, player);
+      addPiece(state, player, action.card.pieceType, action.pieceCell.row, action.pieceCell.col);
+    } else if (action.type === "recoverPiece") {
+      piece = getPiece(state, action.pieceId);
+      if (!piece) {
+        return;
+      }
+      delete state.players[player].pieces[piece.id];
+      state.board[action.row][action.col].pieceId = null;
+      state.players[player].reserve[piece.kind] += 1;
+    } else if (action.type === "recoverFragment") {
+      placement = state.placements.find(function (entry) {
+        return entry.id === action.placementId;
+      }) || null;
+      if (!placement) {
+        return;
+      }
+      removePlacementFromBoardInState(state, placement);
+      state.players[player].hand.push({
+        fragmentType: placement.card.fragmentType,
+        pieceType: placement.card.pieceType
+      });
+    } else if (action.type === "mulligan") {
+      state.players[player].deck = shuffle(state.players[player].deck.concat(state.players[player].hand));
+      state.players[player].hand = [];
+      fillHand(state, player);
+    }
+
+    if (!state.winner) {
+      checkBaseOccupationWinInState(state);
+    }
+    if (!state.winner) {
+      state.currentPlayer = getOpponentPlayer(player);
+      state.turnNumber += 1;
+    }
+  }
+
+  function evaluateStateForNpc(state, npcPlayer) {
+      var opponent = getOpponentPlayer(npcPlayer);
+      if (state.winner === npcPlayer) {
+        return 1000000;
+    }
+    if (state.winner === opponent) {
+      return -1000000;
+    }
+
+    function scorePlayer(player) {
+      var playerState = state.players[player];
+      var score = 0;
+      Object.keys(playerState.pieces).forEach(function (pieceId) {
+        var piece = playerState.pieces[pieceId];
+        score += getPieceStrategicValue(piece.kind) * 12;
+        score += Math.max(0, 22 - getDistanceToEnemyBaseInState(state, player, piece.row, piece.col)) * 3;
+      });
+      Object.keys(playerState.reserve).forEach(function (pieceType) {
+        score += playerState.reserve[pieceType] * getPieceStrategicValue(pieceType) * 5;
+      });
+      playerState.hand.forEach(function (card) {
+        score += getPieceStrategicValue(card.pieceType) * 2.4;
+      });
+      playerState.deck.forEach(function (card) {
+        score += getPieceStrategicValue(card.pieceType) * 0.3;
+      });
+      for (var row = 0; row < BOARD_ROWS; row += 1) {
+        for (var col = 0; col < BOARD_COLS; col += 1) {
+          var cell = state.board[row][col];
+          if (cell.controller === player) {
+            score += 1.6;
+            if (cell.isBaseCenter && cell.baseOwner === getOpponentPlayer(player)) {
+              score += 9000;
+            }
+          }
+        }
+        }
+        return score;
+      }
+
+        var total = scorePlayer(npcPlayer) - scorePlayer(opponent);
+        var npcAttack = getAttackSummaryForState(state, npcPlayer);
+        var opponentAttack = getAttackSummaryForState(state, opponent);
+        total += (npcAttack.mobility - opponentAttack.mobility) * 3.4;
+        total += (npcAttack.attackedCells - opponentAttack.attackedCells) * 2.2;
+        total -= npcAttack.hotCells * 1800;
+        total += opponentAttack.hotCells * 900;
+        total += (npcAttack.captureValue - opponentAttack.captureValue) * 16;
+        total += (npcAttack.basePressure - opponentAttack.basePressure) * 4200;
+        total += (npcAttack.kingPressure - opponentAttack.kingPressure) * 11000;
+        total -= npcAttack.hangingPenalty * 9;
+        total += opponentAttack.hangingPenalty * 6;
+        if (isKingUnderThreatInState(state, npcPlayer)) {
+          total -= 18000;
+        }
+        if (isKingUnderThreatInState(state, opponent)) {
+          total += 9000;
+        }
+        return total;
+      }
+
+    function isNpcImmediateWinAction(action) {
+      if (action.type === "move") {
+        var cell = uiState.state.board[action.row][action.col];
+        var targetPiece = cell && cell.pieceId ? getPiece(uiState.state, cell.pieceId) : null;
+        if (targetPiece && targetPiece.owner !== uiState.state.currentPlayer && targetPiece.kind === "king") {
+          return true;
+        }
+      }
+      if ((action.type === "move" || action.type === "reserve") && uiState.state.board[action.row][action.col].isBaseCenter) {
+        return uiState.state.board[action.row][action.col].baseOwner === getOpponentPlayer(uiState.state.currentPlayer);
+      }
+      if (action.type === "fragment") {
+        return action.cells.some(function (cell) {
+          var boardCell = uiState.state.board[cell.row][cell.col];
+          return boardCell.isBaseCenter && boardCell.baseOwner === getOpponentPlayer(uiState.state.currentPlayer) && !boardCell.pieceId;
+        });
+      }
+      return false;
+    }
+
+    function getNpcCandidateActions(actions, emergencyMode) {
+      var player = uiState.state.currentPlayer;
+      var unique = {};
+      var selected = [];
+
+      function actionKey(action) {
+        if (action.type === "move") {
+          return action.type + ":" + action.pieceId + ":" + action.row + ":" + action.col;
+        }
+        if (action.type === "reserve") {
+          return action.type + ":" + action.pieceType + ":" + action.row + ":" + action.col;
+        }
+        if (action.type === "fragment") {
+          return action.type + ":" + action.handIndex + ":" + action.rotation + ":" + action.anchor.row + ":" + action.anchor.col + ":" + action.pieceCell.row + ":" + action.pieceCell.col;
+        }
+        if (action.type === "recoverPiece") {
+          return action.type + ":" + action.pieceId;
+        }
+        if (action.type === "recoverFragment") {
+          return action.type + ":" + action.placementId;
+        }
+        return action.type;
+      }
+
+      function addAction(action) {
+        var key = actionKey(action);
+        if (unique[key]) {
+          return;
+        }
+        unique[key] = true;
+        selected.push(action);
+      }
+
+      actions
+        .filter(function (action) {
+          return isNpcImmediateWinAction(action);
+        })
+        .forEach(addAction);
+
+      actions
+        .filter(function (action) {
+          return action.type === "move" && (function () {
+            var cell = uiState.state.board[action.row][action.col];
+            var targetPiece = cell && cell.pieceId ? getPiece(uiState.state, cell.pieceId) : null;
+            return targetPiece && targetPiece.owner !== player;
+          }());
+        })
+        .slice(0, emergencyMode ? 6 : 8)
+        .forEach(addAction);
+
+      actions
+        .filter(function (action) {
+          return action.type === "fragment";
+        })
+        .slice(0, emergencyMode ? 2 : 4)
+        .forEach(addAction);
+
+      actions
+        .slice(0, emergencyMode ? 8 : 10)
+        .forEach(addAction);
+
+      return selected;
+    }
+
+    function collectNpcActionsForState(state, player) {
+      return withTemporaryState(state, function () {
+        var previousCurrentPlayer = state.currentPlayer;
+        state.currentPlayer = player;
+        try {
+          return collectNpcActions();
+        } finally {
+          state.currentPlayer = previousCurrentPlayer;
+        }
+      });
+    }
+
+    function findImmediateWinningActionsInState(state, player, limit) {
+      var actions = collectNpcActionsForState(state, player);
+      var emergencyMode = isKingUnderThreatInState(state, player);
+      actions.sort(function (a, b) {
+        return b.score - a.score;
+      });
+      return getNpcCandidateActions(actions, emergencyMode)
+        .slice(0, Math.min(limit || 12, actions.length))
+        .filter(function (action) {
+          var trialState = cloneGameState(state);
+          trialState.currentPlayer = player;
+          applyNpcActionToState(trialState, action);
+          return trialState.winner === player;
+        });
+    }
+
+  function countImmediateWinningActionsInState(state, player, limit) {
+    return findImmediateWinningActionsInState(state, player, limit).length;
+  }
+
+  function makeBoardMap() {
+    return Array.from({ length: BOARD_ROWS }, function () {
+      return Array.from({ length: BOARD_COLS }, function () {
+        return 0;
+      });
+    });
+  }
+
+  function getAttackMapForState(state, player) {
+    var map = makeBoardMap();
+    var attackers = {};
+
+    Object.keys(state.players[player].pieces).forEach(function (pieceId) {
+      var piece = state.players[player].pieces[pieceId];
+      var targets = getLegalMoveTargetsForState(state, piece);
+      targets.forEach(function (target) {
+        var key = target.row + ":" + target.col;
+        map[target.row][target.col] += 1;
+        if (!attackers[key]) {
+          attackers[key] = [];
+        }
+        attackers[key].push(pieceId);
+      });
+    });
+
+    return {
+      counts: map,
+      attackers: attackers
+    };
+  }
+
+  function getDangerMapForState(state, player) {
+    var opponent = getOpponentPlayer(player);
+    var attackMap = getAttackMapForState(state, opponent);
+    var immediateWins = findImmediateWinningActionsInState(state, opponent, 16);
+    var immediateMap = makeBoardMap();
+
+    immediateWins.forEach(function (action) {
+      if (typeof action.row === "number" && typeof action.col === "number") {
+        immediateMap[action.row][action.col] += 1;
+      }
+      if (action.type === "fragment") {
+        action.cells.forEach(function (cell) {
+          immediateMap[cell.row][cell.col] += 1;
+        });
+      }
+    });
+
+    return {
+      counts: attackMap.counts,
+      attackers: attackMap.attackers,
+      immediateWins: immediateWins,
+      immediateCounts: immediateMap
+    };
+  }
+
+  function getLegalMoveTargetsForState(state, piece) {
+    return withTemporaryState(state, function () {
+      return getLegalMoveTargets(piece);
+    });
+  }
+
+    function isCellThreatenedInState(state, attacker, row, col) {
+      return withTemporaryState(state, function () {
+        var pieces = state.players[attacker].pieces;
+        return Object.keys(pieces).some(function (pieceId) {
+          return canMovePiece(pieces[pieceId], row, col);
+        });
+      });
+    }
+
+    function getAttackSummaryForState(state, player) {
+    var opponent = getOpponentPlayer(player);
+    var attackMap = getAttackMapForState(state, player);
+    var dangerMap = getDangerMapForState(state, player);
+    var summary = {
+      mobility: 0,
+      captureValue: 0,
+      kingPressure: 0,
+      basePressure: 0,
+      hangingPenalty: 0,
+      attackMap: attackMap,
+      dangerMap: dangerMap,
+      attackedCells: 0,
+      hotCells: 0
+    };
+
+    Object.keys(state.players[player].pieces).forEach(function (pieceId) {
+      var piece = state.players[player].pieces[pieceId];
+      var targets = getLegalMoveTargetsForState(state, piece);
+        summary.mobility += targets.length;
+
+        targets.forEach(function (target) {
+          var targetCell = state.board[target.row][target.col];
+          var targetPiece = targetCell.pieceId ? getPiece(state, targetCell.pieceId) : null;
+          if (targetPiece && targetPiece.owner === opponent) {
+            summary.captureValue += getPieceStrategicValue(targetPiece.kind);
+            if (targetPiece.kind === "king") {
+              summary.kingPressure += 1;
+            }
+          }
+          if (targetCell.isBaseCenter && targetCell.baseOwner === opponent) {
+            summary.basePressure += 1;
+          }
+        });
+
+        if (piece.kind !== "king" && isCellThreatenedInState(state, opponent, piece.row, piece.col)) {
+          summary.hangingPenalty += getPieceStrategicValue(piece.kind);
+        }
+      });
+
+      for (var row = 0; row < BOARD_ROWS; row += 1) {
+        for (var col = 0; col < BOARD_COLS; col += 1) {
+          if (attackMap.counts[row][col] > 0) {
+            summary.attackedCells += 1;
+          }
+          if (dangerMap.immediateCounts[row][col] > 0) {
+            summary.hotCells += 1;
+          }
+        }
+      }
+
+      return summary;
+    }
+
+    function filterForcedDefenseActions(state, player, actions) {
+      var opponent = getOpponentPlayer(player);
+      var kingUnderThreat = isKingUnderThreatInState(state, player);
+      var dangerMap = getDangerMapForState(state, player);
+      var forced = [];
+      var bestImmediateWins = Infinity;
+      var bestKingThreat = Infinity;
+      var bestDangerCells = Infinity;
+
+      if (!kingUnderThreat && !dangerMap.immediateWins.length) {
+        return actions;
+      }
+
+      actions.forEach(function (action) {
+        var nextState = cloneGameState(state);
+        nextState.currentPlayer = player;
+        applyNpcActionToState(nextState, action);
+
+        var nextDangerMap = getDangerMapForState(nextState, player);
+        var nextImmediateWins = nextDangerMap.immediateWins.length;
+        var nextKingThreat = isKingUnderThreatInState(nextState, player) ? 1 : 0;
+        var nextDangerCells = 0;
+
+        for (var row = 0; row < BOARD_ROWS; row += 1) {
+          for (var col = 0; col < BOARD_COLS; col += 1) {
+            if (nextDangerMap.immediateCounts[row][col] > 0) {
+              nextDangerCells += 1;
+            }
+          }
+        }
+
+        if (
+          nextImmediateWins < bestImmediateWins ||
+          (nextImmediateWins === bestImmediateWins && nextKingThreat < bestKingThreat) ||
+          (nextImmediateWins === bestImmediateWins && nextKingThreat === bestKingThreat && nextDangerCells < bestDangerCells)
+        ) {
+          bestImmediateWins = nextImmediateWins;
+          bestKingThreat = nextKingThreat;
+          bestDangerCells = nextDangerCells;
+          forced = [action];
+          return;
+        }
+
+        if (
+          nextImmediateWins === bestImmediateWins &&
+          nextKingThreat === bestKingThreat &&
+          nextDangerCells === bestDangerCells
+        ) {
+          forced.push(action);
+        }
+      });
+
+      return forced.length ? forced : actions;
+    }
+
+    function collectNpcActions() {
+      var player = uiState.state.currentPlayer;
+      var actions = [];
+    var pieces = uiState.state.players[player].pieces;
+    Object.keys(pieces).forEach(function (pieceId) {
+      var piece = pieces[pieceId];
+      getLegalMoveTargets(piece).forEach(function (target) {
+        actions.push({
+          type: "move",
+          pieceId: piece.id,
+          row: target.row,
+          col: target.col,
+          score: scoreNpcMoveAction(player, piece, target.row, target.col)
+        });
+      });
+    });
+
+    Object.keys(uiState.state.players[player].reserve).forEach(function (pieceType) {
+      if (uiState.state.players[player].reserve[pieceType] <= 0) {
+        return;
+      }
+      getLegalReserveTargets(player, pieceType).forEach(function (target) {
+        actions.push({
+          type: "reserve",
+          pieceType: pieceType,
+          row: target.row,
+          col: target.col,
+          score: scoreNpcReserveAction(player, pieceType, target.row, target.col)
+        });
+      });
+    });
+
+    uiState.state.players[player].hand.forEach(function (card, handIndex) {
+      getNpcFragmentPlacements(player, card).forEach(function (placement) {
+        var pieceCell = pickNpcPieceDropCell(player, card.pieceType, placement.cells);
+        if (!pieceCell) {
+          return;
+        }
+        actions.push({
+          type: "fragment",
+          handIndex: handIndex,
+          card: card,
+          rotation: placement.rotation,
+          anchor: placement.anchor,
+          cells: placement.cells,
+          pieceCell: { row: pieceCell.row, col: pieceCell.col },
+          score: scoreNpcFragmentAction(player, card, placement.cells, pieceCell)
+        });
+      });
+    });
+
+    getRecoverablePieces().forEach(function (target) {
+      var piece = getPiece(uiState.state, target.pieceId);
+      if (!piece) {
+        return;
+      }
+      actions.push({
+        type: "recoverPiece",
+        row: target.row,
+        col: target.col,
+        pieceId: target.pieceId,
+        score: scoreNpcRecoverPieceAction(piece)
+      });
+    });
+
+    getRecoverablePlacements().forEach(function (placement) {
+      actions.push({
+        type: "recoverFragment",
+        row: placement.cells[0].row,
+        col: placement.cells[0].col,
+        placementId: placement.id,
+        score: scoreNpcRecoverFragmentAction(placement)
+      });
+    });
+
+    if (canMulligan()) {
+      actions.push({
+        type: "mulligan",
+        score: actions.length ? 2 : 18
+      });
+    }
+
+    return actions;
+  }
+
+    function chooseNpcAction() {
+      var npcPlayer = uiState.state.currentPlayer;
+      var opponent = getOpponentPlayer(npcPlayer);
+      var actions = collectNpcActions();
+      var emergencyMode = isKingUnderThreatInState(uiState.state, npcPlayer);
+      var immediateWins = findImmediateWinningActionsInState(uiState.state, npcPlayer, 14);
+      if (!actions.length) {
+        return null;
+      }
+      if (immediateWins.length) {
+        immediateWins.sort(function (a, b) {
+          return b.score - a.score;
+        });
+        return immediateWins[0];
+      }
+      actions.sort(function (a, b) {
+        return b.score - a.score;
+      });
+      var candidateActions = getNpcCandidateActions(actions, emergencyMode);
+      candidateActions = filterForcedDefenseActions(uiState.state, npcPlayer, candidateActions);
+      var bestAction = candidateActions[0];
+      var bestScore = -Infinity;
+
+      candidateActions.forEach(function (action) {
+        var nextState = cloneGameState(uiState.state);
+        applyNpcActionToState(nextState, action);
+        var score;
+        if (nextState.winner === npcPlayer) {
+          score = 1000000;
+        } else if (nextState.winner) {
+          score = -1000000;
+        } else if (emergencyMode) {
+          score = evaluateStateForNpc(nextState, npcPlayer);
+          if (!isKingUnderThreatInState(nextState, npcPlayer)) {
+            score += 40000;
+          } else {
+            score -= 40000;
+          }
+          if (isKingUnderThreatInState(nextState, opponent)) {
+            score += 5000;
+          }
+        } else {
+          var nextDangerMap = getDangerMapForState(nextState, npcPlayer);
+          var opponentImmediateWins = nextDangerMap.immediateWins.length;
+          var replyActions = collectNpcActionsForState(nextState, opponent);
+          replyActions.sort(function (a, b) {
+            return b.score - a.score;
+          });
+          replyActions = getNpcCandidateActions(replyActions, isKingUnderThreatInState(nextState, opponent));
+          replyActions = filterForcedDefenseActions(nextState, opponent, replyActions).slice(0, Math.min(6, replyActions.length));
+          if (replyActions.length) {
+            score = Infinity;
+            replyActions.forEach(function (replyAction) {
+              var replyState = cloneGameState(nextState);
+              applyNpcActionToState(replyState, replyAction);
+              score = Math.min(score, evaluateStateForNpc(replyState, npcPlayer));
+            });
+          } else {
+            score = evaluateStateForNpc(nextState, npcPlayer);
+          }
+          if (isKingUnderThreatInState(nextState, npcPlayer)) {
+            score -= 12000;
+          }
+          if (isKingUnderThreatInState(nextState, opponent)) {
+            score += 6500;
+          }
+          if (opponentImmediateWins) {
+            score -= 90000 + opponentImmediateWins * 4000;
+          }
+          if (!opponentImmediateWins && isKingUnderThreatInState(nextState, opponent)) {
+            score += 12000;
+          }
+        }
+
+        if (score > bestScore || (score === bestScore && action.score > (bestAction ? bestAction.score : -Infinity))) {
+          bestScore = score;
+          bestAction = action;
+      }
+    });
+
+    return bestAction;
+  }
+
+  function scheduleNpcTurn() {
+    if (!isNpcTurn() || uiState.state.winner) {
+      return;
+    }
+    clearNpcTurnTimer();
+    uiState.npc.thinking = true;
+    clearSelection();
+    render();
+    uiState.npc.timer = window.setTimeout(function () {
+      uiState.npc.timer = null;
+      performNpcTurn();
+    }, 520);
+  }
+
+  function performNpcTurn() {
+    if (!isNpcTurn() || uiState.state.winner) {
+      uiState.npc.thinking = false;
+      render();
+      return;
+    }
+    var action = chooseNpcAction();
+    if (!action) {
+      uiState.npc.thinking = false;
+      pushLog("NPC は有効な手を見つけられませんでした");
+      endTurn();
+      return;
+    }
+
+    if (action.type === "fragment") {
+      clearSelection();
+      placeFragmentDirect(action.card, action.handIndex, action.cells, action.pieceCell.row, action.pieceCell.col);
+      return;
+    }
+
+    uiState.npc.thinking = false;
+    if (action.type === "move") {
+      commitMove(action.pieceId, action.row, action.col);
+      return;
+    }
+    if (action.type === "reserve") {
+      clearSelection();
+      placeReservePieceDirect(action.pieceType, action.row, action.col);
+      return;
+    }
+    if (action.type === "recoverPiece") {
+      tryRecoverPiece(action.row, action.col);
+      return;
+    }
+    if (action.type === "recoverFragment") {
+      tryRecoverFragment(action.row, action.col);
+      return;
+    }
+    if (action.type === "mulligan") {
+      var playerState = uiState.state.players[uiState.state.currentPlayer];
+      playerState.deck = shuffle(playerState.deck.concat(playerState.hand));
+      playerState.hand = [];
+      fillHand(uiState.state, uiState.state.currentPlayer);
+      pushLog(PLAYER_LABELS[uiState.state.currentPlayer] + " が手札を入れ替え");
+      endTurn();
+    }
+  }
+
   function endTurn() {
     checkBaseOccupationWin();
     if (!uiState.state.winner) {
@@ -2363,6 +3761,10 @@
     render();
     if (isOnlineGame()) {
       pushRoomState();
+      return;
+    }
+    if (isNpcTurn() && !uiState.state.winner) {
+      scheduleNpcTurn();
     }
   }
 
@@ -2521,6 +3923,34 @@
     return JSON.parse(JSON.stringify(state));
   }
 
+  function startPracticeGame(modeOverride) {
+    clearNpcTurnTimer();
+    resetNpcState();
+    uiState.practiceMode = true;
+    uiState.ruleMode = modeOverride || uiState.ruleMode || (els.onlineModeSelect ? els.onlineModeSelect.value : "original");
+    uiState.state = createGame(uiState.ruleMode);
+    uiState.replayIndex = uiState.state.history.length - 1;
+    clearSelection();
+    pushLog("ひとりテストプレイを開始");
+    uiState.screen = "game";
+    render();
+  }
+
+  function startNpcGame(modeOverride) {
+    clearNpcTurnTimer();
+    resetNpcState();
+    uiState.practiceMode = false;
+    uiState.npc.enabled = true;
+    uiState.npc.side = "P2";
+    uiState.ruleMode = modeOverride || uiState.ruleMode || (els.onlineModeSelect ? els.onlineModeSelect.value : "original");
+    uiState.state = createGame(uiState.ruleMode);
+    uiState.replayIndex = uiState.state.history.length - 1;
+    clearSelection();
+    pushLog("NPC 対戦を開始");
+    uiState.screen = "game";
+    render();
+  }
+
   function snapshotGameState(state) {
     var snapshot = cloneGameState(state);
     snapshot.history = [];
@@ -2553,23 +3983,32 @@
     if (history.length <= 1) {
       return false;
     }
+    clearNpcTurnTimer();
+    uiState.npc.thinking = false;
     restored = cloneGameState(history[history.length - 2].snapshot);
     restored.history = cloneGameState(history.slice(0, history.length - 1));
     uiState.state = restored;
     uiState.replayIndex = -1;
     clearSelection();
     render();
+    if (isNpcTurn() && !uiState.state.winner) {
+      scheduleNpcTurn();
+    }
     return true;
   }
 
   function applyOnlineRoom(room, playerId, side) {
     stopRoomPolling();
+    resetNpcState();
+    uiState.practiceMode = false;
+    var resolvedSide = resolveRoomSide(room, playerId) || side || null;
     uiState.online.enabled = true;
     uiState.online.roomId = room.id;
     uiState.online.roomName = room.name || null;
     uiState.online.playerId = playerId;
-    uiState.online.side = side;
-    uiState.online.roomStatus = room.status || (room.players && room.players.P2 && room.players.P2.id ? "playing" : "waiting");
+    uiState.online.side = resolvedSide;
+    uiState.online.room = room;
+    uiState.online.roomStatus = room.status || (room.players && room.players.P2 && room.players.P2.id ? "ready" : "waiting");
     uiState.online.waitRequest = room.waitRequest || null;
     uiState.online.version = room.version;
     uiState.ruleMode = room.gameState.ruleMode || uiState.ruleMode || "original";
@@ -2577,6 +4016,7 @@
     uiState.practiceMode = false;
     uiState.replayIndex = uiState.state.history ? uiState.state.history.length - 1 : -1;
     uiState.screen = "game";
+    saveOnlineSession();
     clearSelection();
     scheduleRoomPolling();
     render();
@@ -2584,15 +4024,18 @@
 
   function resetOnlineState(message) {
     stopRoomPolling();
+    resetNpcState();
     uiState.online.enabled = false;
     uiState.online.roomId = null;
     uiState.online.roomName = null;
     uiState.online.playerId = null;
     uiState.online.side = null;
+    uiState.online.room = null;
     uiState.online.roomStatus = "offline";
     uiState.online.waitRequest = null;
     uiState.online.version = 0;
     uiState.online.syncing = false;
+    clearOnlineSession();
     uiState.screen = "lobby";
     uiState.practiceMode = false;
     if (message) {
@@ -2625,8 +4068,11 @@
     return apiRequest(buildApiUrl("room.get", uiState.online.roomId) + "&playerId=" + encodeURIComponent(uiState.online.playerId), {
       method: "GET"
     }).then(function (data) {
+      uiState.online.room = data.room;
       uiState.online.version = data.room.version;
       uiState.online.roomStatus = data.room.status || uiState.online.roomStatus;
+      uiState.online.side = resolveRoomSide(data.room, uiState.online.playerId) || uiState.online.side;
+      uiState.online.roomName = data.room.name || uiState.online.roomName;
       uiState.online.waitRequest = data.room.waitRequest || null;
       uiState.ruleMode = data.room.gameState.ruleMode || uiState.ruleMode;
       uiState.state = data.room.gameState;
@@ -2659,8 +4105,11 @@
         gameState: cloneGameState(uiState.state)
       })
     }).then(function (data) {
+      uiState.online.room = data.room;
       uiState.online.version = data.room.version;
       uiState.online.roomStatus = data.room.status || uiState.online.roomStatus;
+      uiState.online.side = resolveRoomSide(data.room, uiState.online.playerId) || uiState.online.side;
+      uiState.online.roomName = data.room.name || uiState.online.roomName;
       uiState.online.waitRequest = data.room.waitRequest || null;
       uiState.state = data.room.gameState;
       uiState.ruleMode = data.room.gameState.ruleMode || uiState.ruleMode;
@@ -2741,6 +4190,53 @@
     });
   }
 
+  function startOnlineRoom() {
+    if (!isOnlineGame()) {
+      return Promise.resolve();
+    }
+    return apiRequest(buildApiUrl("room.start", uiState.online.roomId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomId: uiState.online.roomId,
+        playerId: uiState.online.playerId
+      })
+    }).then(function (data) {
+      applyOnlineRoom(data.room, uiState.online.playerId, data.side);
+      pushLog("オンライン対戦の部屋 " + data.room.id + " を開始");
+      if (els.testOutput) {
+        els.testOutput.textContent = "ROOM STARTED\n参加コード: " + data.room.id + "\n先手後手をランダムに決定しました。";
+      }
+    }).catch(function (error) {
+      if (els.testOutput) {
+        els.testOutput.textContent = "ROOM ERROR\n" + error.message;
+      }
+    });
+  }
+
+  function restoreOnlineSession() {
+    var session = loadOnlineSession();
+    if (!session || !session.roomId || !session.playerId) {
+      return Promise.resolve(false);
+    }
+    if (els.onlineNameInput && session.playerName && !els.onlineNameInput.value.trim()) {
+      els.onlineNameInput.value = session.playerName;
+    }
+    return apiRequest(buildApiUrl("room.get", session.roomId) + "&playerId=" + encodeURIComponent(session.playerId), {
+      method: "GET"
+    }).then(function (data) {
+      applyOnlineRoom(data.room, session.playerId, resolveRoomSide(data.room, session.playerId));
+      pushLog("オンライン対戦の部屋 " + data.room.id + " に再接続");
+      if (els.testOutput) {
+        els.testOutput.textContent = "ROOM RESTORED\n参加コード: " + data.room.id;
+      }
+      return true;
+    }).catch(function () {
+      clearOnlineSession();
+      return false;
+    });
+  }
+
   function deleteRoomByKey(roomIdOverride, adminKeyOverride) {
     var roomId = roomIdOverride || (els.deleteRoomCodeInput ? els.deleteRoomCodeInput.value.trim().toUpperCase() : "");
     var adminKey = adminKeyOverride || (els.deleteRoomKeyInput ? els.deleteRoomKeyInput.value.trim().toUpperCase() : "");
@@ -2798,7 +4294,7 @@
   }
 
   function disbandOnlineRoom() {
-    if (!isOnlineGame() || uiState.online.side !== "P1") {
+    if (!isOnlineGame() || !isOnlineRoomOwner()) {
       return Promise.resolve();
     }
     return apiRequest(buildApiUrl("room.disband", uiState.online.roomId), {
@@ -2875,25 +4371,39 @@
     uiState.state = createGame(uiState.ruleMode);
     uiState.replayIndex = uiState.state.history.length - 1;
     uiState.roomAdminKeys = loadRoomAdminKeys();
+    restoreStoredOnlineName();
     setScreen("lobby");
 
     if (els.newGameBtn) {
       els.newGameBtn.addEventListener("click", function () {
-        uiState.practiceMode = true;
-        uiState.ruleMode = els.onlineModeSelect ? els.onlineModeSelect.value : uiState.ruleMode;
-        uiState.state = createGame(uiState.ruleMode);
-        uiState.replayIndex = uiState.state.history.length - 1;
-        clearSelection();
-        pushLog("ひとりテストプレイを開始");
-        uiState.screen = "game";
-        render();
+        startPracticeGame("original");
+      });
+    }
+    if (els.newGameShogiBtn) {
+      els.newGameShogiBtn.addEventListener("click", function () {
+        startPracticeGame("shogi");
+      });
+    }
+    if (els.npcGameBtn) {
+      els.npcGameBtn.addEventListener("click", function () {
+        startNpcGame("original");
+      });
+    }
+    if (els.npcGameShogiBtn) {
+      els.npcGameShogiBtn.addEventListener("click", function () {
+        startNpcGame("shogi");
+      });
+    }
+    if (els.onlineNameInput) {
+      els.onlineNameInput.addEventListener("input", function () {
+        saveOnlineName(els.onlineNameInput.value.trim());
       });
     }
 
     if (els.backToLobbyBtn) {
       els.backToLobbyBtn.addEventListener("click", function () {
         if (isOnlineGame()) {
-          if (uiState.online.side === "P1") {
+          if (isOnlineRoomOwner()) {
             if (!window.confirm("部屋を解散してロビーへ戻りますか？")) {
               return;
             }
@@ -2906,27 +4416,36 @@
           leaveOnlineRoom();
           return;
         }
+        clearNpcTurnTimer();
+        uiState.npc.thinking = false;
+        resetNpcState();
+        uiState.practiceMode = false;
         uiState.screen = "lobby";
         render();
+      });
+    }
+    if (els.startMatchBtn) {
+      els.startMatchBtn.addEventListener("click", function () {
+        startOnlineRoom();
       });
     }
 
     if (els.practiceRestartBtn) {
       els.practiceRestartBtn.addEventListener("click", function () {
-        if (!(uiState.screen === "game" && uiState.practiceMode && !isOnlineGame())) {
+        if (!(uiState.screen === "game" && !isOnlineGame() && (uiState.practiceMode || isNpcGame()))) {
           return;
         }
-        uiState.state = createGame(uiState.ruleMode);
-        uiState.replayIndex = uiState.state.history.length - 1;
-        clearSelection();
-        pushLog("ひとりテストプレイを新しく開始");
-        render();
+        if (isNpcGame()) {
+          startNpcGame();
+        } else {
+          startPracticeGame();
+        }
       });
     }
 
     if (els.practiceModeBtn) {
       els.practiceModeBtn.addEventListener("click", function () {
-        if (!(uiState.screen === "game" && uiState.practiceMode && !isOnlineGame())) {
+        if (!(uiState.screen === "game" && !isOnlineGame() && (uiState.practiceMode || isNpcGame()))) {
           return;
         }
         if (!window.confirm("駒タイプを変更すると、いまの盤面はリセットされます。変更しますか？")) {
@@ -2936,10 +4455,13 @@
         if (els.onlineModeSelect) {
           els.onlineModeSelect.value = uiState.ruleMode;
         }
-        uiState.state = createGame(uiState.ruleMode);
-        uiState.replayIndex = uiState.state.history.length - 1;
-        clearSelection();
-        pushLog("ひとりテストプレイの駒モードを " + GAME_MODE_LABELS[uiState.ruleMode] + " に変更");
+        if (isNpcGame()) {
+          startNpcGame();
+          pushLog("NPC 対戦の駒モードを " + GAME_MODE_LABELS[uiState.ruleMode] + " に変更");
+        } else {
+          startPracticeGame();
+          pushLog("ひとりテストプレイの駒モードを " + GAME_MODE_LABELS[uiState.ruleMode] + " に変更");
+        }
         render();
       });
     }
@@ -2974,6 +4496,16 @@
     if (els.refreshRoomsBtn) {
       els.refreshRoomsBtn.addEventListener("click", function () {
         refreshRoomList();
+      });
+    }
+    if (els.submitFeedbackBtn) {
+      els.submitFeedbackBtn.addEventListener("click", function () {
+        submitFeedback();
+      });
+    }
+    if (els.refreshFeedbackBtn) {
+      els.refreshFeedbackBtn.addEventListener("click", function () {
+        loadSiteInfo(false);
       });
     }
     if (els.deleteRoomByKeyBtn) {
@@ -3162,7 +4694,14 @@
     });
 
     els.testOutput.textContent = runTests();
+    render();
+    loadSiteInfo(true);
     refreshRoomList({ silent: true });
+    restoreOnlineSession().then(function (restored) {
+      if (!restored) {
+        render();
+      }
+    });
     window.UNFOLD_3D_API = {
       boardRows: BOARD_ROWS,
       boardCols: BOARD_COLS,

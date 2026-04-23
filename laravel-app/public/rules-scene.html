@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD Rules Scene</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #f2e9d8;
+      overflow: hidden;
+      font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+    }
+    .scene-wrap {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,0.65), transparent 42%),
+        linear-gradient(180deg, #f8f2e7, #efe1ca);
+    }
+    .scene-card {
+      width: min(1280px, 100%);
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(82,60,26,0.12);
+      box-shadow: 0 20px 50px rgba(82,60,26,0.12);
+      box-sizing: border-box;
+    }
+    .scene-title {
+      margin: 0;
+      font-size: 28px;
+      color: #5f4321;
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+    #sceneViewport {
+      width: 100%;
+      height: 640px;
+      border-radius: 22px;
+      overflow: hidden;
+      background: #5c452d;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .scene-stage {
+      position: relative;
+    }
+    .scene-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .scene-overlay svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #toggle3DLabelsBtn {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="scene-wrap">
+    <div class="scene-card">
+      <h1 id="sceneTitle" class="scene-title">UNFOLD</h1>
+      <div class="scene-stage">
+        <div id="sceneViewport"></div>
+        <div id="sceneOverlay" class="scene-overlay"></div>
+      </div>
+      <button id="toggle3DLabelsBtn" type="button">labels</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var sceneName = params.get("scene") || "fragment-before";
+      window.UNFOLD_3D_CAMERA_PRESET = getCameraPreset(sceneName);
+
+      var BOARD_ROWS = 9;
+      var BOARD_COLS = 15;
+
+      function getCameraPreset(name) {
+        var preset = {
+          yaw: 0,
+          pitch: 0.12,
+          distance: 14.8,
+          targetX: -4.6,
+          targetZ: 0
+        };
+        if (name === "board-only" || name === "start-state") {
+          preset.distance = 20.8;
+          preset.targetX = 0;
+        } else if (name === "fragment-corner-ng") {
+          preset.distance = 13.4;
+          preset.targetX = -3.8;
+        } else if (name === "base-only" || name === "fragment-only" || name === "piece-only" || name === "fragment-before" || name === "fragment-place" || name === "fragment-piece") {
+          preset.distance = 13.4;
+          preset.targetX = -4.2;
+        } else if (name === "win-base") {
+          preset.targetX = 4.6;
+        } else if (name === "overwrite-before" || name === "overwrite-after" || name === "overwrite-illegal") {
+          preset.targetX = -2.8;
+          preset.distance = 13.8;
+        } else if (name === "win-capture") {
+          preset.targetX = 3.6;
+          preset.distance = 13.8;
+        } else if (name === "recover-fragment-idle" || name === "recover-fragment-before" || name === "recover-fragment-after") {
+          preset.distance = 17.4;
+          preset.targetX = 0.3;
+        } else if (name === "move-before" || name === "move-after" || name === "drop-before" || name === "drop-after" || name === "recover-piece-before" || name === "recover-piece-after") {
+          preset.distance = 13.8;
+          preset.targetX = -3.4;
+        } else if (name === "mulligan-before" || name === "mulligan-after") {
+          preset.distance = 13.8;
+          preset.targetX = -3.6;
+        }
+        return preset;
+      }
+
+      var PIECES = {
+        realmKing: { label: "展界者", short: "王" },
+        realmKnight: { label: "界騎士", short: "界" },
+        chaosBeast: { label: "混沌獣", short: "混" },
+        sideAttacker: { label: "側撃士", short: "側" },
+        frontliner: { label: "前衛士", short: "前" }
+      };
+
+      function createState() {
+        var state = {
+          currentPlayer: "P1",
+          players: {
+            P1: { pieces: {} },
+            P2: { pieces: {} }
+          },
+          board: []
+        };
+        for (var row = 0; row < BOARD_ROWS; row += 1) {
+          var line = [];
+          for (var col = 0; col < BOARD_COLS; col += 1) {
+            line.push({
+              row: row,
+              col: col,
+              controller: null,
+              pieceId: null,
+              stack: [],
+              isBaseCenter: false,
+              baseOwner: null
+            });
+          }
+          state.board.push(line);
+        }
+        return state;
+      }
+
+      function seedBase(state, player) {
+        var startRow = 3;
+        var startCol = player === "P1" ? 0 : BOARD_COLS - 3;
+        for (var row = 0; row < 3; row += 1) {
+          for (var col = 0; col < 3; col += 1) {
+            var cell = state.board[startRow + row][startCol + col];
+            cell.controller = player;
+            cell.isBaseCenter = row === 1 && col === 1;
+            if (cell.isBaseCenter) {
+              cell.baseOwner = player;
+            }
+          }
+        }
+      }
+
+      function addPlacement(state, placements, id, owner, cells) {
+        placements[id] = { id: id, owner: owner, cells: cells.map(function (cell) { return { row: cell.row, col: cell.col }; }) };
+        cells.forEach(function (cell) {
+          var boardCell = state.board[cell.row][cell.col];
+          boardCell.stack.push(id);
+          boardCell.controller = owner;
+        });
+      }
+
+      function addPiece(state, owner, id, kind, row, col) {
+        state.players[owner].pieces[id] = { id: id, owner: owner, kind: kind, row: row, col: col };
+        state.board[row][col].pieceId = id;
+        state.board[row][col].controller = owner;
+      }
+
+      function setController(state, row, col, owner) {
+        state.board[row][col].controller = owner;
+      }
+
+      function collectReserveTargets(state, owner) {
+        var targets = [];
+        for (var row = 0; row < BOARD_ROWS; row += 1) {
+          for (var col = 0; col < BOARD_COLS; col += 1) {
+            var cell = state.board[row][col];
+            if (cell.controller === owner && !cell.pieceId) {
+              targets.push({ row: row, col: col });
+            }
+          }
+        }
+        return targets;
+      }
+
+      function teeCells(anchorRow, anchorCol) {
+        return [
+          { row: anchorRow, col: anchorCol },
+          { row: anchorRow + 1, col: anchorCol },
+          { row: anchorRow + 1, col: anchorCol + 1 },
+          { row: anchorRow + 1, col: anchorCol + 2 },
+          { row: anchorRow + 1, col: anchorCol + 3 },
+          { row: anchorRow + 2, col: anchorCol }
+        ];
+      }
+
+      function hookCells(anchorRow, anchorCol) {
+        return [
+          { row: anchorRow, col: anchorCol + 2 },
+          { row: anchorRow, col: anchorCol + 3 },
+          { row: anchorRow + 1, col: anchorCol },
+          { row: anchorRow + 1, col: anchorCol + 1 },
+          { row: anchorRow + 1, col: anchorCol + 2 },
+          { row: anchorRow + 2, col: anchorCol }
+        ];
+      }
+
+      function cells(list) {
+        return list.map(function (item) {
+          return { row: item[0], col: item[1] };
+        });
+      }
+
+      function buildScene(name) {
+        var state = createState();
+        var placements = {};
+        var uiState = {
+          previewLegal: false,
+          selection: null,
+          moveTargets: [],
+          reserveTargets: [],
+          recoverPieceTargets: [],
+          recoverFragmentTargets: [],
+          pendingFragmentPiece: null,
+          previewCells: []
+        };
+
+        seedBase(state, "P1");
+        seedBase(state, "P2");
+        addPiece(state, "P1", "P1-king-1", "realmKing", 4, 1);
+        addPiece(state, "P2", "P2-king-1", "realmKing", 4, 13);
+        addPiece(state, "P1", "P1-realm-knight-1", "realmKnight", 4, 2);
+        addPiece(state, "P2", "P2-realm-knight-1", "realmKnight", 4, 12);
+
+        var title = "UNFOLD";
+
+        if (name === "board-only") {
+          title = "盤面";
+          state.players.P1.pieces = {};
+          state.players.P2.pieces = {};
+          for (var r0 = 0; r0 < BOARD_ROWS; r0 += 1) {
+            for (var c0 = 0; c0 < BOARD_COLS; c0 += 1) {
+              state.board[r0][c0].pieceId = null;
+            }
+          }
+        } else if (name === "base-only") {
+          title = "本陣";
+          state.players.P1.pieces = {};
+          state.players.P2.pieces = {};
+          for (var r1 = 0; r1 < BOARD_ROWS; r1 += 1) {
+            for (var c1 = 0; c1 < BOARD_COLS; c1 += 1) {
+              state.board[r1][c1].pieceId = null;
+            }
+          }
+          state.board[4][13].pieceId = null;
+        } else if (name === "fragment-only") {
+          title = "展開図";
+          state.players.P1.pieces = {};
+          state.players.P2.pieces = {};
+          for (var r2 = 0; r2 < BOARD_ROWS; r2 += 1) {
+            for (var c2 = 0; c2 < BOARD_COLS; c2 += 1) {
+              state.board[r2][c2].pieceId = null;
+            }
+          }
+          state.board[4][13].pieceId = null;
+          addPlacement(state, placements, "pl-frag-only", "P1", teeCells(3, 3));
+        } else if (name === "piece-only") {
+          title = "駒";
+          state.players.P1.pieces = {};
+          state.players.P2.pieces = {};
+          for (var r3 = 0; r3 < BOARD_ROWS; r3 += 1) {
+            for (var c3 = 0; c3 < BOARD_COLS; c3 += 1) {
+              state.board[r3][c3].pieceId = null;
+            }
+          }
+          state.board[4][13].pieceId = null;
+          addPlacement(state, placements, "pl-piece-only", "P1", teeCells(3, 3));
+          addPiece(state, "P1", "P1-piece-only", "chaosBeast", 4, 4);
+        } else if (name === "start-state") {
+          title = "ゲーム開始時";
+        } else if (name === "fragment-before") {
+          title = "展開図を置く前";
+        } else if (name === "fragment-place") {
+          title = "ティーを設置した後";
+          addPlacement(state, placements, "pl-tee", "P1", teeCells(3, 2));
+        } else if (name === "fragment-illegal") {
+          title = "自陣に接していないので置けない";
+          uiState.previewLegal = false;
+          uiState.previewCells = teeCells(1, 4);
+        } else if (name === "fragment-on-base-ng") {
+          title = "自分の陣地に重ねているので置けない";
+          uiState.previewLegal = false;
+          uiState.previewCells = teeCells(3, 0);
+        } else if (name === "fragment-corner-ng") {
+          title = "角だけ触れていて置けない";
+          uiState.previewLegal = false;
+          uiState.previewCells = cells([
+            [6, 3],
+            [6, 4],
+            [6, 5],
+            [5, 5],
+            [4, 5],
+            [4, 6]
+          ]);
+        } else if (name === "fragment-piece") {
+          title = "対応駒を置けるマス表示";
+          addPlacement(state, placements, "pl-tee", "P1", teeCells(3, 2));
+          uiState.pendingFragmentPiece = {
+            pieceType: "chaosBeast",
+            cells: teeCells(3, 2)
+          };
+          uiState.selection = { type: "fragmentPiece", pieceType: "chaosBeast" };
+        } else if (name === "overwrite-before") {
+          title = "上書き前";
+          addPlacement(state, placements, "pl-ow-base-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-hook-p2", "P2", hookCells(2, 7));
+        } else if (name === "overwrite-after") {
+          title = "上書き後";
+          addPlacement(state, placements, "pl-ow-base-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-hook-p2", "P2", hookCells(2, 7));
+          addPlacement(state, placements, "pl-tee-p1", "P1", teeCells(3, 6));
+        } else if (name === "overwrite-illegal") {
+          title = "駒がいるので上書きできない";
+          addPlacement(state, placements, "pl-ow-base-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-hook-p2", "P2", hookCells(2, 7));
+          addPiece(state, "P2", "P2-side-1", "sideAttacker", 4, 7);
+          uiState.previewLegal = false;
+          uiState.previewCells = teeCells(3, 6);
+        } else if (name === "move-before") {
+          title = "駒を移動する前";
+          addPlacement(state, placements, "pl-move-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-move-p2", "P2", hookCells(3, 6));
+          addPiece(state, "P1", "P1-front-1", "frontliner", 4, 6);
+          addPiece(state, "P2", "P2-side-cap-1", "sideAttacker", 4, 7);
+          uiState.selection = { type: "piece", pieceId: "P1-front-1" };
+          uiState.moveTargets = [
+            { row: 4, col: 5 },
+            { row: 4, col: 7 },
+            { row: 5, col: 6 }
+          ];
+        } else if (name === "move-after") {
+          title = "駒を移動した後";
+          addPlacement(state, placements, "pl-move-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-move-p2", "P2", hookCells(3, 6));
+          addPiece(state, "P1", "P1-front-1", "frontliner", 4, 7);
+        } else if (name === "drop-before") {
+          title = "持ち駒を打つ前";
+          addPlacement(state, placements, "pl-drop-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-drop-p2", "P2", hookCells(3, 6));
+          uiState.reserveTargets = collectReserveTargets(state, "P1");
+          uiState.previewLegal = false;
+          uiState.previewCells = hookCells(3, 6);
+        } else if (name === "drop-after") {
+          title = "持ち駒を打った後";
+          addPlacement(state, placements, "pl-drop-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-drop-p2", "P2", hookCells(3, 6));
+          addPiece(state, "P1", "P1-side-2", "sideAttacker", 4, 4);
+        } else if (name === "mulligan-before") {
+          title = "手札を入れ替える前";
+        } else if (name === "mulligan-after") {
+          title = "3枚引き直した後";
+        } else if (name === "recover-piece-before") {
+          title = "駒を回収する前";
+          addPlacement(state, placements, "pl-rec-piece-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-rec-piece-p2", "P2", hookCells(3, 6));
+          addPiece(state, "P1", "P1-side-3", "sideAttacker", 4, 4);
+          addPiece(state, "P1", "P1-front-3", "frontliner", 4, 7);
+          uiState.recoverPieceTargets = [{ row: 4, col: 4 }];
+          uiState.previewLegal = false;
+          uiState.previewCells = [{ row: 4, col: 7 }];
+        } else if (name === "recover-piece-after") {
+          title = "駒を回収した後";
+          addPlacement(state, placements, "pl-rec-piece-p1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-rec-piece-p2", "P2", hookCells(3, 6));
+          addPiece(state, "P1", "P1-front-3", "frontliner", 4, 7);
+        } else if (name === "recover-fragment-idle") {
+          title = "展開図を回収する前";
+          addPlacement(state, placements, "pl-rec-frag-free", "P1", teeCells(3, 2));
+          addPlacement(state, placements, "pl-rec-frag-under-p2", "P2", hookCells(3, 6));
+          addPlacement(state, placements, "pl-rec-frag-top-p1", "P1", teeCells(3, 6));
+          addPlacement(state, placements, "pl-rec-frag-under-p1", "P1", hookCells(2, 10));
+          addPlacement(state, placements, "pl-rec-frag-top-p2", "P2", teeCells(2, 10));
+        } else if (name === "recover-fragment-before") {
+          title = "展開図の回収候補";
+          addPlacement(state, placements, "pl-rec-frag-free", "P1", teeCells(3, 2));
+          addPlacement(state, placements, "pl-rec-frag-under-p2", "P2", hookCells(3, 6));
+          addPlacement(state, placements, "pl-rec-frag-top-p1", "P1", teeCells(3, 6));
+          addPlacement(state, placements, "pl-rec-frag-under-p1", "P1", hookCells(2, 10));
+          addPlacement(state, placements, "pl-rec-frag-top-p2", "P2", teeCells(2, 10));
+          uiState.recoverFragmentTargets = teeCells(3, 2).concat(teeCells(3, 6));
+          uiState.previewLegal = false;
+          uiState.previewCells = hookCells(2, 10);
+        } else if (name === "recover-fragment-after") {
+          title = "展開図を回収した後";
+          addPlacement(state, placements, "pl-rec-frag-free", "P1", teeCells(3, 2));
+          addPlacement(state, placements, "pl-rec-frag-under-p2", "P2", hookCells(3, 6));
+          addPlacement(state, placements, "pl-rec-frag-under-p1", "P1", hookCells(2, 10));
+          addPlacement(state, placements, "pl-rec-frag-top-p2", "P2", teeCells(2, 10));
+        } else if (name === "win-capture") {
+          title = "自分の駒で相手の王を取る";
+          state.players.P1.pieces = {};
+          state.players.P2.pieces = {};
+          for (var clearRow = 0; clearRow < BOARD_ROWS; clearRow += 1) {
+            for (var clearCol = 0; clearCol < BOARD_COLS; clearCol += 1) {
+              state.board[clearRow][clearCol].pieceId = null;
+            }
+          }
+          state.board[4][13].pieceId = null;
+          delete state.players.P2.pieces["P2-king-1"];
+          addPlacement(state, placements, "pl-win-cap-p1", "P1", teeCells(3, 9));
+          addPlacement(state, placements, "pl-win-cap-p2", "P2", hookCells(3, 10));
+          addPiece(state, "P1", "P1-chaos-2", "chaosBeast", 4, 9);
+          addPiece(state, "P2", "P2-king-2", "realmKing", 4, 10);
+          uiState.selection = { type: "piece", pieceId: "P1-chaos-2" };
+          uiState.moveTargets = [{ row: 4, col: 10 }];
+        } else if (name === "win-base") {
+          title = "相手本陣中心を展開図で上書きする";
+          state.board[4][13].pieceId = null;
+          delete state.players.P2.pieces["P2-king-1"];
+          addPiece(state, "P2", "P2-side-base-1", "sideAttacker", 3, 12);
+          uiState.previewLegal = true;
+          uiState.previewCells = teeCells(3, 11);
+        }
+
+        return { state: state, placements: placements, uiState: uiState, title: title };
+      }
+
+      function renderOverlay(name) {
+        var overlay = document.getElementById("sceneOverlay");
+        if (!overlay) {
+          return;
+        }
+        overlay.innerHTML = "";
+      }
+
+      var scene = buildScene(sceneName);
+      document.getElementById("sceneTitle").textContent = scene.title;
+      renderOverlay(sceneName);
+
+      window.UNFOLD_3D_API = {
+        boardRows: BOARD_ROWS,
+        boardCols: BOARD_COLS,
+        getState: function () { return scene.state; },
+        getUiState: function () { return scene.uiState; },
+        getPieceById: function (pieceId) {
+          return scene.state.players.P1.pieces[pieceId] || scene.state.players.P2.pieces[pieceId] || null;
+        },
+        getPlacementById: function (placementId) {
+          return scene.placements[placementId] || null;
+        },
+        isMoveTarget: function (row, col) {
+          return scene.uiState.moveTargets.some(function (target) {
+            return target.row === row && target.col === col;
+          });
+        },
+        isReserveTarget: function (row, col) {
+          return scene.uiState.reserveTargets.some(function (target) {
+            return target.row === row && target.col === col;
+          });
+        },
+        isRecoverPieceTarget: function (row, col) {
+          return scene.uiState.recoverPieceTargets.some(function (target) {
+            return target.row === row && target.col === col;
+          });
+        },
+        isRecoverFragmentTarget: function (row, col) {
+          return scene.uiState.recoverFragmentTargets.some(function (target) {
+            return target.row === row && target.col === col;
+          });
+        },
+        isPendingFragmentPieceCell: function (row, col) {
+          return !!(scene.uiState.pendingFragmentPiece && scene.uiState.pendingFragmentPiece.cells.some(function (target) {
+            return target.row === row && target.col === col;
+          }));
+        },
+        isPreviewCell: function (row, col) {
+          return scene.uiState.previewCells.some(function (target) {
+            return target.row === row && target.col === col;
+          });
+        },
+        handleCellClick: function () {},
+        handleCellHover: function () {},
+        openContextMenu: function () {},
+        hideContextMenu: function () {},
+        clearSelection: function () {},
+        hasSelection: function () { return false; }
+      };
+    }());
+  </script>
+  <script src="three-board.js"></script>
+</body>
+</html>
