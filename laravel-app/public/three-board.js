@@ -18,6 +18,13 @@
   var ZONE_HEIGHT = 0.12;
   var CENTER_HEIGHT = 0.07;
   var STACK_HEIGHT = 0.12;
+  var DEFAULT_CAMERA_ORBIT = {
+    yaw: 0,
+    pitch: 0.06,
+    distance: 14.6,
+    targetX: 0,
+    targetZ: 0
+  };
   var sceneData = {
     scene: null,
     camera: null,
@@ -34,18 +41,29 @@
     hiddenPlacementIds: {},
     labelsEnabled: true,
     orbit: {
-      yaw: -0.65,
-      pitch: 0.98,
-      distance: 14.2,
+      yaw: DEFAULT_CAMERA_ORBIT.yaw,
+      pitch: DEFAULT_CAMERA_ORBIT.pitch,
+      distance: DEFAULT_CAMERA_ORBIT.distance,
       dragging: false,
       moved: false,
       lastX: 0,
       lastY: 0,
       mode: "rotate",
-      targetX: 0,
-      targetZ: 0
+      targetX: DEFAULT_CAMERA_ORBIT.targetX,
+      targetZ: DEFAULT_CAMERA_ORBIT.targetZ
     }
   };
+
+  function resetCameraView() {
+    sceneData.orbit.yaw = DEFAULT_CAMERA_ORBIT.yaw;
+    sceneData.orbit.pitch = DEFAULT_CAMERA_ORBIT.pitch;
+    sceneData.orbit.distance = DEFAULT_CAMERA_ORBIT.distance;
+    sceneData.orbit.targetX = DEFAULT_CAMERA_ORBIT.targetX;
+    sceneData.orbit.targetZ = DEFAULT_CAMERA_ORBIT.targetZ;
+    applyCameraPreset();
+    updateCameraPosition();
+    renderScene();
+  }
 
   function applyCameraPreset() {
     var preset = window.UNFOLD_3D_CAMERA_PRESET;
@@ -226,7 +244,10 @@
     visual.base.material.emissive.setHex(0x000000);
     visual.base.material.emissiveIntensity = 0;
 
-    if (api.isMoveTarget(row, col) || api.isPendingFragmentPieceCell(row, col)) {
+    if (isPendingConfirmCell(uiState, row, col)) {
+      visual.base.material.emissive.setHex(0xc78f18);
+      visual.base.material.emissiveIntensity = 0.34;
+    } else if (api.isMoveTarget(row, col) || api.isPendingFragmentPieceCell(row, col)) {
       visual.base.material.emissive.setHex(api.isPendingFragmentPieceCell(row, col) ? 0xc78f18 : 0x285bb3);
       visual.base.material.emissiveIntensity = api.isPendingFragmentPieceCell(row, col) ? 0.28 : 0.4;
     } else if (api.isReserveTarget(row, col)) {
@@ -326,6 +347,78 @@
     var texture = new THREE.CanvasTexture(canvas);
     sceneData.pieceLabels.set(key, texture);
     return texture;
+  }
+
+  function makeDebugBadgeTexture(kind, text) {
+    var key = "debug:" + kind + ":" + text;
+    var palette;
+    var canvas;
+    var ctx;
+    var texture;
+    if (sceneData.pieceLabels.has(key)) {
+      return sceneData.pieceLabels.get(key);
+    }
+    palette = {
+      attack: { fill: "#2f7fd6", stroke: "#173e68", text: "#f7fbff" },
+      danger: { fill: "#d65a49", stroke: "#7b241a", text: "#fff6f1" },
+      hot: { fill: "#e1a12f", stroke: "#845513", text: "#fff8eb" }
+    }[kind] || { fill: "#7b6950", stroke: "#473826", text: "#fff9ef" };
+    canvas = document.createElement("canvas");
+    canvas.width = 112;
+    canvas.height = 112;
+    ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, 42, 0, Math.PI * 2);
+    ctx.fillStyle = palette.fill;
+    ctx.fill();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = palette.stroke;
+    ctx.stroke();
+    ctx.font = "bold 42px 'Yu Gothic UI', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = palette.text;
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2 + 2);
+    texture = new THREE.CanvasTexture(canvas);
+    sceneData.pieceLabels.set(key, texture);
+    return texture;
+  }
+
+  function makeAiDebugBadge(row, col, kind, text, xOffset, zOffset, yOffset, scale) {
+    var world = boardToWorld(row, col);
+    var state = api.getState();
+    var cell = state.board[row][col];
+    var sprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: makeDebugBadgeTexture(kind, text),
+        transparent: true,
+        depthWrite: false,
+        depthTest: false
+      })
+    );
+    sprite.position.set(world.x + xOffset, getCellTopY(cell) + yOffset, world.z + zOffset);
+    sprite.scale.set(scale, scale, 1);
+    return sprite;
+  }
+
+  function makeAiDebugHotRing(row, col) {
+    var world = boardToWorld(row, col);
+    var state = api.getState();
+    var cell = state.board[row][col];
+    var ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.34, 0.035, 16, 32),
+      new THREE.MeshStandardMaterial({
+        color: 0xe1a12f,
+        emissive: 0xe1a12f,
+        emissiveIntensity: 0.28,
+        roughness: 0.32,
+        depthWrite: false
+      })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(world.x, getCellTopY(cell) + 0.18, world.z);
+    return ring;
   }
 
   function getPieceDisplayName(piece) {
@@ -742,10 +835,19 @@
     return !!(
       uiState &&
       uiState.pendingPlacement &&
-      uiState.pendingPlacement.type === "fragmentPiece" &&
+      (uiState.pendingPlacement.type === "fragmentPiece" || uiState.pendingPlacement.type === "move") &&
       uiState.pendingPlacement.row === row &&
       uiState.pendingPlacement.col === col
     );
+  }
+
+  function isSelectedPieceCell(uiState, row, col) {
+    var piece;
+    if (!(uiState && uiState.selection && uiState.selection.type === "piece")) {
+      return false;
+    }
+    piece = api.getPieceById(uiState.selection.pieceId);
+    return !!piece && piece.row === row && piece.col === col;
   }
 
   function makeConfirmCellMarker(row, col) {
@@ -838,11 +940,16 @@
   }
 
   function renderMarkers(state, uiState) {
+    var overlay = api.getAiDebugOverlay ? api.getAiDebugOverlay() : null;
     clearMarkers();
     for (var row = 0; row < BOARD_ROWS; row += 1) {
       for (var col = 0; col < BOARD_COLS; col += 1) {
-        if (api.isMoveTarget(row, col)) {
+        var debugCell = overlay && overlay.cells[row] ? overlay.cells[row][col] : null;
+        if (api.isMoveTarget(row, col) && !isPendingConfirmCell(uiState, row, col)) {
           sceneData.markers.add(makeMoveTargetMarker(row, col));
+        }
+        if (isSelectedPieceCell(uiState, row, col)) {
+          sceneData.markers.add(makeDisc(row, col, 0x2e61b8, 0.14, 0.08));
         }
         if (api.isReserveTarget(row, col)) {
           sceneData.markers.add(makeDisc(row, col, 0x1180cc, 0.12, 0.05));
@@ -865,6 +972,20 @@
         }
         if (isPendingConfirmCell(uiState, row, col)) {
           sceneData.markers.add(makeConfirmCellMarker(row, col));
+        }
+        if (overlay && debugCell) {
+          if (overlay.showDanger && debugCell.dangerCount > 0) {
+            sceneData.markers.add(makeDisc(row, col, 0xc8533f, 0.08 + Math.min(debugCell.dangerCount, 5) * 0.012, 0.1));
+            sceneData.markers.add(makeAiDebugBadge(row, col, "danger", String(debugCell.dangerCount), -0.24, -0.24, 0.26, 0.34));
+          }
+          if (overlay.showAttack && debugCell.attackCount > 0) {
+            sceneData.markers.add(makeDisc(row, col, 0x2d7bd0, 0.06 + Math.min(debugCell.attackCount, 5) * 0.012, 0.15));
+            sceneData.markers.add(makeAiDebugBadge(row, col, "attack", String(debugCell.attackCount), -0.24, 0.24, 0.31, 0.34));
+          }
+          if (overlay.showDanger && debugCell.hotCount > 0) {
+            sceneData.markers.add(makeAiDebugHotRing(row, col));
+            sceneData.markers.add(makeAiDebugBadge(row, col, "hot", debugCell.hotCount > 1 ? String(debugCell.hotCount) : "!", 0.24, -0.24, 0.36, 0.3));
+          }
         }
       }
     }
@@ -942,7 +1063,7 @@
         orbit.targetZ = Math.max(-3.5, Math.min(3.5, orbit.targetZ));
       } else {
         orbit.yaw -= dx * 0.008;
-        orbit.pitch = Math.max(0.52, Math.min(1.28, orbit.pitch + dy * 0.008));
+        orbit.pitch = Math.max(0.04, Math.min(1.28, orbit.pitch + dy * 0.008));
       }
       updateCameraPosition();
       return;
@@ -1008,6 +1129,7 @@
 
   window.UNFOLD_3D_RENDERER = {
     renderScene: renderScene,
+    resetCameraView: resetCameraView,
     startPieceMoveAnimation: startPieceMoveAnimation,
     startPiecePlacementAnimation: startPiecePlacementAnimation,
     startFragmentUnfoldAnimation: startFragmentUnfoldAnimation

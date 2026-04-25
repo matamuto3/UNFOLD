@@ -256,6 +256,8 @@
     movementSummary: document.getElementById("movementSummary"),
     fragmentCatalog: document.getElementById("fragmentCatalog"),
     pendingPieceBanner: document.getElementById("pendingPieceBanner"),
+    toggleAiDebugBtn: document.getElementById("toggleAiDebugBtn"),
+    aiDebugStatus: document.getElementById("aiDebugStatus"),
     p1Panel: document.getElementById("p1Panel"),
     p2Panel: document.getElementById("p2Panel"),
     newGameBtn: document.getElementById("newGameBtn"),
@@ -366,7 +368,13 @@
     recoverFragmentTargets: [],
     contextMenuOpen: false,
     pendingPlacement: null,
-    pendingFragmentPiece: null
+    pendingFragmentPiece: null,
+    aiDebug: {
+      mode: "off",
+      targetPlayer: null,
+      overlay: null,
+      cacheKey: ""
+    }
   };
 
   function createGame(mode) {
@@ -931,6 +939,9 @@
   function render() {
     renderStatus();
     renderPendingPieceBanner();
+    syncAiDebugOverlay();
+    syncAiDebugButton();
+    renderAiDebugStatus();
     renderBoard();
     renderSide("P1", els.p1Reserve, els.p1Hand, els.p1DeckCount);
     renderSide("P2", els.p2Reserve, els.p2Hand, els.p2DeckCount);
@@ -1036,12 +1047,220 @@
     els.pendingPieceBanner.innerHTML = "";
   }
 
+  function getAiDebugModeLabel(mode) {
+    if (mode === "attack") {
+      return "利き";
+    }
+    if (mode === "danger") {
+      return "危険";
+    }
+    if (mode === "both") {
+      return "両方";
+    }
+    return "OFF";
+  }
+
+  function getAiDebugPlayer() {
+    if (isNpcGame()) {
+      return uiState.npc.side || "P2";
+    }
+    if (uiState.state && uiState.state.currentPlayer) {
+      return uiState.state.currentPlayer;
+    }
+    return "P1";
+  }
+
+  function getAiDebugStateFingerprint(state, player, mode) {
+    var pieceTokens = [];
+    var placementTokens = [];
+    ["P1", "P2"].forEach(function (side) {
+      Object.keys(state.players[side].pieces).sort().forEach(function (pieceId) {
+        var piece = state.players[side].pieces[pieceId];
+        pieceTokens.push(pieceId + ":" + piece.kind + ":" + piece.row + ":" + piece.col);
+      });
+    });
+    state.placements.slice().sort(function (a, b) {
+      return a.id.localeCompare(b.id);
+    }).forEach(function (placement) {
+      placementTokens.push(
+        placement.id + ":" + placement.owner + ":" + placement.cells.map(function (cell) {
+          return cell.row + "-" + cell.col;
+        }).join("_")
+      );
+    });
+    return [
+      mode,
+      player,
+      state.turnNumber,
+      state.currentPlayer,
+      state.winner || "-",
+      pieceTokens.join("|"),
+      placementTokens.join("|")
+    ].join("~");
+  }
+
+  function buildAiDebugOverlay(state, player, mode) {
+    var opponent = getOpponentPlayer(player);
+    var attackMap = getAttackMapForState(state, player);
+    var dangerMap = getDangerMapForState(state, player);
+    var defenseSnapshot = getDefenseSnapshot(state, player);
+    var basePressureScore = getBaseCenterPressureScore(state, player);
+    var opponentBasePressureScore = getBaseCenterPressureScore(state, opponent);
+    var roleScore = getPieceRoleScoreForPlayer(state, player);
+    var opponentRoleScore = getPieceRoleScoreForPlayer(state, opponent);
+    var ownBase = findBaseCenterInState(state, player);
+    var ownKing = findKingInState(state, player);
+    var enemyBase = findBaseCenterInState(state, opponent);
+    var cells = [];
+    var attackedCells = 0;
+    var dangerCells = 0;
+    var hotCells = 0;
+    var maxAttackCount = 0;
+    var maxDangerCount = 0;
+    var maxHotCount = 0;
+    var row;
+    var col;
+    var attackCount;
+    var dangerCount;
+    var hotCount;
+
+    for (row = 0; row < BOARD_ROWS; row += 1) {
+      cells[row] = [];
+      for (col = 0; col < BOARD_COLS; col += 1) {
+        attackCount = attackMap.counts[row][col];
+        dangerCount = dangerMap.counts[row][col];
+        hotCount = dangerMap.immediateCounts[row][col];
+        if (attackCount > 0) {
+          attackedCells += 1;
+          maxAttackCount = Math.max(maxAttackCount, attackCount);
+        }
+        if (dangerCount > 0) {
+          dangerCells += 1;
+          maxDangerCount = Math.max(maxDangerCount, dangerCount);
+        }
+        if (hotCount > 0) {
+          hotCells += 1;
+          maxHotCount = Math.max(maxHotCount, hotCount);
+        }
+        cells[row][col] = {
+          attackCount: attackCount,
+          dangerCount: dangerCount,
+          hotCount: hotCount
+        };
+      }
+    }
+
+    return {
+      mode: mode,
+      showAttack: mode === "attack" || mode === "both",
+      showDanger: mode === "danger" || mode === "both",
+      player: player,
+      playerName: getDisplayedPlayerName(player),
+      attackMap: attackMap,
+      dangerMap: dangerMap,
+      defenseSnapshot: defenseSnapshot,
+      basePressureScore: basePressureScore,
+      opponentBasePressureScore: opponentBasePressureScore,
+      basePressureDelta: basePressureScore - opponentBasePressureScore,
+      roleScore: roleScore,
+      opponentRoleScore: opponentRoleScore,
+      roleScoreDelta: roleScore - opponentRoleScore,
+      attackedCells: attackedCells,
+      dangerCells: dangerCells,
+      hotCells: hotCells,
+      maxAttackCount: maxAttackCount,
+      maxDangerCount: maxDangerCount,
+      maxHotCount: maxHotCount,
+      ownBase: ownBase ? { row: ownBase.row, col: ownBase.col } : null,
+      ownKing: ownKing ? { row: ownKing.row, col: ownKing.col } : null,
+      enemyBase: enemyBase ? { row: enemyBase.row, col: enemyBase.col } : null,
+      cells: cells
+    };
+  }
+
+  function syncAiDebugOverlay() {
+    var mode = uiState.aiDebug && uiState.aiDebug.mode ? uiState.aiDebug.mode : "off";
+    var player = getAiDebugPlayer();
+    var state = uiState.state;
+    var cacheKey;
+    if (!state || mode === "off") {
+      uiState.aiDebug.targetPlayer = player;
+      uiState.aiDebug.overlay = null;
+      uiState.aiDebug.cacheKey = "";
+      return;
+    }
+    cacheKey = getAiDebugStateFingerprint(state, player, mode);
+    if (uiState.aiDebug.cacheKey === cacheKey && uiState.aiDebug.overlay) {
+      uiState.aiDebug.targetPlayer = player;
+      return;
+    }
+    uiState.aiDebug.targetPlayer = player;
+    uiState.aiDebug.cacheKey = cacheKey;
+    uiState.aiDebug.overlay = buildAiDebugOverlay(state, player, mode);
+  }
+
+  function syncAiDebugButton() {
+    if (!els.toggleAiDebugBtn) {
+      return;
+    }
+    var mode = uiState.aiDebug && uiState.aiDebug.mode ? uiState.aiDebug.mode : "off";
+    els.toggleAiDebugBtn.textContent = "AIデバッグ: " + getAiDebugModeLabel(mode);
+    els.toggleAiDebugBtn.classList.toggle("active-tool", mode !== "off");
+  }
+
+  function formatSignedDebugValue(value) {
+    var rounded = Math.round(value || 0);
+    if (rounded > 0) {
+      return "+" + rounded;
+    }
+    return String(rounded);
+  }
+
+  function renderAiDebugStatus() {
+    if (!els.aiDebugStatus) {
+      return;
+    }
+    var overlay = uiState.aiDebug ? uiState.aiDebug.overlay : null;
+    var defenseSnapshot;
+    var summary = [];
+    var titleText;
+    if (!overlay) {
+      els.aiDebugStatus.hidden = true;
+      els.aiDebugStatus.innerHTML = "";
+      return;
+    }
+    defenseSnapshot = overlay.defenseSnapshot;
+    titleText = "AIデバッグ: " + overlay.playerName + " (" + PLAYER_LABELS[overlay.player] + ")";
+    summary.push("<div class=\"ai-debug-title\">" + titleText + "</div>");
+    if (overlay.showAttack) {
+      summary.push("<span class=\"ai-debug-chip attack\">利き " + overlay.attackedCells + " / 最大 " + overlay.maxAttackCount + "</span>");
+    }
+    if (overlay.showDanger) {
+      summary.push("<span class=\"ai-debug-chip danger\">危険 " + overlay.dangerCells + " / 最大 " + overlay.maxDangerCount + "</span>");
+      summary.push("<span class=\"ai-debug-chip hot\">即勝ち筋 " + defenseSnapshot.immediateWins + " / ホット " + overlay.hotCells + "</span>");
+    }
+    summary.push("<span class=\"ai-debug-chip\">受け " + ((defenseSnapshot.kingThreatened || defenseSnapshot.baseHot || defenseSnapshot.immediateWins) ? "必須" : "不要") + "</span>");
+    summary.push("<span class=\"ai-debug-chip\">本陣圧力 " + formatSignedDebugValue(overlay.basePressureDelta) + "</span>");
+    summary.push("<span class=\"ai-debug-chip\">駒役割 " + formatSignedDebugValue(overlay.roleScoreDelta) + "</span>");
+    els.aiDebugStatus.innerHTML = summary.join("");
+    els.aiDebugStatus.hidden = false;
+  }
+
+  function getAiDebugCellData(row, col) {
+    if (!uiState.aiDebug || !uiState.aiDebug.overlay || !uiState.aiDebug.overlay.cells[row]) {
+      return null;
+    }
+    return uiState.aiDebug.overlay.cells[row][col] || null;
+  }
+
   function renderBoard() {
     els.board.innerHTML = "";
     els.board.style.gridTemplateColumns = "repeat(" + BOARD_COLS + ", minmax(0, 1fr))";
+    var overlay = uiState.aiDebug ? uiState.aiDebug.overlay : null;
     for (var row = 0; row < BOARD_ROWS; row += 1) {
       for (var col = 0; col < BOARD_COLS; col += 1) {
         var cell = uiState.state.board[row][col];
+        var debugCell = overlay ? getAiDebugCellData(row, col) : null;
         var button = document.createElement("button");
         button.type = "button";
         button.className = "cell " + (cell.controller ? cell.controller.toLowerCase() : "neutral");
@@ -1051,8 +1270,14 @@
         if (uiState.selection && uiState.selection.type === "piece" && pieceMatchesCell(uiState.selection.pieceId, row, col)) {
           button.classList.add("selected");
         }
+        if (isPendingMoveSourceCell(row, col)) {
+          button.classList.add("pending-move-source");
+        }
         if (isMoveTarget(row, col)) {
           button.classList.add("move-target");
+        }
+        if (isPendingMoveTargetCell(row, col)) {
+          button.classList.add("pending-move-target");
         }
         if (isReserveTarget(row, col)) {
           button.classList.add("reserve-target");
@@ -1075,6 +1300,17 @@
             button.classList.add("target");
           }
         }
+        if (overlay && debugCell) {
+          if (overlay.showAttack && debugCell.attackCount > 0) {
+            button.classList.add("ai-debug-attack-cell");
+          }
+          if (overlay.showDanger && debugCell.dangerCount > 0) {
+            button.classList.add("ai-debug-danger-cell");
+          }
+          if (overlay.showDanger && debugCell.hotCount > 0) {
+            button.classList.add("ai-debug-hot");
+          }
+        }
         button.dataset.row = String(row);
         button.dataset.col = String(col);
         button.addEventListener("click", makeCellHandler(row, col));
@@ -1084,6 +1320,27 @@
         stack.className = "stack-count";
         stack.textContent = cell.stack.length > 0 ? "x" + cell.stack.length : "";
         button.appendChild(stack);
+
+        if (overlay && debugCell) {
+          if (overlay.showDanger && debugCell.dangerCount > 0) {
+            var dangerBadge = document.createElement("span");
+            dangerBadge.className = "ai-debug-badge danger";
+            dangerBadge.textContent = String(debugCell.dangerCount);
+            button.appendChild(dangerBadge);
+          }
+          if (overlay.showAttack && debugCell.attackCount > 0) {
+            var attackBadge = document.createElement("span");
+            attackBadge.className = "ai-debug-badge attack";
+            attackBadge.textContent = String(debugCell.attackCount);
+            button.appendChild(attackBadge);
+          }
+          if (overlay.showDanger && debugCell.hotCount > 0) {
+            var hotBadge = document.createElement("span");
+            hotBadge.className = "ai-debug-badge hot";
+            hotBadge.textContent = debugCell.hotCount > 1 ? String(debugCell.hotCount) : "!";
+            button.appendChild(hotBadge);
+          }
+        }
 
         if (cell.pieceId) {
           var piece = getPiece(uiState.state, cell.pieceId);
@@ -1238,6 +1495,58 @@
         els.historyBoard.appendChild(cellEl);
       }
     }
+  }
+
+  function setupSimpleGameLayout() {
+    var center = els.gameView ? els.gameView.querySelector(".center") : null;
+    var logCard = els.logList ? els.logList.closest(".card") : null;
+    var movementCard = els.movementSummary ? els.movementSummary.closest(".card") : null;
+    var fragmentCard = els.fragmentCatalog ? els.fragmentCatalog.closest(".card") : null;
+    var testCard = els.testOutput ? els.testOutput.closest(".card") : null;
+    var details;
+    var summary;
+    var summaryLabel;
+    var summaryTitle;
+    var toolbar;
+    var grid;
+
+    if (!center || !logCard || !els.historyCard || !movementCard || !fragmentCard || !testCard || !els.runTestsBtn) {
+      return;
+    }
+    if (document.getElementById("extrasDrawer")) {
+      return;
+    }
+
+    details = document.createElement("details");
+    details.id = "extrasDrawer";
+    details.className = "card extras-drawer";
+
+    summary = document.createElement("summary");
+    summary.className = "extras-summary";
+    summaryLabel = document.createElement("span");
+    summaryLabel.className = "label";
+    summaryLabel.textContent = "DETAILS";
+    summaryTitle = document.createElement("strong");
+    summaryTitle.className = "extras-title";
+    summaryTitle.textContent = "棋譜・資料";
+    summary.appendChild(summaryLabel);
+    summary.appendChild(summaryTitle);
+    details.appendChild(summary);
+
+    toolbar = document.createElement("div");
+    toolbar.className = "extras-toolbar";
+    toolbar.appendChild(els.runTestsBtn);
+    details.appendChild(toolbar);
+
+    grid = document.createElement("div");
+    grid.className = "extras-grid";
+    grid.appendChild(els.historyCard);
+    grid.appendChild(movementCard);
+    grid.appendChild(fragmentCard);
+    grid.appendChild(testCard);
+    details.appendChild(grid);
+
+    logCard.insertAdjacentElement("afterend", details);
   }
 
   function renderMovementSummary() {
@@ -1872,12 +2181,18 @@
         if (!button) {
           continue;
         }
-        button.classList.remove("selected", "anchor", "target", "preview-invalid", "move-target", "reserve-target", "recover-piece-target", "recover-fragment-target");
+        button.classList.remove("selected", "pending-move-source", "pending-move-target", "anchor", "target", "preview-invalid", "move-target", "reserve-target", "recover-piece-target", "recover-fragment-target");
         if (uiState.selection && uiState.selection.type === "piece" && pieceMatchesCell(uiState.selection.pieceId, row, col)) {
           button.classList.add("selected");
         }
+        if (isPendingMoveSourceCell(row, col)) {
+          button.classList.add("pending-move-source");
+        }
         if (isMoveTarget(row, col)) {
           button.classList.add("move-target");
+        }
+        if (isPendingMoveTargetCell(row, col)) {
+          button.classList.add("pending-move-target");
         }
         if (isReserveTarget(row, col)) {
           button.classList.add("reserve-target");
@@ -1931,6 +2246,15 @@
     }
 
     if (uiState.selection && uiState.selection.type === "piece") {
+      if (piece && piece.owner === uiState.state.currentPlayer) {
+        if (uiState.selection.pieceId === piece.id) {
+          clearSelection();
+        } else {
+          selectPieceForMove(piece.id);
+        }
+        render();
+        return;
+      }
       tryMove(row, col, event);
       return;
     }
@@ -1946,11 +2270,7 @@
     }
 
     if (piece && piece.owner === uiState.state.currentPlayer) {
-      uiState.selection = { type: "piece", pieceId: piece.id };
-      uiState.moveTargets = getLegalMoveTargets(piece);
-      uiState.reserveTargets = [];
-      uiState.recoverPieceTargets = [];
-      uiState.recoverFragmentTargets = [];
+      selectPieceForMove(piece.id);
       render();
       return;
     }
@@ -1986,13 +2306,24 @@
 
   function tryMove(row, col, event) {
     var piece = getPiece(uiState.state, uiState.selection.pieceId);
+    var targetCell;
+    var targetPiece;
+    var confirmText;
     if (!piece) {
+      clearSelection();
+      render();
       return;
     }
     if (!canMovePiece(piece, row, col)) {
+      if (uiState.pendingPlacement && uiState.pendingPlacement.type === "move") {
+        hidePlacementConfirm();
+        render();
+      }
       return;
     }
 
+    targetCell = uiState.state.board[row][col];
+    targetPiece = targetCell.pieceId ? getPiece(uiState.state, targetCell.pieceId) : null;
     openPlacementConfirm(event ? event.clientX : 0, event ? event.clientY : 0, {
       type: "move",
       pieceId: piece.id,
@@ -2000,8 +2331,13 @@
       col: col
     });
     if (els.confirmText) {
-      els.confirmText.textContent = "\u3053\u306E\u79FB\u52D5\u3092\u78BA\u5B9A\u3057\u307E\u3059\u304B\uFF1F";
+      confirmText = getPieceLabel(piece.kind) + " \u3092 " + formatBoardCoordinate(piece.row, piece.col) + " \u304B\u3089 " + formatBoardCoordinate(row, col) + " \u3078\u79FB\u52D5";
+      if (targetPiece && targetPiece.owner !== piece.owner) {
+        confirmText += "\u3057\u3001" + getPieceLabel(targetPiece.kind) + " \u3092\u53D6\u308A";
+      }
+      els.confirmText.textContent = confirmText + "\u307E\u3059\u304B\uFF1F";
     }
+    render();
   }
 
   function commitMove(pieceId, row, col) {
@@ -2266,6 +2602,46 @@
   function pieceMatchesCell(pieceId, row, col) {
     var piece = getPiece(uiState.state, pieceId);
     return !!piece && piece.row === row && piece.col === col;
+  }
+
+  function formatBoardCoordinate(row, col) {
+    return "(" + (row + 1) + ", " + (col + 1) + ")";
+  }
+
+  function isPendingMoveTargetCell(row, col) {
+    return !!(
+      uiState.pendingPlacement &&
+      uiState.pendingPlacement.type === "move" &&
+      uiState.pendingPlacement.row === row &&
+      uiState.pendingPlacement.col === col
+    );
+  }
+
+  function isPendingMoveSourceCell(row, col) {
+    if (!uiState.pendingPlacement || uiState.pendingPlacement.type !== "move") {
+      return false;
+    }
+    return pieceMatchesCell(uiState.pendingPlacement.pieceId, row, col);
+  }
+
+  function selectPieceForMove(pieceId) {
+    var piece = getPiece(uiState.state, pieceId);
+    if (!piece) {
+      return false;
+    }
+    uiState.selection = { type: "piece", pieceId: piece.id };
+    uiState.moveTargets = getLegalMoveTargets(piece);
+    uiState.reserveTargets = [];
+    uiState.recoverPieceTargets = [];
+    uiState.recoverFragmentTargets = [];
+    uiState.pendingAnchor = null;
+    uiState.rotation = 0;
+    uiState.previewCells = [];
+    uiState.previewLegal = false;
+    uiState.pendingFragmentPiece = null;
+    hideContextMenu();
+    hidePlacementConfirm();
+    return true;
   }
 
   function tryReserveDrop(row, col) {
@@ -2853,10 +3229,28 @@
     return Math.max(0, 20 - getDistanceToEnemyBase(player, row, col));
   }
 
+  function getBaseCenterTargetBonus(player, row, col) {
+    var enemyBase = findBaseCenter(getOpponentPlayer(player));
+    if (!enemyBase) {
+      return 0;
+    }
+    return Math.max(0, 9 - getWeightedDistance(row, col, enemyBase.row, enemyBase.col)) * 4.5;
+  }
+
+  function getPieceRolePreviewBonus(player, pieceType, row, col) {
+    return getPieceRoleBonusInState(uiState.state, {
+      owner: player,
+      kind: pieceType,
+      row: row,
+      col: col
+    }) * 0.32;
+  }
+
   function scoreNpcMoveAction(player, piece, row, col) {
     var cell = uiState.state.board[row][col];
     var targetPiece = cell.pieceId ? getPiece(uiState.state, cell.pieceId) : null;
-    var score = 40 + getCenterPressureScore(player, row, col) + getPieceStrategicValue(piece.kind) * 0.08;
+    var score = 40 + getCenterPressureScore(player, row, col) + getBaseCenterTargetBonus(player, row, col) + getPieceStrategicValue(piece.kind) * 0.08;
+    score += getPieceRolePreviewBonus(player, piece.kind, row, col);
     if (cell.controller === player) {
       score += 6;
     }
@@ -2871,7 +3265,8 @@
 
   function scoreNpcReserveAction(player, pieceType, row, col) {
     var cell = uiState.state.board[row][col];
-    var score = 26 + getCenterPressureScore(player, row, col) + getPieceStrategicValue(pieceType) * 0.22;
+    var score = 26 + getCenterPressureScore(player, row, col) + getBaseCenterTargetBonus(player, row, col) + getPieceStrategicValue(pieceType) * 0.22;
+    score += getPieceRolePreviewBonus(player, pieceType, row, col);
     if (cell.isBaseCenter && cell.baseOwner === getOpponentPlayer(player)) {
       score += 50000;
     }
@@ -2888,6 +3283,7 @@
       if (uiState.state.board[cell.row][cell.col].isBaseCenter && uiState.state.board[cell.row][cell.col].baseOwner === getOpponentPlayer(player)) {
         score += 50000;
       }
+      score += getPieceRolePreviewBonus(player, pieceType, cell.row, cell.col);
       if (!best || score > best.score) {
         best = {
           row: cell.row,
@@ -2903,7 +3299,7 @@
     var score = 48;
     cells.forEach(function (cell) {
       var boardCell = uiState.state.board[cell.row][cell.col];
-      score += 5 + getCenterPressureScore(player, cell.row, cell.col) * 0.8;
+      score += 5 + getCenterPressureScore(player, cell.row, cell.col) * 0.8 + getBaseCenterTargetBonus(player, cell.row, cell.col);
       if (boardCell.controller && boardCell.controller !== player) {
         score += 12;
       }
@@ -2915,6 +3311,7 @@
       score += pieceCell.score;
     }
     score += getPieceStrategicValue(card.pieceType) * 0.12;
+    score += getPieceRolePreviewBonus(player, card.pieceType, pieceCell ? pieceCell.row : cells[0].row, pieceCell ? pieceCell.col : cells[0].col);
     return score;
   }
 
@@ -3204,6 +3601,8 @@
         var total = scorePlayer(npcPlayer) - scorePlayer(opponent);
         var npcAttack = getAttackSummaryForState(state, npcPlayer);
         var opponentAttack = getAttackSummaryForState(state, opponent);
+        var baseCenterPressureDelta = getBaseCenterPressureScore(state, npcPlayer) - getBaseCenterPressureScore(state, opponent);
+        var roleScoreDelta = getPieceRoleScoreForPlayer(state, npcPlayer) - getPieceRoleScoreForPlayer(state, opponent);
         total += (npcAttack.mobility - opponentAttack.mobility) * 3.4;
         total += (npcAttack.attackedCells - opponentAttack.attackedCells) * 2.2;
         total -= npcAttack.hotCells * 1800;
@@ -3211,6 +3610,8 @@
         total += (npcAttack.captureValue - opponentAttack.captureValue) * 16;
         total += (npcAttack.basePressure - opponentAttack.basePressure) * 4200;
         total += (npcAttack.kingPressure - opponentAttack.kingPressure) * 11000;
+        total += baseCenterPressureDelta * 1.15;
+        total += roleScoreDelta * 0.9;
         total -= npcAttack.hangingPenalty * 9;
         total += opponentAttack.hangingPenalty * 6;
         if (isKingUnderThreatInState(state, npcPlayer)) {
@@ -3394,6 +3795,264 @@
     };
   }
 
+  function getDefenseSnapshot(state, player) {
+    var opponent = getOpponentPlayer(player);
+    var ownBase = findBaseCenterInState(state, player);
+    var ownKing = findKingInState(state, player);
+    var dangerMap = getDangerMapForState(state, player);
+    var snapshot = {
+      immediateWins: dangerMap.immediateWins.length,
+      baseHot: 0,
+      baseThreat: 0,
+      kingThreatened: false,
+      kingDanger: 0,
+      dangerCells: 0
+    };
+
+    if (ownBase) {
+      snapshot.baseHot = dangerMap.immediateCounts[ownBase.row][ownBase.col];
+      snapshot.baseThreat = dangerMap.counts[ownBase.row][ownBase.col];
+    }
+    if (ownKing) {
+      snapshot.kingThreatened = isCellThreatenedInState(state, opponent, ownKing.row, ownKing.col);
+      snapshot.kingDanger = dangerMap.counts[ownKing.row][ownKing.col];
+    }
+
+    for (var row = 0; row < BOARD_ROWS; row += 1) {
+      for (var col = 0; col < BOARD_COLS; col += 1) {
+        if (dangerMap.immediateCounts[row][col] > 0) {
+          snapshot.dangerCells += 1;
+        }
+      }
+    }
+
+    return snapshot;
+  }
+
+  function isDefenseSnapshotBetter(candidate, baseline) {
+    if (!baseline) {
+      return true;
+    }
+    if (candidate.immediateWins !== baseline.immediateWins) {
+      return candidate.immediateWins < baseline.immediateWins;
+    }
+    if (candidate.baseHot !== baseline.baseHot) {
+      return candidate.baseHot < baseline.baseHot;
+    }
+    if ((candidate.kingThreatened ? 1 : 0) !== (baseline.kingThreatened ? 1 : 0)) {
+      return (candidate.kingThreatened ? 1 : 0) < (baseline.kingThreatened ? 1 : 0);
+    }
+    if (candidate.kingDanger !== baseline.kingDanger) {
+      return candidate.kingDanger < baseline.kingDanger;
+    }
+    if (candidate.baseThreat !== baseline.baseThreat) {
+      return candidate.baseThreat < baseline.baseThreat;
+    }
+    return candidate.dangerCells < baseline.dangerCells;
+  }
+
+  function isSameDefenseSnapshot(left, right) {
+    return !!left && !!right &&
+      left.immediateWins === right.immediateWins &&
+      left.baseHot === right.baseHot &&
+      left.baseThreat === right.baseThreat &&
+      !!left.kingThreatened === !!right.kingThreatened &&
+      left.kingDanger === right.kingDanger &&
+      left.dangerCells === right.dangerCells;
+  }
+
+  function getWeightedDistance(rowA, colA, rowB, colB) {
+    return Math.abs(rowA - rowB) + Math.abs(colA - colB);
+  }
+
+  function getBaseCenterPressureScore(state, player) {
+    var opponent = getOpponentPlayer(player);
+    var center = findBaseCenterInState(state, opponent);
+    var playerAttack = getAttackMapForState(state, player).counts;
+    var opponentAttack = getAttackMapForState(state, opponent).counts;
+    var score = 0;
+    var row;
+    var col;
+    var weight;
+    var cell;
+    var piece;
+
+    if (!center) {
+      return 0;
+    }
+
+    for (row = center.row - 1; row <= center.row + 1; row += 1) {
+      for (col = center.col - 1; col <= center.col + 1; col += 1) {
+        if (!isInBounds(row, col)) {
+          continue;
+        }
+        weight = row === center.row && col === center.col
+          ? 28
+          : (Math.abs(row - center.row) + Math.abs(col - center.col) === 1 ? 14 : 9);
+        cell = state.board[row][col];
+        piece = cell.pieceId ? getPiece(state, cell.pieceId) : null;
+        if (cell.controller === player) {
+          score += weight * 2.6;
+        } else if (cell.controller === opponent) {
+          score -= weight * 1.25;
+        }
+        score += Math.min(3, playerAttack[row][col]) * weight * 1.45;
+        score -= Math.min(3, opponentAttack[row][col]) * weight * 0.9;
+        if (piece && piece.owner === player) {
+          score += weight * 1.9;
+        } else if (piece && piece.owner === opponent) {
+          score -= weight * 1.4;
+        }
+      }
+    }
+
+    return score;
+  }
+
+  function getPieceRoleBonusInState(state, piece) {
+    var owner = piece.owner;
+    var opponent = getOpponentPlayer(owner);
+    var ownKing = findKingInState(state, owner);
+    var enemyKing = findKingInState(state, opponent);
+    var ownBase = findBaseCenterInState(state, owner);
+    var enemyBase = findBaseCenterInState(state, opponent);
+    var distOwnKing = ownKing ? getWeightedDistance(piece.row, piece.col, ownKing.row, ownKing.col) : 9;
+    var distEnemyKing = enemyKing ? getWeightedDistance(piece.row, piece.col, enemyKing.row, enemyKing.col) : 9;
+    var distOwnBase = ownBase ? getWeightedDistance(piece.row, piece.col, ownBase.row, ownBase.col) : 9;
+    var distEnemyBase = enemyBase ? getWeightedDistance(piece.row, piece.col, enemyBase.row, enemyBase.col) : 9;
+    var bonus = 0;
+
+    switch (piece.kind) {
+      case "king":
+        bonus += Math.max(0, 5 - distOwnBase) * 13;
+        bonus += Math.max(0, 4 - distOwnKing) * 10;
+        bonus -= Math.max(0, 4 - distEnemyBase) * 8;
+        break;
+      case "guard":
+      case "barrier":
+        bonus += Math.max(0, 4 - distOwnKing) * 12;
+        bonus += Math.max(0, 4 - distOwnBase) * 8;
+        bonus += Math.max(0, 6 - distEnemyBase) * 3;
+        break;
+      case "flanker":
+        bonus += Math.max(0, 4 - distOwnKing) * 8;
+        bonus += Math.max(0, 6 - distEnemyBase) * 5;
+        bonus += Math.max(0, 5 - distEnemyKing) * 4;
+        break;
+      case "vanguard":
+        bonus += Math.max(0, 6 - distEnemyBase) * 8;
+        bonus += Math.max(0, 5 - distEnemyKing) * 5;
+        break;
+      case "rider":
+        bonus += Math.max(0, 7 - distEnemyBase) * 8;
+        bonus += Math.max(0, 5 - distEnemyKing) * 8;
+        break;
+      case "realmKnight":
+        bonus += Math.max(0, 7 - distEnemyBase) * 10;
+        bonus += Math.max(0, 6 - distEnemyKing) * 7;
+        break;
+      case "charger":
+      case "destroyer":
+        bonus += Math.max(0, 8 - distEnemyBase) * 9;
+        bonus += Math.max(0, 7 - distEnemyKing) * 6;
+        break;
+      case "disruptor":
+        bonus += Math.max(0, 6 - distEnemyKing) * 9;
+        bonus += Math.max(0, 7 - distEnemyBase) * 6;
+        break;
+      case "chaosBeast":
+        bonus += Math.max(0, 7 - distEnemyBase) * 10;
+        bonus += Math.max(0, 6 - distEnemyKing) * 8;
+        bonus += Math.max(0, 4 - distOwnKing) * 4;
+        break;
+      case "decoy":
+        bonus += Math.max(0, 6 - distEnemyBase) * 5;
+        bonus += Math.max(0, 5 - distEnemyKing) * 3;
+        break;
+      default:
+        break;
+    }
+
+    if (enemyBase && piece.row === enemyBase.row && piece.col === enemyBase.col) {
+      bonus += 60;
+    }
+    if (ownBase && piece.row === ownBase.row && piece.col === ownBase.col && (piece.kind === "guard" || piece.kind === "barrier")) {
+      bonus += 36;
+    }
+
+    return bonus;
+  }
+
+  function getPieceRoleScoreForPlayer(state, player) {
+    var total = 0;
+    Object.keys(state.players[player].pieces).forEach(function (pieceId) {
+      total += getPieceRoleBonusInState(state, state.players[player].pieces[pieceId]);
+    });
+    return total;
+  }
+
+  function rebalanceNpcCandidateActions(actions, emergencyMode) {
+    var limits = emergencyMode
+      ? { move: 5, fragment: 2, reserve: 2, recoverPiece: 1, recoverFragment: 1, mulligan: 1 }
+      : { move: 6, fragment: 3, reserve: 2, recoverPiece: 1, recoverFragment: 1, mulligan: 1 };
+    var totalLimit = emergencyMode ? 7 : 10;
+    var counts = {};
+    var selected = [];
+    var remaining = [];
+
+    actions.forEach(function (action) {
+      var limit = limits[action.type] || 1;
+      counts[action.type] = counts[action.type] || 0;
+      if (counts[action.type] < limit && selected.length < totalLimit) {
+        counts[action.type] += 1;
+        selected.push(action);
+      } else {
+        remaining.push(action);
+      }
+    });
+
+    remaining.forEach(function (action) {
+      if (selected.length < totalLimit) {
+        selected.push(action);
+      }
+    });
+
+    return selected;
+  }
+
+  function refineNpcCandidateActions(state, player, actions, emergencyMode) {
+    var opponent = getOpponentPlayer(player);
+    var currentPressure = getBaseCenterPressureScore(state, player) - getBaseCenterPressureScore(state, opponent);
+    var currentRole = getPieceRoleScoreForPlayer(state, player) - getPieceRoleScoreForPlayer(state, opponent);
+    var refined = filterForcedDefenseActions(state, player, actions).map(function (action) {
+      var nextState = cloneGameState(state);
+      var defenseSnapshot;
+      var pressureDelta;
+      var roleDelta;
+      nextState.currentPlayer = player;
+      applyNpcActionToState(nextState, action);
+      defenseSnapshot = getDefenseSnapshot(nextState, player);
+      pressureDelta = (getBaseCenterPressureScore(nextState, player) - getBaseCenterPressureScore(nextState, opponent)) - currentPressure;
+      roleDelta = (getPieceRoleScoreForPlayer(nextState, player) - getPieceRoleScoreForPlayer(nextState, opponent)) - currentRole;
+      action.refinedScore =
+        action.score +
+        pressureDelta * 1.7 +
+        roleDelta * 1.05 -
+        defenseSnapshot.immediateWins * 12000 -
+        defenseSnapshot.baseHot * 9000 -
+        defenseSnapshot.kingDanger * 2200 -
+        defenseSnapshot.baseThreat * 360;
+      action.defenseSnapshot = defenseSnapshot;
+      return action;
+    });
+
+    refined.sort(function (a, b) {
+      return (b.refinedScore || b.score) - (a.refinedScore || a.score);
+    });
+
+    return rebalanceNpcCandidateActions(refined, emergencyMode);
+  }
+
   function getLegalMoveTargetsForState(state, piece) {
     return withTemporaryState(state, function () {
       return getLegalMoveTargets(piece);
@@ -3409,7 +4068,7 @@
       });
     }
 
-    function getAttackSummaryForState(state, player) {
+  function getAttackSummaryForState(state, player) {
     var opponent = getOpponentPlayer(player);
     var attackMap = getAttackMapForState(state, player);
     var dangerMap = getDangerMapForState(state, player);
@@ -3464,53 +4123,28 @@
     }
 
     function filterForcedDefenseActions(state, player, actions) {
-      var opponent = getOpponentPlayer(player);
-      var kingUnderThreat = isKingUnderThreatInState(state, player);
-      var dangerMap = getDangerMapForState(state, player);
+      var currentSnapshot = getDefenseSnapshot(state, player);
       var forced = [];
-      var bestImmediateWins = Infinity;
-      var bestKingThreat = Infinity;
-      var bestDangerCells = Infinity;
+      var bestSnapshot = null;
 
-      if (!kingUnderThreat && !dangerMap.immediateWins.length) {
+      if (!currentSnapshot.kingThreatened && !currentSnapshot.immediateWins && !currentSnapshot.baseHot) {
         return actions;
       }
 
       actions.forEach(function (action) {
         var nextState = cloneGameState(state);
+        var nextSnapshot;
         nextState.currentPlayer = player;
         applyNpcActionToState(nextState, action);
+        nextSnapshot = getDefenseSnapshot(nextState, player);
 
-        var nextDangerMap = getDangerMapForState(nextState, player);
-        var nextImmediateWins = nextDangerMap.immediateWins.length;
-        var nextKingThreat = isKingUnderThreatInState(nextState, player) ? 1 : 0;
-        var nextDangerCells = 0;
-
-        for (var row = 0; row < BOARD_ROWS; row += 1) {
-          for (var col = 0; col < BOARD_COLS; col += 1) {
-            if (nextDangerMap.immediateCounts[row][col] > 0) {
-              nextDangerCells += 1;
-            }
-          }
-        }
-
-        if (
-          nextImmediateWins < bestImmediateWins ||
-          (nextImmediateWins === bestImmediateWins && nextKingThreat < bestKingThreat) ||
-          (nextImmediateWins === bestImmediateWins && nextKingThreat === bestKingThreat && nextDangerCells < bestDangerCells)
-        ) {
-          bestImmediateWins = nextImmediateWins;
-          bestKingThreat = nextKingThreat;
-          bestDangerCells = nextDangerCells;
+        if (isDefenseSnapshotBetter(nextSnapshot, bestSnapshot)) {
+          bestSnapshot = nextSnapshot;
           forced = [action];
           return;
         }
 
-        if (
-          nextImmediateWins === bestImmediateWins &&
-          nextKingThreat === bestKingThreat &&
-          nextDangerCells === bestDangerCells
-        ) {
+        if (isSameDefenseSnapshot(nextSnapshot, bestSnapshot)) {
           forced.push(action);
         }
       });
@@ -3621,8 +4255,7 @@
       actions.sort(function (a, b) {
         return b.score - a.score;
       });
-      var candidateActions = getNpcCandidateActions(actions, emergencyMode);
-      candidateActions = filterForcedDefenseActions(uiState.state, npcPlayer, candidateActions);
+      var candidateActions = refineNpcCandidateActions(uiState.state, npcPlayer, getNpcCandidateActions(actions, emergencyMode), emergencyMode);
       var bestAction = candidateActions[0];
       var bestScore = -Infinity;
 
@@ -3651,8 +4284,7 @@
           replyActions.sort(function (a, b) {
             return b.score - a.score;
           });
-          replyActions = getNpcCandidateActions(replyActions, isKingUnderThreatInState(nextState, opponent));
-          replyActions = filterForcedDefenseActions(nextState, opponent, replyActions).slice(0, Math.min(6, replyActions.length));
+          replyActions = refineNpcCandidateActions(nextState, opponent, getNpcCandidateActions(replyActions, isKingUnderThreatInState(nextState, opponent)), isKingUnderThreatInState(nextState, opponent)).slice(0, Math.min(6, replyActions.length));
           if (replyActions.length) {
             score = Infinity;
             replyActions.forEach(function (replyAction) {
@@ -3835,7 +4467,7 @@
   function getMessageText() {
     if (isOnlineGame() && uiState.online.waitRequest) {
       if (uiState.online.waitRequest.requestedTo === uiState.online.side) {
-        return "相手から待った申請が届いています。承認すると 1 手戻ります。";
+        return "相手から待った申請が届いています。承認すると申請者の手番まで巻き戻します。";
       }
       if (uiState.online.waitRequest.requestedBy === uiState.online.side) {
         return "待った申請中です。相手の返答を待っています。";
@@ -3844,6 +4476,13 @@
     if (uiState.state.winner) {
       return PLAYER_LABELS[uiState.state.winner] + "\u306E\u52DD\u3061\u3067\u3059\u3002";
     }
+    if (uiState.pendingPlacement && uiState.pendingPlacement.type === "move") {
+      var pendingMovePiece = getPiece(uiState.state, uiState.pendingPlacement.pieceId);
+      if (pendingMovePiece) {
+        return getPieceLabel(pendingMovePiece.kind) + " を " + formatBoardCoordinate(pendingMovePiece.row, pendingMovePiece.col) + " から " + formatBoardCoordinate(uiState.pendingPlacement.row, uiState.pendingPlacement.col) + " へ動かす確認中です。金色のマスを見て確定してください。";
+      }
+      return "\u3053\u306E\u79FB\u52D5\u3092\u78BA\u5B9A\u3057\u307E\u3059\u304B\uFF1F";
+    }
     if (uiState.pendingFragmentPiece) {
       return "\u4ECA\u7F6E\u3044\u305F\u6B20\u7247\u306E\u4E2D\u304B\u3089\u3001" + getPieceLabel(uiState.pendingFragmentPiece.pieceType) + "\u3092\u7F6E\u304F\u30DE\u30B9\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002";
     }
@@ -3851,7 +4490,8 @@
       return "\u99D2\u3092\u52D5\u304B\u3059\u304B\u3001\u6301\u3061\u99D2\u3092\u6253\u3064\u304B\u3001\u624B\u672D\u306E\u6B20\u7247\u3092\u914D\u7F6E\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
     }
     if (uiState.selection.type === "piece") {
-      return "\u79FB\u52D5\u5148\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u901A\u5E38\u79FB\u52D5\u306F\u9023\u7D9A\u3057\u305F\u5C55\u958B\u56F3\u306E\u4E0A\u3060\u3051\u3067\u3059\u3002";
+      var selectedPiece = getPiece(uiState.state, uiState.selection.pieceId);
+      return (selectedPiece ? getPieceLabel(selectedPiece.kind) + " \u306E" : "") + "\u79FB\u52D5\u5148\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u9752\u304C\u79FB\u52D5\u5148\u3067\u3001\u5225\u306E\u81EA\u99D2\u3092\u62BC\u3059\u3068\u9078\u3073\u76F4\u3057\u3001\u540C\u3058\u99D2\u3092\u3082\u3046\u4E00\u5EA6\u62BC\u3059\u3068\u89E3\u9664\u3067\u304D\u307E\u3059\u3002";
     }
     if (uiState.selection.type === "recoverPiece") {
       return "\u6A59\u306E\u67A0\u3067\u8868\u793A\u3055\u308C\u305F\u81EA\u99D2\u3092\u9078\u3076\u3068\u3001\u6301\u99D2\u3068\u3057\u3066\u56DE\u53CE\u3057\u307E\u3059\u3002";
@@ -3923,6 +4563,12 @@
     return JSON.parse(JSON.stringify(state));
   }
 
+  function resetBoardCameraView() {
+    if (window.UNFOLD_3D_RENDERER && typeof window.UNFOLD_3D_RENDERER.resetCameraView === "function") {
+      window.UNFOLD_3D_RENDERER.resetCameraView();
+    }
+  }
+
   function startPracticeGame(modeOverride) {
     clearNpcTurnTimer();
     resetNpcState();
@@ -3933,6 +4579,7 @@
     clearSelection();
     pushLog("ひとりテストプレイを開始");
     uiState.screen = "game";
+    resetBoardCameraView();
     render();
   }
 
@@ -3948,6 +4595,7 @@
     clearSelection();
     pushLog("NPC 対戦を開始");
     uiState.screen = "game";
+    resetBoardCameraView();
     render();
   }
 
@@ -3977,6 +4625,30 @@
     return !uiState.pendingFragmentPiece && !uiState.selection && !uiState.state.winner && getHistoryEntries().length > 1;
   }
 
+  function getWaitRestoreHistoryIndex(history, currentPlayer) {
+    var index;
+    if (!history || history.length <= 1) {
+      return -1;
+    }
+    for (index = history.length - 2; index >= 0; index -= 1) {
+      if ((history[index].currentPlayer || "") === currentPlayer) {
+        return index;
+      }
+    }
+    return history.length - 2;
+  }
+
+  function getWaitRestoreStateFromHistory(history, currentPlayer) {
+    var targetIndex = getWaitRestoreHistoryIndex(history, currentPlayer);
+    var restored;
+    if (targetIndex < 0) {
+      return null;
+    }
+    restored = cloneGameState(history[targetIndex].snapshot);
+    restored.history = cloneGameState(history.slice(0, targetIndex + 1));
+    return restored;
+  }
+
   function restorePreviousTurn() {
     var history = getHistoryEntries();
     var restored;
@@ -3985,8 +4657,10 @@
     }
     clearNpcTurnTimer();
     uiState.npc.thinking = false;
-    restored = cloneGameState(history[history.length - 2].snapshot);
-    restored.history = cloneGameState(history.slice(0, history.length - 1));
+    restored = getWaitRestoreStateFromHistory(history, uiState.state.currentPlayer);
+    if (!restored) {
+      return false;
+    }
     uiState.state = restored;
     uiState.replayIndex = -1;
     clearSelection();
@@ -4001,6 +4675,8 @@
     stopRoomPolling();
     resetNpcState();
     uiState.practiceMode = false;
+    var previousScreen = uiState.screen;
+    var previousRoomStatus = uiState.online.roomStatus;
     var resolvedSide = resolveRoomSide(room, playerId) || side || null;
     uiState.online.enabled = true;
     uiState.online.roomId = room.id;
@@ -4016,6 +4692,9 @@
     uiState.practiceMode = false;
     uiState.replayIndex = uiState.state.history ? uiState.state.history.length - 1 : -1;
     uiState.screen = "game";
+    if (previousScreen !== "game" || (previousRoomStatus !== "playing" && uiState.online.roomStatus === "playing")) {
+      resetBoardCameraView();
+    }
     saveOnlineSession();
     clearSelection();
     scheduleRoomPolling();
@@ -4323,7 +5002,7 @@
     }
     if (!isOnlineGame()) {
       if (restorePreviousTurn()) {
-        pushLog("待ったで 1 手戻しました");
+        pushLog("待ったで自分の手番まで戻しました");
         render();
       }
       return Promise.resolve();
@@ -4372,6 +5051,7 @@
     uiState.replayIndex = uiState.state.history.length - 1;
     uiState.roomAdminKeys = loadRoomAdminKeys();
     restoreStoredOnlineName();
+    setupSimpleGameLayout();
     setScreen("lobby");
 
     if (els.newGameBtn) {
@@ -4397,6 +5077,19 @@
     if (els.onlineNameInput) {
       els.onlineNameInput.addEventListener("input", function () {
         saveOnlineName(els.onlineNameInput.value.trim());
+      });
+    }
+    if (els.toggleAiDebugBtn) {
+      els.toggleAiDebugBtn.addEventListener("click", function () {
+        var modes = ["off", "attack", "danger", "both"];
+        var currentMode = uiState.aiDebug && uiState.aiDebug.mode ? uiState.aiDebug.mode : "off";
+        var nextIndex = (modes.indexOf(currentMode) + 1) % modes.length;
+        uiState.aiDebug.mode = modes[nextIndex];
+        if (uiState.aiDebug.mode === "off") {
+          uiState.aiDebug.overlay = null;
+          uiState.aiDebug.cacheKey = "";
+        }
+        render();
       });
     }
 
@@ -4466,9 +5159,11 @@
       });
     }
 
-    els.runTestsBtn.addEventListener("click", function () {
-      els.testOutput.textContent = runTests();
-    });
+    if (els.runTestsBtn) {
+      els.runTestsBtn.addEventListener("click", function () {
+        els.testOutput.textContent = runTests();
+      });
+    }
 
     if (els.onlineModeSelect) {
       els.onlineModeSelect.value = getCurrentRuleMode();
@@ -4730,6 +5425,9 @@
       clearSelection: clearSelection,
       hasSelection: function () {
         return !!uiState.selection;
+      },
+      getAiDebugOverlay: function () {
+        return uiState.aiDebug ? uiState.aiDebug.overlay : null;
       }
     };
     render();

@@ -321,6 +321,9 @@ class RoomApiController extends Controller
                 if (empty($room['gameState']['history']) || count($room['gameState']['history']) <= 1) {
                     throw new RuntimeException('No turn is available to undo');
                 }
+                if ($this->buildWaitRestoredState($room['gameState'], $side) === null) {
+                    throw new RuntimeException('No turn is available to undo');
+                }
 
                 $room['waitRequest'] = [
                     'requestedBy' => $side,
@@ -348,12 +351,10 @@ class RoomApiController extends Controller
                     throw new RuntimeException('Only the opponent can respond to this wait request');
                 }
                 if (!empty($body['approved'])) {
-                    $history = $room['gameState']['history'] ?? [];
-                    if (count($history) <= 1) {
+                    $restored = $this->buildWaitRestoredState($room['gameState'] ?? [], (string) ($request['requestedBy'] ?? ''));
+                    if ($restored === null) {
                         throw new RuntimeException('No turn is available to undo');
                     }
-                    $restored = $history[count($history) - 2]['snapshot'];
-                    $restored['history'] = array_slice($history, 0, count($history) - 1);
                     $room['gameState'] = $restored;
                 }
 
@@ -647,6 +648,38 @@ class RoomApiController extends Controller
             $payload['gameState'] = $room['gameState'] ?? [];
         }
         return $payload;
+    }
+
+    private function getWaitRestoreHistoryIndex(array $history, string $currentPlayer): int
+    {
+        $count = count($history);
+        if ($count <= 1) {
+            return -1;
+        }
+
+        for ($index = $count - 2; $index >= 0; $index--) {
+            if ((string) ($history[$index]['currentPlayer'] ?? '') === $currentPlayer) {
+                return $index;
+            }
+        }
+
+        return $count - 2;
+    }
+
+    private function buildWaitRestoredState(array $gameState, string $currentPlayer): ?array
+    {
+        $history = is_array($gameState['history'] ?? null) ? array_values($gameState['history']) : [];
+        $targetIndex = $this->getWaitRestoreHistoryIndex($history, $currentPlayer);
+        $snapshot = $targetIndex >= 0 ? ($history[$targetIndex]['snapshot'] ?? null) : null;
+
+        if (!is_array($snapshot)) {
+            return null;
+        }
+
+        $restored = $snapshot;
+        $restored['history'] = array_slice($history, 0, $targetIndex + 1);
+
+        return $restored;
     }
 
     private function closeRoomIfEmpty(array &$rooms, string $roomId): bool

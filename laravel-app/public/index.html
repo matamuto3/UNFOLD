@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UNFOLD</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260426a">
 </head>
 <body>
   <main class="app">
@@ -230,13 +230,17 @@
               <div class="inline-guide">
                 <p id="messageLabel" class="inline-guide-text">盤面上のメッセージがここに表示されます。</p>
               </div>
-              <button id="toggle3DLabelsBtn" type="button">立体文字 ON</button>
+              <div class="board-tool-buttons">
+                <button id="toggleAiDebugBtn" type="button">AIデバッグ OFF</button>
+                <button id="toggle3DLabelsBtn" type="button">立体文字 ON</button>
+              </div>
             </div>
             <div class="scene-control-guide" aria-label="3D盤面の操作方法">
               <span class="scene-control-chip">ドラッグ: 回転</span>
               <span class="scene-control-chip">Shift + ドラッグ: 視点をずらす</span>
               <span class="scene-control-chip">ホイール: 拡大縮小</span>
             </div>
+            <div id="aiDebugStatus" class="ai-debug-status" hidden></div>
             <div id="pendingPieceBanner" class="pending-piece-banner" hidden></div>
             <div id="sceneViewport" class="scene-viewport" aria-label="UNFOLD 3D盤面"></div>
             <div id="board" class="board" aria-label="UNFOLD盤面"></div>
@@ -313,8 +317,8 @@
 
   <script>window.__UNFOLD_BOOTED = false;</script>
   <script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
-  <script src="app.js?v=20260424b"></script>
-  <script src="three-board.js?v=20260422a"></script>
+  <script src="app.js?v=20260426a"></script>
+  <script src="three-board.js?v=20260424c"></script>
   <script>
     if (!window.__UNFOLD_BOOTED) {
       var message = document.getElementById("messageLabel");
