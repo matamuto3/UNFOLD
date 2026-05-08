@@ -4,14 +4,48 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UNFOLD 簡易ルール</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta name="description" content="UNFOLDの勝利条件、手番の流れ、駒と展開図の基本を短く把握できる簡易ルールページです。">
+  <meta name="robots" content="max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#20242a">
+  <link rel="canonical" href="https://unfold.sakura.ne.jp/rules-summary.html">
+  <meta property="og:site_name" content="UNFOLD">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="UNFOLD 簡易ルール">
+  <meta property="og:description" content="UNFOLDの勝利条件、手番の流れ、駒と展開図の基本を短く把握できる簡易ルールページ。">
+  <meta property="og:url" content="https://unfold.sakura.ne.jp/rules-summary.html">
+  <meta property="og:image" content="https://unfold.sakura.ne.jp/assets/rules/start-state.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="UNFOLDの初期局面ボード">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="UNFOLD 簡易ルール">
+  <meta name="twitter:description" content="勝利条件、手番の流れ、駒と展開図の基本を短く把握できる UNFOLD の簡易ルール。">
+  <meta name="twitter:image" content="https://unfold.sakura.ne.jp/assets/rules/start-state.png">
+  <link rel="stylesheet" href="styles.css?v=20260503c">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": "https://unfold.sakura.ne.jp/rules-summary.html#webpage",
+      "url": "https://unfold.sakura.ne.jp/rules-summary.html",
+      "name": "UNFOLD 簡易ルール",
+      "description": "UNFOLDの勝利条件、手番の流れ、駒と展開図の基本を短く把握できる簡易ルールページです。",
+      "inLanguage": "ja-JP",
+      "isPartOf": {
+        "@id": "https://unfold.sakura.ne.jp/#website"
+      }
+    }
+  </script>
   <style>
     body.rules-body {
       margin: 0;
       background:
-        radial-gradient(circle at top, rgba(255,255,255,0.72), transparent 40%),
-        linear-gradient(180deg, #f6efe4 0%, #ead9be 100%);
-      color: #2e2419;
+        radial-gradient(circle at 16% 8%, rgba(255,255,255,0.86), transparent 30%),
+        radial-gradient(circle at 86% 14%, rgba(160,168,178,0.18), transparent 34%),
+        repeating-linear-gradient(118deg, transparent 0 34px, rgba(64,71,82,0.045) 35px 36px, transparent 37px 78px),
+        linear-gradient(180deg, #f7f6f1 0%, #dedbd2 100%);
+      color: #20242a;
       font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
     }
     .rules-shell {
@@ -25,9 +59,12 @@
     .section {
       padding: 22px;
       border-radius: 24px;
-      background: rgba(255,255,255,0.84);
-      border: 1px solid rgba(95, 67, 33, 0.12);
-      box-shadow: 0 18px 42px rgba(82, 60, 26, 0.08);
+      background:
+        radial-gradient(circle at 18% 8%, rgba(255,255,255,0.9), transparent 30%),
+        repeating-linear-gradient(125deg, transparent 0 38px, rgba(67,75,88,0.045) 39px 40px, transparent 42px 86px),
+        linear-gradient(180deg, rgba(255,255,252,0.96), rgba(235,234,228,0.94));
+      border: 1px solid rgba(43,49,57,0.15);
+      box-shadow: 0 18px 42px rgba(35,39,46,0.1);
       display: grid;
       gap: 12px;
     }
@@ -59,8 +96,8 @@
       gap: 10px;
       padding: 16px;
       border-radius: 20px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(244,236,223,0.96));
-      border: 1px solid rgba(95, 67, 33, 0.1);
+      background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(239,238,233,0.94));
+      border: 1px solid rgba(43,49,57,0.13);
       align-content: start;
     }
     .card img {
@@ -69,9 +106,11 @@
       object-fit: contain;
       object-position: center;
       border-radius: 16px;
-      border: 1px solid rgba(95, 67, 33, 0.12);
-      background: #efe4d1;
-      box-shadow: 0 10px 24px rgba(82, 60, 26, 0.08);
+      border: 1px solid rgba(43,49,57,0.16);
+      background:
+        radial-gradient(circle at 50% 10%, rgba(255,255,255,0.62), transparent 36%),
+        linear-gradient(180deg, #f4f2ec 0%, #d9d7d0 100%);
+      box-shadow: 0 10px 24px rgba(35,39,46,0.1);
     }
     .list {
       padding-left: 1.2rem;
@@ -89,7 +128,7 @@
       padding: 7px 10px;
       border-radius: 999px;
       background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(95, 67, 33, 0.12);
+      border: 1px solid rgba(43,49,57,0.13);
       font-size: 0.92rem;
     }
     .callout {
@@ -137,7 +176,7 @@
         <article class="card">
           <h3>展開図</h3>
           <img src="assets/rules/fragment-only.png" alt="展開図の画像">
-          <p>手札から置いて、自分の陣地を広げます。</p>
+          <p>手札や持ち展開図から置いて、自分の陣地を広げます。</p>
         </article>
         <article class="card">
           <h3>駒</h3>
@@ -168,14 +207,17 @@
       <div class="grid-2">
         <article class="card">
           <img src="assets/rules/start-state.png" alt="ゲーム開始時の盤面画像">
-          <p>本陣に初期駒を置いた状態から始めます。中央に展界者または王将を置き、その斜め前 2 マスに界騎士と護衛士、将棋駒モードでは銀将と金将を配置します。</p>
+          <p>本陣中央に展界者、または将棋駒モード時の王将だけを置いてから、初期スタンバイを行います。固定の界騎士・護衛士、金将・銀将は初期配置しません。</p>
+          <p>図は初期スタンバイで対応駒を 3 体ずつ本陣に置いたあとの例です。選んだカードの展開図は盤面に置かず、持ち展開図になります。</p>
         </article>
         <article class="card">
           <ul class="list">
-            <li>山札は各プレイヤー 18 枚です。</li>
+            <li>山札は各プレイヤー 20 枚です。</li>
             <li>最初に手札を 3 枚引きます。</li>
             <li>持ち駒は最初はありません。</li>
-            <li>護衛士 1 体は山札から外し、初期配置に使います。</li>
+            <li>先手、後手の順で手札から 1 枚ずつ選び、対応駒だけを本陣 3×3 マスの空きマスに置きます。</li>
+            <li>初期スタンバイでは展開図を盤面に置かず、選んだ展開図は持ち展開図になります。</li>
+            <li>各プレイヤーが最初の手札 3 枚を選び終えたら補充し、両者完了後に先手の通常手番を始めます。</li>
           </ul>
         </article>
       </div>
@@ -202,7 +244,7 @@
         <article class="card">
           <h3>手札から 1 枚選ぶ</h3>
           <img src="assets/rules/hand-select.png" alt="手札から展開図を1枚選んでいる画像">
-          <p>展開図は 0度 / 90度 / 180度 / 270度で回転して置けます。</p>
+          <p>手札または持ち展開図から選び、0度 / 90度 / 180度 / 270度で回転して置けます。</p>
         </article>
         <article class="card">
           <h3>自分の陣地に一辺で接するように置く</h3>
@@ -267,7 +309,7 @@
         <article class="card">
           <h3>展開図を回収する</h3>
           <img src="assets/rules/recover-fragment-before.png" alt="展開図回収の候補表示が出ている画像">
-          <p>手札 3 枚未満で、駒がなく、さらに上に別の展開図が重なっていないときだけ回収できます。</p>
+          <p>駒がなく、さらに上に別の展開図が重なっていない自分の展開図を回収できます。回収した図は手札ではなく持ち展開図になります。</p>
         </article>
       </div>
     </section>

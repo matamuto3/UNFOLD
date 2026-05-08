@@ -1,0 +1,82 @@
+{
+  "name": "unfold-original-pieces",
+  "cellSize": 192,
+  "rows": 3,
+  "cols": 4,
+  "background": "#FF00FF",
+  "pieces": [
+    {
+      "kind": "king",
+      "label": "展界者",
+      "short": "展",
+      "color": "#23877f"
+    },
+    {
+      "kind": "realmKnight",
+      "label": "界騎士",
+      "short": "界",
+      "color": "#2d6fb5"
+    },
+    {
+      "kind": "guard",
+      "label": "護衛士",
+      "short": "護",
+      "color": "#6d7a82"
+    },
+    {
+      "kind": "chaosBeast",
+      "label": "混沌獣",
+      "short": "混",
+      "color": "#7a4fc4"
+    },
+    {
+      "kind": "destroyer",
+      "label": "滅界者",
+      "short": "滅",
+      "color": "#8e3131"
+    },
+    {
+      "kind": "decoy",
+      "label": "誘引士",
+      "short": "誘",
+      "color": "#b77c2b"
+    },
+    {
+      "kind": "barrier",
+      "label": "結界士",
+      "short": "結",
+      "color": "#4466a6"
+    },
+    {
+      "kind": "rider",
+      "label": "騎乗士",
+      "short": "騎",
+      "color": "#397e62"
+    },
+    {
+      "kind": "charger",
+      "label": "突撃士",
+      "short": "突",
+      "color": "#a65f24"
+    },
+    {
+      "kind": "flanker",
+      "label": "側撃士",
+      "short": "側",
+      "color": "#936c2f"
+    },
+    {
+      "kind": "disruptor",
+      "label": "攪乱士",
+      "short": "攪",
+      "color": "#6b5aa8"
+    },
+    {
+      "kind": "vanguard",
+      "label": "前衛士",
+      "short": "前",
+      "color": "#8d7f42"
+    }
+  ],
+  "rawSheet": "laravel-app/public/assets/sprites/unfold-pieces/raw/unfold-original-pieces-raw-sheet.png"
+}

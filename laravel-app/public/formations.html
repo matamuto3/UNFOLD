@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD 囲い・戦型ガイド</title>
+  <meta name="description" content="UNFOLDの囲い・戦型ガイドです。守り重視、バランス、攻め寄りの初期スタンバイ例と、受け・回収・攻めの型を実盤面付きで整理しています。">
+  <meta name="robots" content="max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#20242a">
+  <link rel="canonical" href="https://unfold.sakura.ne.jp/formations.html">
+  <meta property="og:site_name" content="UNFOLD">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="UNFOLD 囲い・戦型ガイド">
+  <meta property="og:description" content="守り重視、バランス、攻め寄りの初期スタンバイ例と、受け・回収・攻めの型を実盤面付きで整理した UNFOLD の囲い・戦型ガイド。">
+  <meta property="og:url" content="https://unfold.sakura.ne.jp/formations.html">
+  <meta property="og:image" content="https://unfold.sakura.ne.jp/assets/rules/standby-balance.png">
+  <meta property="og:image:width" content="760">
+  <meta property="og:image:height" content="475">
+  <meta property="og:image:alt" content="UNFOLDのバランス型スタンバイ例">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="UNFOLD 囲い・戦型ガイド">
+  <meta name="twitter:description" content="守り重視、バランス、攻め寄りの初期スタンバイ例と、受け・回収・攻めの型を実盤面付きで整理した UNFOLD の囲い・戦型ガイド。">
+  <meta name="twitter:image" content="https://unfold.sakura.ne.jp/assets/rules/standby-balance.png">
+  <link rel="stylesheet" href="styles.css?v=20260505advice">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": "https://unfold.sakura.ne.jp/formations.html#webpage",
+      "url": "https://unfold.sakura.ne.jp/formations.html",
+      "name": "UNFOLD 囲い・戦型ガイド",
+      "description": "UNFOLDの囲い・戦型ガイドです。守り重視、バランス、攻め寄りの初期スタンバイ例と、受け・回収・攻めの型を実盤面付きで整理しています。",
+      "inLanguage": "ja-JP",
+      "isPartOf": {
+        "@id": "https://unfold.sakura.ne.jp/#website"
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --guide-ink: #1f252d;
+      --guide-muted: #55616d;
+      --guide-warm: #8f5b1d;
+      --guide-warm-soft: rgba(180, 124, 49, 0.14);
+      --guide-line: rgba(39, 47, 57, 0.12);
+      --guide-panel:
+        radial-gradient(circle at 18% 8%, rgba(255,255,255,0.92), transparent 28%),
+        linear-gradient(145deg, rgba(255,255,252,0.97), rgba(235,233,226,0.95));
+      --guide-shadow: 0 18px 42px rgba(35, 39, 46, 0.1);
+    }
+    html {
+      scroll-behavior: smooth;
+    }
+    body.rules-body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 14% 6%, rgba(255,255,255,0.92), transparent 28%),
+        radial-gradient(circle at 84% 12%, rgba(147, 156, 170, 0.18), transparent 30%),
+        linear-gradient(135deg, rgba(73, 82, 96, 0.04) 0, rgba(73, 82, 96, 0.04) 2px, transparent 2px, transparent 22px),
+        linear-gradient(180deg, #f5f4ef 0%, #ddd9cf 100%);
+      color: var(--guide-ink);
+      font-family: "Yu Gothic UI", "Hiragino Sans", sans-serif;
+    }
+    .guide-shell {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 64px;
+      display: grid;
+      gap: 18px;
+    }
+    .guide-hero,
+    .guide-section {
+      display: grid;
+      gap: 16px;
+      padding: 24px;
+      border-radius: 28px;
+      border: 1px solid rgba(39, 47, 57, 0.14);
+      background: var(--guide-panel);
+      box-shadow: var(--guide-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .guide-hero::before,
+    .guide-section::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.78), rgba(255,255,255,0));
+      pointer-events: none;
+    }
+    .guide-hero {
+      grid-template-columns: minmax(0, 1.24fr) minmax(320px, 0.96fr);
+      align-items: stretch;
+    }
+    .guide-hero-copy,
+    .guide-hero-side {
+      display: grid;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    .guide-hero h1,
+    .guide-section h2,
+    .guide-card h3,
+    .step-card h3,
+    .visual-card h3 {
+      margin: 0;
+    }
+    .guide-hero h1 {
+      font-size: clamp(2.14rem, 4.2vw, 3.18rem);
+      line-height: 1.06;
+      letter-spacing: -0.03em;
+    }
+    .guide-section h2 {
+      font-size: clamp(1.7rem, 3vw, 2.24rem);
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+    }
+    .guide-card h3,
+    .step-card h3,
+    .visual-card h3 {
+      font-size: 1.14rem;
+      line-height: 1.34;
+      color: #1d2630;
+    }
+    .guide-hero p,
+    .guide-section p,
+    .guide-card p,
+    .guide-card li,
+    .step-card p,
+    .guide-table {
+      margin: 0;
+      line-height: 1.75;
+    }
+    .label {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(39, 47, 57, 0.08);
+      background: rgba(255,255,255,0.84);
+      color: #7f5a28;
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .hero-kicker {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--guide-warm-soft);
+      color: #8c5a1a;
+      font-size: 0.84rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .hero-lead {
+      max-width: 64ch;
+      font-size: 1.05rem;
+      color: #31404f;
+    }
+    .hero-emphasis {
+      display: grid;
+      gap: 10px;
+      padding: 20px;
+      border-radius: 22px;
+      background:
+        linear-gradient(160deg, rgba(30, 39, 49, 0.96), rgba(71, 81, 94, 0.92));
+      color: #f5f1ea;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-emphasis::after {
+      content: "";
+      position: absolute;
+      inset: auto -14% -18% auto;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(215, 171, 103, 0.26), transparent 68%);
+      pointer-events: none;
+    }
+    .hero-emphasis strong {
+      font-size: 1.34rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .hero-actions a {
+      text-decoration: none;
+    }
+    .board-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .legend-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(39, 47, 57, 0.09);
+      color: #526170;
+      font-size: 0.82rem;
+    }
+    .zoom-note {
+      color: var(--guide-muted);
+      font-size: 0.88rem;
+    }
+    .focus-points {
+      display: grid;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(245, 240, 230, 0.94);
+      border: 1px solid rgba(39, 47, 57, 0.08);
+    }
+    .focus-points strong {
+      color: #6f4819;
+      font-size: 0.92rem;
+    }
+    .focus-points ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .guide-facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .fact-chip {
+      display: grid;
+      gap: 5px;
+      padding: 13px 15px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.76);
+      border: 1px solid rgba(39, 47, 57, 0.1);
+      box-shadow: 0 10px 24px rgba(35, 39, 46, 0.06);
+    }
+    .fact-chip span {
+      color: #7f5a28;
+      font-size: 0.76rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .fact-chip strong {
+      font-size: 1.02rem;
+      line-height: 1.35;
+      color: #1d2630;
+    }
+    .hero-pillars {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .pillar-card {
+      display: grid;
+      gap: 6px;
+      padding: 14px 15px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.74);
+      border: 1px solid rgba(39, 47, 57, 0.1);
+      box-shadow: 0 10px 24px rgba(35, 39, 46, 0.06);
+    }
+    .pillar-card span {
+      color: #7f5a28;
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .pillar-card strong {
+      font-size: 1.04rem;
+      line-height: 1.35;
+    }
+    .pillar-card p {
+      color: var(--guide-muted);
+      font-size: 0.95rem;
+    }
+    .visual-card {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.74);
+      border: 1px solid rgba(39, 47, 57, 0.12);
+    }
+    .visual-card img,
+    .guide-card img,
+    .step-card img {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 16px;
+      border: 1px solid rgba(39, 47, 57, 0.14);
+      background:
+        radial-gradient(circle at 50% 10%, rgba(255,255,255,0.62), transparent 36%),
+        linear-gradient(180deg, #f4f2ec 0%, #d9d7d0 100%);
+      box-shadow: 0 10px 24px rgba(35, 39, 46, 0.1);
+      cursor: zoom-in;
+    }
+    .hero-summary {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid rgba(39, 47, 57, 0.11);
+    }
+    .hero-summary ul {
+      padding-left: 1.2rem;
+      display: grid;
+      gap: 7px;
+      margin: 0;
+    }
+    .guide-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 16px 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(39, 47, 57, 0.1);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.78), rgba(240,237,230,0.82));
+      box-shadow: 0 14px 28px rgba(35, 39, 46, 0.06);
+    }
+    .guide-nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(39, 47, 57, 0.09);
+      background: rgba(255,255,255,0.76);
+      color: #2c3946;
+      text-decoration: none;
+      transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+    }
+    .guide-nav a::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, #b77d38, #8f5b1d);
+      box-shadow: 0 0 0 3px rgba(183, 125, 56, 0.12);
+    }
+    .guide-nav a:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(35, 39, 46, 0.08);
+      border-color: rgba(143, 91, 29, 0.18);
+    }
+    .section-head {
+      display: grid;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+    .section-head p {
+      max-width: 74ch;
+      color: var(--guide-muted);
+    }
+    .guide-grid {
+      display: grid;
+      gap: 14px;
+    }
+    .guide-grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .guide-grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .guide-grid.cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .guide-card {
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(239,237,231,0.94));
+      border: 1px solid rgba(39, 47, 57, 0.12);
+      align-content: start;
+      position: relative;
+      overflow: hidden;
+    }
+    .guide-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 4px;
+      background: linear-gradient(90deg, rgba(197, 160, 109, 0.56), rgba(255,255,255,0));
+      pointer-events: none;
+    }
+    .guide-card.focus {
+      background: linear-gradient(180deg, rgba(255,250,242,0.97), rgba(239,229,216,0.94));
+      border-color: rgba(154, 97, 28, 0.25);
+    }
+    .guide-card.standby-card {
+      gap: 12px;
+    }
+    .guide-card.soft {
+      background: linear-gradient(180deg, rgba(242,247,250,0.94), rgba(230,235,239,0.94));
+    }
+    .guide-card ul {
+      padding-left: 1.2rem;
+      display: grid;
+      gap: 7px;
+      margin: 0;
+    }
+    .callout {
+      display: grid;
+      gap: 8px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      border-left: 4px solid #aa7939;
+      background: rgba(248, 241, 229, 0.98);
+    }
+    .callout strong {
+      color: #6f4819;
+    }
+    .lesson-band {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 14px;
+    }
+    .priority-list {
+      display: grid;
+      gap: 10px;
+    }
+    .priority-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.76);
+      border: 1px solid rgba(39, 47, 57, 0.1);
+    }
+    .priority-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #8f5b1d;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .role-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .role-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(39, 47, 57, 0.12);
+      font-size: 0.92rem;
+    }
+    .role-chip.wall {
+      background: rgba(164, 110, 42, 0.14);
+      border-color: rgba(164, 110, 42, 0.22);
+    }
+    .role-chip.escape {
+      background: rgba(57, 112, 155, 0.12);
+      border-color: rgba(57, 112, 155, 0.22);
+    }
+    .role-chip.pressure {
+      background: rgba(108, 91, 153, 0.12);
+      border-color: rgba(108, 91, 153, 0.2);
+    }
+    .standby-visual {
+      position: relative;
+      min-height: 196px;
+      border-radius: 18px;
+      border: 1px solid rgba(39, 47, 57, 0.1);
+      background:
+        linear-gradient(180deg, rgba(247, 244, 236, 0.96), rgba(232, 229, 220, 0.96));
+      overflow: hidden;
+    }
+    .standby-visual::after {
+      content: "将棋駒の配置イメージ";
+      position: absolute;
+      right: 14px;
+      top: 12px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(39, 47, 57, 0.08);
+      background: rgba(255,255,255,0.84);
+      font-size: 0.72rem;
+      color: #7f5a28;
+      letter-spacing: 0.04em;
+    }
+    .standby-surface {
+      position: absolute;
+      inset: 12px;
+      border-radius: 14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0) 36%),
+        url("assets/rules/board-only.png") center 58% / cover no-repeat;
+      border: 1px solid rgba(39, 47, 57, 0.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+      overflow: hidden;
+    }
+    .standby-surface::before,
+    .standby-surface::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+    }
+    .standby-surface::before {
+      left: 31%;
+      top: 18%;
+      width: 38%;
+      height: 22%;
+      background: rgba(130, 182, 184, 0.15);
+      filter: blur(4px);
+    }
+    .standby-surface::after {
+      left: 34%;
+      bottom: 11%;
+      width: 32%;
+      height: 20%;
+      background: rgba(223, 143, 111, 0.14);
+      filter: blur(5px);
+    }
+    .standby-piece {
+      position: absolute;
+      left: var(--x);
+      top: var(--y);
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      transform: translate(-50%, -50%) rotate(45deg);
+      border: 1px solid rgba(39, 47, 57, 0.12);
+      box-shadow: 0 10px 18px rgba(35, 39, 46, 0.14);
+      display: grid;
+      place-items: center;
+      z-index: 1;
+    }
+    .standby-piece span {
+      transform: rotate(-45deg);
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      color: #3b2e1c;
+    }
+    .standby-piece.wall {
+      background: rgba(246, 236, 216, 0.98);
+      border-color: rgba(165, 122, 62, 0.34);
+    }
+    .standby-piece.escape {
+      background: rgba(234, 242, 248, 0.98);
+      border-color: rgba(76, 121, 160, 0.28);
+    }
+    .standby-piece.pressure {
+      background: rgba(248, 236, 231, 0.98);
+      border-color: rgba(171, 95, 73, 0.28);
+    }
+    .standby-piece.relay {
+      background: rgba(236, 239, 247, 0.98);
+      border-color: rgba(100, 102, 158, 0.24);
+    }
+    .standby-piece.attack {
+      background: rgba(249, 230, 223, 0.98);
+      border-color: rgba(171, 95, 73, 0.3);
+    }
+    .piece-examples {
+      display: grid;
+      gap: 9px;
+    }
+    .piece-row {
+      display: grid;
+      gap: 6px;
+      padding: 12px 13px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(39, 47, 57, 0.08);
+    }
+    .piece-row-label {
+      font-size: 0.84rem;
+      color: #65717d;
+      letter-spacing: 0.04em;
+    }
+    .piece-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .piece-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 42px;
+      min-height: 42px;
+      padding: 0 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(39, 47, 57, 0.12);
+      background: rgba(255,255,255,0.95);
+      font-weight: 700;
+    }
+    .piece-chip.original {
+      background: rgba(235, 240, 244, 0.95);
+    }
+    .piece-chip.shogi {
+      background: rgba(246, 237, 220, 0.96);
+    }
+    .standby-note {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(31, 39, 49, 0.05);
+      border: 1px solid rgba(39, 47, 57, 0.08);
+      color: #4f5c69;
+    }
+    .guide-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.75);
+    }
+    .guide-table th,
+    .guide-table td {
+      padding: 12px 13px;
+      border-bottom: 1px solid rgba(39, 47, 57, 0.11);
+      text-align: left;
+      vertical-align: top;
+    }
+    .guide-table th {
+      color: #8a632d;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+    }
+    .guide-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .checklist {
+      display: grid;
+      gap: 10px;
+    }
+    .check-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 15px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.76);
+      border: 1px solid rgba(39, 47, 57, 0.1);
+    }
+    .check-mark {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(150, 107, 44, 0.16);
+      color: #8f5b1d;
+      font-weight: 700;
+    }
+    .small-note {
+      color: #526170;
+      font-size: 0.93rem;
+    }
+    .guide-section[id],
+    .guide-nav {
+      scroll-margin-top: 24px;
+    }
+    .image-lightbox[hidden] {
+      display: none;
+    }
+    .image-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      padding: 24px;
+      display: grid;
+      place-items: center;
+      background: rgba(19, 24, 31, 0.82);
+    }
+    .image-lightbox-panel {
+      width: min(1100px, calc(100vw - 32px));
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.96);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.24);
+    }
+    .image-lightbox-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+    .image-lightbox-head p {
+      color: var(--guide-muted);
+      font-size: 0.92rem;
+    }
+    .image-lightbox-close {
+      appearance: none;
+      border: 1px solid rgba(39, 47, 57, 0.12);
+      background: rgba(245,245,242,0.96);
+      color: #1f252d;
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    .image-lightbox img {
+      width: 100%;
+      max-height: calc(100vh - 180px);
+      object-fit: contain;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 50% 10%, rgba(255,255,255,0.62), transparent 36%),
+        linear-gradient(180deg, #f4f2ec 0%, #d9d7d0 100%);
+      border: 1px solid rgba(39, 47, 57, 0.12);
+    }
+    .image-lightbox-caption {
+      color: #31404f;
+      font-size: 0.94rem;
+      line-height: 1.7;
+    }
+    @media (max-width: 960px) {
+      .guide-facts,
+      .hero-pillars,
+      .guide-hero,
+      .lesson-band,
+      .guide-grid.cols-2,
+      .guide-grid.cols-3,
+      .guide-grid.cols-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 760px) {
+      .guide-shell {
+        width: min(100% - 20px, 1140px);
+        padding-top: 18px;
+      }
+      .guide-nav {
+        padding: 14px;
+      }
+      .guide-hero,
+      .guide-section {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body class="rules-body">
+  <main class="guide-shell">
+    <section class="guide-hero">
+      <div class="guide-hero-copy">
+        <span class="hero-kicker">Field Guide</span>
+        <h1>UNFOLD 囲い・戦型ガイド</h1>
+        <p class="hero-lead">
+          形を覚える。役割で読み替える。局面で切り替える。
+          このページは、初期スタンバイの囲い例や戦型の見方を、参照しながら使うための資料ページです。
+        </p>
+        <div class="hero-emphasis">
+          <strong>囲いは名前より「何を守り、何を伸ばし、どこに圧を返すか」で見ると強くなります。</strong>
+          <p>
+            ここでは具体的な配置例と戦型の狙いを並べて、同じ囲いでも何を残して何を捨てているのかが読めるように整理します。
+          </p>
+        </div>
+        <div class="hero-actions">
+          <a class="button-link" href="joseki.html">攻守ガイドへ</a>
+          <a class="button-link" href="rules.html">詳細ルール</a>
+          <a class="button-link" href="index.html">ゲームへ戻る</a>
+        </div>
+        <div class="guide-facts">
+          <article class="fact-chip">
+            <span>対象</span>
+            <strong>2局目以降の参照用</strong>
+          </article>
+          <article class="fact-chip">
+            <span>読む目安</span>
+            <strong>6〜8分で全体像</strong>
+          </article>
+          <article class="fact-chip">
+            <span>役割</span>
+            <strong>見本と比較のページ</strong>
+          </article>
+        </div>
+        <div class="hero-pillars">
+          <article class="pillar-card">
+            <span>囲い</span>
+            <strong>3つの対応駒で本陣をどう守るかを見る</strong>
+            <p>壁、退路、外への触り方の配分で性格が変わります。</p>
+          </article>
+          <article class="pillar-card">
+            <span>戦型</span>
+            <strong>受け切るか、先に圧をかけるかを決める</strong>
+            <p>同じ手札でも、型の選び方で主導権の取り方が変わります。</p>
+          </article>
+          <article class="pillar-card">
+            <span>切替</span>
+            <strong>攻め・受け・回収を局面で切り替える</strong>
+            <p>囲いが固まった後は、毎手の役割判断が差を作ります。</p>
+          </article>
+        </div>
+      </div>
+      <div class="guide-hero-side">
+        <article class="visual-card">
+          <img src="assets/rules/start-state.png" alt="初期スタンバイ後の盤面全体">
+          <h3>このページで分かること</h3>
+          <ul>
+            <li>守り重視・バランス・攻め寄りの囲い例</li>
+            <li>検証から見えた戦型と型の違い</li>
+            <li>攻め・受け・回収を使い分ける視点</li>
+          </ul>
+          <div class="board-legend">
+            <span class="legend-chip">左: 自分側</span>
+            <span class="legend-chip">右: 相手側</span>
+            <span class="legend-chip">画像はクリックで拡大</span>
+          </div>
+          <p>
+            初心者向けの考え方だけ知りたい時は、別ページの
+            <a href="joseki.html">攻守ガイド</a>
+            から読むと入りやすいです。
+          </p>
+        </article>
+        <article class="hero-summary">
+          <span class="label">START HERE</span>
+          <p>読み方に迷ったら、まずはこの順で見ると整理しやすいです。</p>
+          <ul>
+            <li>1. 3枚が担っている役割を見る</li>
+            <li>2. その囲いが薄くなる場所を覚える</li>
+            <li>3. 攻め・受け・回収の切り替え先を見る</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <nav class="guide-nav" aria-label="ページ内ナビ">
+      <a href="#quick-picks">最初の選び方</a>
+      <a href="#opening-mindset">3役割の見方</a>
+      <a href="#standby-guide">囲い一覧</a>
+      <a href="#anti-patterns">避けたい形</a>
+      <a href="#battle-patterns">戦型と型</a>
+      <a href="#tactical-themes">攻め・受け・回収</a>
+      <a href="joseki.html">攻守ガイドへ</a>
+    </nav>
+
+    <section class="guide-section" id="quick-picks">
+      <div class="section-head">
+        <p class="label">QUICK PICKS</p>
+        <h2>迷った時の最初の選び方</h2>
+        <p>カードゲームやボードゲームの Field Guide のように、まず「今どれを採用するか」だけを先に決められるようにしています。理屈はその下の見本と比較表で追えます。</p>
+      </div>
+      <div class="guide-grid cols-3">
+        <article class="guide-card focus">
+          <h3>最初の3局は守り重視囲い</h3>
+          <p>王前と横の安全を固めやすく、多少遅れても即負け筋を減らせます。迷ったらまずこれです。</p>
+        </article>
+        <article class="guide-card">
+          <h3>中央へ触りたいならバランス囲い</h3>
+          <p>守りを完全には捨てず、中盤へ出る通路も確保できます。慣れてきた後の基準形に向きます。</p>
+        </article>
+        <article class="guide-card">
+          <h3>攻め寄りは相手が薄い時だけ</h3>
+          <p>勝ち筋を早く作れますが、受け損ねがそのまま敗着になりやすいです。常用より局面限定が安全です。</p>
+        </article>
+      </div>
+      <div class="callout">
+        <p>
+          まず1つ選ぶなら <strong>守り重視囲い</strong>、次に試すなら <strong>バランス囲い</strong>、
+          攻め寄りは <strong>相手の王前が薄いと読めた時だけ</strong> と覚えると導入がぶれにくくなります。
+        </p>
+      </div>
+    </section>
+
+    <section class="guide-section" id="opening-mindset">
+      <div class="section-head">
+        <p class="label">OPENING MINDSET</p>
+        <h2>囲いを見る時の3つの役割</h2>
+        <p>囲いは「どの駒を使っているか」だけでなく、「その3つがどこを守り、どこへ伸び、どこに圧を返しているか」で見ると読みやすくなります。</p>
+      </div>
+      <div class="lesson-band">
+        <div class="priority-list">
+          <article class="priority-item">
+            <span class="priority-badge">壁</span>
+            <div>
+              <h3>王の前を支える</h3>
+              <p>最初の1枚は、王の正面に近い筋を受けられるかを重視します。ここが薄いと長射程や跳躍の着地点をすぐ作られます。</p>
+            </div>
+          </article>
+          <article class="priority-item">
+            <span class="priority-badge">逃</span>
+            <div>
+              <h3>横の逃げ道を残す</h3>
+              <p>王は中央から動くことがあります。動いた先でさらに詰まないように、左右どちらかに安全な退路を残しておきます。</p>
+            </div>
+          </article>
+          <article class="priority-item">
+            <span class="priority-badge">妨</span>
+            <div>
+              <h3>相手の接続点を牽制する</h3>
+              <p>3つ目の駒は、自分の守りを崩さない範囲で相手の一本道を切る役目です。守り切るだけでなく、相手に楽をさせない配置が大切です。</p>
+            </div>
+          </article>
+        </div>
+        <article class="guide-card soft">
+          <img src="assets/rules/standby-balance.png" alt="バランス型の初期スタンバイ局面">
+          <div class="board-legend">
+            <span class="legend-chip">左: 自分側</span>
+            <span class="legend-chip">右: 相手側</span>
+          </div>
+          <h3>役割で見ると何が良いか</h3>
+          <div class="role-strip">
+            <span class="role-chip wall">壁: 即負けを減らす</span>
+            <span class="role-chip escape">逃げ道: 王の可動域を残す</span>
+            <span class="role-chip pressure">妨害: 相手の楽な形を消す</span>
+          </div>
+          <p>
+            囲いを名前だけで覚えるより、<strong>何を守り、何を伸ばし、何を邪魔しているか</strong> の3点で見ると、手札が違っても応用が利きます。
+          </p>
+          <p class="small-note">
+            同じ「守り重視」でも、王前が薄いなら守り寄りとは言えません。役割の置き方が優先です。
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="guide-section" id="standby-guide">
+      <div class="section-head">
+        <p class="label">STANDBY GUIDE</p>
+        <h2>初期スタンバイ囲いの見本</h2>
+        <p>ここでは実際の初期スタンバイ局面をそのまま使って、守り寄り、バランス型、攻め寄りの3パターンを見比べます。下段のオリジナル駒例は、将棋駒の役割をそのまま読み替えたものです。</p>
+      </div>
+      <div class="guide-grid cols-3">
+        <article class="guide-card">
+          <img src="assets/rules/standby-defense.png" alt="守り重視の初期スタンバイ局面">
+          <div class="board-legend">
+            <span class="legend-chip">左: 自分側</span>
+            <span class="legend-chip">右: 相手側</span>
+          </div>
+          <h3>守り重視囲い</h3>
+          <p><strong>おすすめ:</strong> 堅守2 + 妨害1</p>
+          <div class="focus-points">
+            <strong>画像で見るポイント</strong>
+            <ul>
+              <li>王の前に護衛士を置き、横に逃げ道を残しています。</li>
+              <li>外へ伸びる側撃士で、相手の接続点にも触れています。</li>
+            </ul>
+          </div>
+          <ul>
+            <li>最初に王の前を厚くする。</li>
+            <li>次に横の逃げ道を残す。</li>
+            <li>3つ目の役割で相手の伸び筋に触る。</li>
+          </ul>
+          <div class="piece-examples">
+            <div class="piece-row">
+              <span class="piece-row-label">将棋駒の例</span>
+              <div class="piece-chip-row">
+                <span class="piece-chip shogi">金将</span>
+                <span class="piece-chip shogi">歩兵</span>
+                <span class="piece-chip shogi">銀将</span>
+              </div>
+            </div>
+            <div class="piece-row">
+              <span class="piece-row-label">オリジナル駒の例</span>
+              <div class="piece-chip-row">
+                <span class="piece-chip original">護衛士</span>
+                <span class="piece-chip original">結界士</span>
+                <span class="piece-chip original">側撃士</span>
+              </div>
+            </div>
+          </div>
+          <p>最初の数局はこの形から入るのがいちばん安全です。</p>
+        </article>
+        <article class="guide-card standby-card">
+          <img src="assets/rules/standby-balance.png" alt="バランス型の初期スタンバイ局面">
+          <div class="board-legend">
+            <span class="legend-chip">左: 自分側</span>
+            <span class="legend-chip">右: 相手側</span>
+          </div>
+          <h3>バランス囲い</h3>
+          <p><strong>目安:</strong> 堅守1 + 中継1 + 妨害1</p>
+          <div class="focus-points">
+            <strong>画像で見るポイント</strong>
+            <ul>
+              <li>護衛士で王前を押さえつつ、騎乗士で中央への通路を作っています。</li>
+              <li>前衛士が外へ触る役を兼ねています。</li>
+            </ul>
+          </div>
+          <ul>
+            <li>守りを1枚に絞る代わりに、中盤へ出る通路を1本作る。</li>
+            <li>ただし王前が空くなら採用しない。</li>
+            <li>攻め急ぎにならない範囲で中央へ圧をかける。</li>
+          </ul>
+          <div class="piece-examples">
+            <div class="piece-row">
+              <span class="piece-row-label">将棋駒の例</span>
+              <div class="piece-chip-row">
+                <span class="piece-chip shogi">金将</span>
+                <span class="piece-chip shogi">桂馬</span>
+                <span class="piece-chip shogi">歩兵</span>
+              </div>
+            </div>
+            <div class="piece-row">
+              <span class="piece-row-label">オリジナル駒の例</span>
+              <div class="piece-chip-row">
+                <span class="piece-chip original">護衛士</span>
+                <span class="piece-chip original">騎乗士</span>
+                <span class="piece-chip original">前衛士</span>
+              </div>
+            </div>
+          </div>
+          <p>慣れてきたら、守りを残したまま攻めの道を増やす形として使います。</p>
+        </article>
+        <article class="guide-card standby-card">
+          <img src="assets/rules/standby-attack.png" alt="攻め寄りの初期スタンバイ局面">
+          <div class="board-legend">
+            <span class="legend-chip">左: 自分側</span>
+            <span class="legend-chip">右: 相手側</span>
+          </div>
+          <h3>攻め寄り囲い</h3>
+          <p><strong>目安:</strong> 中継2 + 退路1</p>
+          <div class="focus-points">
+            <strong>画像で見るポイント</strong>
+            <ul>
+              <li>騎乗士と突撃士が中央へ並び、先に攻め筋を作っています。</li>
+              <li>そのぶん王前の厚みは薄く、返し技に弱くなります。</li>
+            </ul>
+          </div>
+          <ul>
+            <li>相手本陣へ向かう道を早く作れる。</li>
+            <li>その代わり、王前が薄くなりやすい。</li>
+            <li>初心者は「勝ち筋」より「即負け筋」が増えやすいので注意。</li>
+          </ul>
+          <div class="piece-examples">
+            <div class="piece-row">
+              <span class="piece-row-label">将棋駒の例</span>
+              <div class="piece-chip-row">
+                <span class="piece-chip shogi">桂馬</span>
+                <span class="piece-chip shogi">飛車</span>
+                <span class="piece-chip shogi">歩兵</span>
+              </div>
+            </div>
+            <div class="piece-row">
+              <span class="piece-row-label">オリジナル駒の例</span>
+              <div class="piece-chip-row">
+                <span class="piece-chip original">騎乗士</span>
+                <span class="piece-chip original">突撃士</span>
+                <span class="piece-chip original">前衛士</span>
+              </div>
+            </div>
+          </div>
+          <p>最初から常用するより、相手の守りが薄いと見えた時だけ選ぶくらいで十分です。</p>
+        </article>
+      </div>
+      <p class="standby-note">
+        上の画像は実際の初期スタンバイ局面を切り出した例です。下段のオリジナル駒は同じ役割の読み替え例で、
+        特定の3枚セットを固定の正解として示しているわけではありません。
+      </p>
+      <table class="guide-table">
+        <thead>
+          <tr>
+            <th>囲い</th>
+            <th>向いている局面</th>
+            <th>強み</th>
+            <th>崩れやすい点</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>守り重視囲い</td>
+            <td>初戦、相手の型が読めない時</td>
+            <td>即負け筋を減らしやすい</td>
+            <td>攻め返しが遅れやすい</td>
+          </tr>
+          <tr>
+            <td>バランス囲い</td>
+            <td>互角の立ち上がり、中央戦をしたい時</td>
+            <td>受けと展開を両立しやすい</td>
+            <td>王前を薄くしやすい</td>
+          </tr>
+          <tr>
+            <td>攻め寄り囲い</td>
+            <td>相手の守りが薄い、主導権を急ぎたい時</td>
+            <td>短手数で勝ち筋を作りやすい</td>
+            <td>受け損ねが即敗着になりやすい</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <p>
+          囲いを名前で覚えるより、<strong>「この3つは何を守り、何を伸ばしているか」</strong> で見ると、引いた手札が違っても応用しやすくなります。
+        </p>
+      </div>
+    </section>
+
+    <section class="guide-section" id="anti-patterns">
+      <div class="section-head">
+        <p class="label">ANTI PATTERNS</p>
+        <h2>避けたい初期スタンバイ</h2>
+        <p>良い囲いを見るだけだと、「どこから危険になるか」が逆にぼやけることがあります。ここでは初心者がやりがちな崩れ筋を、悪い例として先に固定します。</p>
+      </div>
+      <div class="guide-grid cols-3">
+        <article class="guide-card">
+          <img src="assets/rules/standby-bad-open.png" alt="王前が薄い悪い初期スタンバイ">
+          <div class="board-legend">
+            <span class="legend-chip">左: 自分側</span>
+            <span class="legend-chip">右: 相手側</span>
+          </div>
+          <h3>王前が薄い</h3>
+          <div class="focus-points">
+            <strong>何が悪いか</strong>
+            <ul>
+              <li>中央へ伸ばす駒を優先しすぎて、王前の受け駒がありません。</li>
+              <li>短射程でも届く筋が残り、受けが後手に回ります。</li>
+            </ul>
+          </div>
+        </article>
+        <article class="guide-card">
+          <img src="assets/rules/standby-bad-no-escape.png" alt="横の退路がない悪い初期スタンバイ">
+          <div class="board-legend">
+            <span class="legend-chip">左: 自分側</span>
+            <span class="legend-chip">右: 相手側</span>
+          </div>
+          <h3>横の退路がない</h3>
+          <div class="focus-points">
+            <strong>何が悪いか</strong>
+            <ul>
+              <li>王の横まで自分で塞いでいて、逃げ先が作れていません。</li>
+              <li>王前が破られた瞬間に一気に詰み筋へ入ります。</li>
+            </ul>
+          </div>
+        </article>
+        <article class="guide-card">
+          <img src="assets/rules/standby-bad-overextend.png" alt="3つとも攻めに寄る悪い初期スタンバイ">
+          <div class="board-legend">
+            <span class="legend-chip">左: 自分側</span>
+            <span class="legend-chip">右: 相手側</span>
+          </div>
+          <h3>3つとも攻めに寄せる</h3>
+          <div class="focus-points">
+            <strong>何が悪いか</strong>
+            <ul>
+              <li>攻め筋は増えますが、守り役が消えて返し技に極端に弱くなります。</li>
+              <li>初心者が「押せている」と誤解しやすい典型です。</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+      <table class="guide-table">
+        <thead>
+          <tr>
+            <th>悪い形</th>
+            <th>起きやすい負け筋</th>
+            <th>直し方</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>王前が薄い</td>
+            <td>王捕獲を最短で許す</td>
+            <td>1枚を王前へ戻し、中央へ出る駒を1枚減らす</td>
+          </tr>
+          <tr>
+            <td>横の退路がない</td>
+            <td>王を動かした後に詰みやすい</td>
+            <td>横1マスぶんの退路役を必ず残す</td>
+          </tr>
+          <tr>
+            <td>3つとも攻めに寄せる</td>
+            <td>受け直し不能のまま反撃を浴びる</td>
+            <td>3つ目を攻め役ではなく妨害役にする</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="guide-section" id="battle-patterns">
+      <div class="section-head">
+        <p class="label">BATTLE PATTERNS</p>
+        <h2>検証から見えた戦型と型</h2>
+        <p>まだ歴史の浅いゲームなので、ここでの定石は固定の正解ではありません。NPC 同士の大量対局から「崩れにくかった考え方」を抜き出した、育成中の型メモとして読んでください。</p>
+      </div>
+      <div class="guide-grid cols-2">
+        <article class="guide-card">
+          <img src="assets/rules/standby-attack.png" alt="攻め寄り配置から圧をかける戦型イメージ">
+          <h3>攻め vs 守り</h3>
+          <p>
+            先手が中央へ圧力をかけ、後手が即負けを消し続ける戦型です。
+            先手は勝ち筋を急ぎ、後手は「王」と「本陣中央」の両方を同時に見る必要があります。
+          </p>
+        </article>
+        <article class="guide-card">
+          <img src="assets/rules/standby-defense.png" alt="守りを固めてから返す戦型イメージ">
+          <h3>守り vs 攻め</h3>
+          <p>
+            守る側が本陣前を厚くし、相手の展開図が置けない形を作ってから反撃する型です。
+            検証では、後手が守り切って反撃する成功例が多く出ました。
+          </p>
+        </article>
+        <article class="guide-card">
+          <img src="assets/rules/standby-balance.png" alt="中央戦へ移りやすいバランス戦型のイメージ">
+          <h3>バランス戦型</h3>
+          <p>
+            先手後手の勝率差が比較的小さく、練習用の基準にしやすい戦型です。
+            迷ったら、壁1枚、逃げ道1枚、圧力1枚の配分から始めると読みやすくなります。
+          </p>
+        </article>
+        <article class="guide-card">
+          <img src="assets/rules/move-after.png" alt="通路を通して一気に前進する速攻戦型イメージ">
+          <h3>速攻戦型</h3>
+          <p>
+            攻め駒と長い展開図を早く通す戦型です。
+            決まると短手数で勝てますが、受けを1手間違えると逆に王を取られやすいです。
+          </p>
+        </article>
+      </div>
+      <table class="guide-table">
+        <thead>
+          <tr>
+            <th>型</th>
+            <th>狙い</th>
+            <th>崩れやすい点</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>本陣接続囲い</td>
+            <td>初期スタンバイの対応駒3つを本陣に置き、王の前と横を厚くする。</td>
+            <td>壁だけ作ると反撃手がなく、相手に中央を伸ばされる。</td>
+          </tr>
+          <tr>
+            <td>中央圧力型</td>
+            <td>相手本陣中心へ展開図を近づけ、上書き勝利と王捕獲を同時に匂わせる。</td>
+            <td>王の前が薄くなると、相手の1手勝ちを許しやすい。</td>
+          </tr>
+          <tr>
+            <td>横受け型</td>
+            <td>王の横に逃げ道を残し、直線駒や跳び駒の刺さりを減らす。</td>
+            <td>角だけ接する展開図は接続にならないため、1辺で接しているか必ず確認する。</td>
+          </tr>
+          <tr>
+            <td>反撃受け型</td>
+            <td>受けながら次の手で相手王や本陣中心に圧力を返す。</td>
+            <td>受けだけを続けると山札を使っても主導権を取り返しにくい。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="guide-section" id="tactical-themes">
+      <div class="section-head">
+        <p class="label">TACTICAL THEMES</p>
+        <h2>攻め・受け・回収の使いどころ</h2>
+        <p>このゲームは「勝ち筋を通す手」と「負け筋を消す手」が毎ターンせめぎ合います。囲いを覚えた後は、毎手どの役割に切り替えるかが実戦の差になります。</p>
+      </div>
+      <div class="guide-grid cols-3">
+        <article class="guide-card focus">
+          <img src="assets/rules/overwrite-after.png" alt="攻めで二重の勝ち筋を作る局面">
+          <h3>攻め方: 2つの勝ち筋を同時に作る</h3>
+          <p>
+            王を取る筋だけ、または本陣中央を上書きする筋だけでは受けられやすいです。
+            強い攻めは、王を逃がすと本陣中央が空き、中心を守ると王が詰む形を作ります。
+          </p>
+        </article>
+        <article class="guide-card focus">
+          <img src="assets/rules/drop-before.png" alt="受けで即負け筋を消す局面">
+          <h3>受け方: 即負けを全部消す</h3>
+          <p>
+            受けは「一番怖い手を1つ消す」だけでは足りません。
+            相手が次に勝てる手が複数あるなら、王の捕獲、本陣中央、展開図上書きの全てを同時に減らします。
+          </p>
+        </article>
+        <article class="guide-card focus">
+          <img src="assets/rules/recover-piece-before.png" alt="回収で形を作り直す局面">
+          <h3>回収: 逃げではなく形の作り直し</h3>
+          <p>
+            駒回収は狙われた駒を助けながら持駒に戻す手です。
+            展開図回収は、駒が乗っておらず上書きもされていない安全な図を持ち展開図に戻し、次の接続や受けに再利用する手です。
+          </p>
+        </article>
+      </div>
+      <div class="checklist">
+        <div class="check-item">
+          <span class="check-mark">攻</span>
+          <p>相手本陣中心に近い展開図を置く前に、自分の王が次の手で取られないか確認します。</p>
+        </div>
+        <div class="check-item">
+          <span class="check-mark">受</span>
+          <p>相手の展開図を置けなくする防御は強いです。自陣の外側に「置かれると負ける余白」を残さないようにします。</p>
+        </div>
+        <div class="check-item">
+          <span class="check-mark">回</span>
+          <p>回収は手番を使います。回収後に相手の即勝ちが残るなら、先に駒移動・持駒打ち・展開図で受けます。</p>
+        </div>
+      </div>
+      <div class="callout">
+        <p>
+          囲いと戦型のページは、<strong>「この形なら何が強くて、どこが薄いか」</strong> を見返す参照用です。
+          実戦判断の基本に戻りたい時は <a href="joseki.html">攻守ガイド</a> を合わせて見るのがおすすめです。
+        </p>
+      </div>
+    </section>
+
+    <section class="guide-section" id="read-next">
+      <div class="section-head">
+        <p class="label">READ NEXT</p>
+        <h2>次に読むページ</h2>
+        <p>形の見方を押さえたら、実戦での攻めと守りの判断に戻ると理解がつながりやすくなります。</p>
+      </div>
+      <div class="guide-grid cols-2">
+        <article class="guide-card focus">
+          <h3>攻守ガイドへ戻る</h3>
+          <p>守りが大切な理由、攻めと守りの定石、最初の数局で使うチェックリストをまとめています。</p>
+          <div class="hero-actions">
+            <a class="button-link" href="joseki.html">攻守ガイドを開く</a>
+          </div>
+        </article>
+        <article class="guide-card">
+          <h3>詳細ルールを見る</h3>
+          <p>勝利条件や行動の定義を正確に確認したい時は、ルール本体を参照してください。</p>
+          <div class="hero-actions">
+            <a class="button-link" href="rules.html">詳細ルール</a>
+            <a class="button-link" href="rules-summary.html">簡易ルール</a>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+  <div id="guideLightbox" class="image-lightbox" hidden>
+    <div class="image-lightbox-panel">
+      <div class="image-lightbox-head">
+        <p>画像を拡大表示しています。外側を押すか `Esc` で閉じられます。</p>
+        <button id="guideLightboxClose" class="image-lightbox-close" type="button">閉じる</button>
+      </div>
+      <img id="guideLightboxImage" alt="">
+      <p id="guideLightboxCaption" class="image-lightbox-caption"></p>
+    </div>
+  </div>
+  <script src="guide-lightbox.js"></script>
+</body>
+</html>

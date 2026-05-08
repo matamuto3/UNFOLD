@@ -1,0 +1,1539 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-06T19:43:32.674Z",
+  "sources": {
+    "docsFiles": 231,
+    "storageFiles": 587,
+    "games": 22672,
+    "skippedDuplicate": 1606
+  },
+  "policy": {
+    "purpose": "Opening rescue joseki for P2 defense after the three-card standby rule.",
+    "setup": {
+      "preferredP2MinCols": [
+        9,
+        10
+      ],
+      "mirrorP1MaxCols": [
+        5,
+        4
+      ],
+      "avoid": [
+        "Do not overextend with three attack pieces unless it also cuts an enemy road.",
+        "Prefer a band that can still defend the king zone over a central race."
+      ],
+      "profiles": [
+        {
+          "key": "middle;min9;max13;shield3;attack0;soft0",
+          "games": 19,
+          "p1": 4,
+          "p2": 0,
+          "draw": 15,
+          "p2SurvivalRate": 0.7895,
+          "p2WinRate": 0,
+          "drawRate": 0.7895,
+          "avgPlies": 28.53
+        },
+        {
+          "key": "middle;min9;max14;shield2;attack1;soft0",
+          "games": 43,
+          "p1": 13,
+          "p2": 0,
+          "draw": 30,
+          "p2SurvivalRate": 0.6977,
+          "p2WinRate": 0,
+          "drawRate": 0.6977,
+          "avgPlies": 25.56
+        },
+        {
+          "key": "middle;min9;max14;shield1;attack2;soft0",
+          "games": 39,
+          "p1": 12,
+          "p2": 1,
+          "draw": 26,
+          "p2SurvivalRate": 0.6923,
+          "p2WinRate": 0.0256,
+          "drawRate": 0.6667,
+          "avgPlies": 24.72
+        },
+        {
+          "key": "middle;min9;max13;shield1;attack1;soft1",
+          "games": 12,
+          "p1": 4,
+          "p2": 0,
+          "draw": 8,
+          "p2SurvivalRate": 0.6667,
+          "p2WinRate": 0,
+          "drawRate": 0.6667,
+          "avgPlies": 23.67
+        },
+        {
+          "key": "over-extended;min8;max14;shield0;attack2;soft1",
+          "games": 9,
+          "p1": 3,
+          "p2": 0,
+          "draw": 6,
+          "p2SurvivalRate": 0.6667,
+          "p2WinRate": 0,
+          "drawRate": 0.6667,
+          "avgPlies": 23.67
+        },
+        {
+          "key": "over-extended;min8;max14;shield1;attack2;soft0",
+          "games": 9,
+          "p1": 3,
+          "p2": 0,
+          "draw": 6,
+          "p2SurvivalRate": 0.6667,
+          "p2WinRate": 0,
+          "drawRate": 0.6667,
+          "avgPlies": 24.56
+        },
+        {
+          "key": "over-extended;min8;max12;shield0;attack2;soft1",
+          "games": 6,
+          "p1": 2,
+          "p2": 0,
+          "draw": 4,
+          "p2SurvivalRate": 0.6667,
+          "p2WinRate": 0,
+          "drawRate": 0.6667,
+          "avgPlies": 24.33
+        },
+        {
+          "key": "middle;min9;max14;shield0;attack3;soft0",
+          "games": 11,
+          "p1": 4,
+          "p2": 0,
+          "draw": 7,
+          "p2SurvivalRate": 0.6364,
+          "p2WinRate": 0,
+          "drawRate": 0.6364,
+          "avgPlies": 25.09
+        },
+        {
+          "key": "middle;min9;max12;shield1;attack2;soft0",
+          "games": 52,
+          "p1": 19,
+          "p2": 1,
+          "draw": 32,
+          "p2SurvivalRate": 0.6346,
+          "p2WinRate": 0.0192,
+          "drawRate": 0.6154,
+          "avgPlies": 24.13
+        },
+        {
+          "key": "middle;min9;max14;shield0;attack2;soft1",
+          "games": 8,
+          "p1": 3,
+          "p2": 0,
+          "draw": 5,
+          "p2SurvivalRate": 0.625,
+          "p2WinRate": 0,
+          "drawRate": 0.625,
+          "avgPlies": 22.88
+        },
+        {
+          "key": "over-extended;min8;max14;shield1;attack1;soft1",
+          "games": 26,
+          "p1": 10,
+          "p2": 0,
+          "draw": 16,
+          "p2SurvivalRate": 0.6154,
+          "p2WinRate": 0,
+          "drawRate": 0.6154,
+          "avgPlies": 24.23
+        },
+        {
+          "key": "over-extended;min8;max13;shield2;attack0;soft1",
+          "games": 15,
+          "p1": 6,
+          "p2": 0,
+          "draw": 9,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 22.8
+        },
+        {
+          "key": "over-extended;min8;max12;shield3;attack0;soft0",
+          "games": 5,
+          "p1": 2,
+          "p2": 0,
+          "draw": 3,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 26.8
+        },
+        {
+          "key": "over-extended;min8;max13;shield1;attack2;soft0",
+          "games": 5,
+          "p1": 2,
+          "p2": 0,
+          "draw": 3,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 23.2
+        }
+      ],
+      "minCols": [
+        {
+          "key": "9",
+          "games": 499,
+          "p1": 212,
+          "p2": 3,
+          "draw": 284,
+          "p2SurvivalRate": 0.5752,
+          "p2WinRate": 0.006,
+          "drawRate": 0.5691,
+          "avgPlies": 23.71
+        },
+        {
+          "key": "8",
+          "games": 227,
+          "p1": 106,
+          "p2": 1,
+          "draw": 120,
+          "p2SurvivalRate": 0.533,
+          "p2WinRate": 0.0044,
+          "drawRate": 0.5286,
+          "avgPlies": 22.61
+        }
+      ]
+    },
+    "response": {
+      "weights": {
+        "move:destroyer:capture": 1,
+        "move:realmKnight:capture": 0.917,
+        "fragment:net07m/rider": 0.917,
+        "fragment:net03m/barrier": 0.875,
+        "fragment:net09m/flanker": 0.864,
+        "fragment:net04/charger": 0.859,
+        "fragment:net03/barrier": 0.825,
+        "fragment:net04m/charger": 0.825,
+        "fragment:net09/flanker": 0.792,
+        "fragment:net11/decoy": 0.786,
+        "fragment:net01/chaosBeast": 0.78,
+        "fragment:net02m/guard": 0.724,
+        "fragment:net05/vanguard": 0.72,
+        "fragment:net08/realmKnight": 0.708
+      },
+      "rows": [
+        {
+          "key": "move:destroyer:capture",
+          "games": 22,
+          "p1": 6,
+          "p2": 2,
+          "draw": 14,
+          "p2SurvivalRate": 0.7273,
+          "p2WinRate": 0.0909,
+          "drawRate": 0.6364,
+          "avgPlies": 24.45
+        },
+        {
+          "key": "move:realmKnight:capture",
+          "games": 54,
+          "p1": 18,
+          "p2": 0,
+          "draw": 36,
+          "p2SurvivalRate": 0.6667,
+          "p2WinRate": 0,
+          "drawRate": 0.6667,
+          "avgPlies": 25.7
+        },
+        {
+          "key": "fragment:net07m/rider",
+          "games": 30,
+          "p1": 10,
+          "p2": 0,
+          "draw": 20,
+          "p2SurvivalRate": 0.6667,
+          "p2WinRate": 0,
+          "drawRate": 0.6667,
+          "avgPlies": 25.13
+        },
+        {
+          "key": "fragment:net03m/barrier",
+          "games": 33,
+          "p1": 12,
+          "p2": 1,
+          "draw": 20,
+          "p2SurvivalRate": 0.6364,
+          "p2WinRate": 0.0303,
+          "drawRate": 0.6061,
+          "avgPlies": 25.52
+        },
+        {
+          "key": "fragment:net09m/flanker",
+          "games": 35,
+          "p1": 13,
+          "p2": 0,
+          "draw": 22,
+          "p2SurvivalRate": 0.6286,
+          "p2WinRate": 0,
+          "drawRate": 0.6286,
+          "avgPlies": 24.2
+        },
+        {
+          "key": "fragment:net04/charger",
+          "games": 24,
+          "p1": 9,
+          "p2": 0,
+          "draw": 15,
+          "p2SurvivalRate": 0.625,
+          "p2WinRate": 0,
+          "drawRate": 0.625,
+          "avgPlies": 24.79
+        },
+        {
+          "key": "fragment:net03/barrier",
+          "games": 35,
+          "p1": 14,
+          "p2": 1,
+          "draw": 20,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0.0286,
+          "drawRate": 0.5714,
+          "avgPlies": 22.97
+        },
+        {
+          "key": "fragment:net04m/charger",
+          "games": 25,
+          "p1": 10,
+          "p2": 0,
+          "draw": 15,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 23.44
+        },
+        {
+          "key": "fragment:net09/flanker",
+          "games": 33,
+          "p1": 14,
+          "p2": 0,
+          "draw": 19,
+          "p2SurvivalRate": 0.5758,
+          "p2WinRate": 0,
+          "drawRate": 0.5758,
+          "avgPlies": 23.52
+        },
+        {
+          "key": "fragment:net11/decoy",
+          "games": 42,
+          "p1": 18,
+          "p2": 0,
+          "draw": 24,
+          "p2SurvivalRate": 0.5714,
+          "p2WinRate": 0,
+          "drawRate": 0.5714,
+          "avgPlies": 23.24
+        },
+        {
+          "key": "fragment:net01/chaosBeast",
+          "games": 37,
+          "p1": 16,
+          "p2": 0,
+          "draw": 21,
+          "p2SurvivalRate": 0.5676,
+          "p2WinRate": 0,
+          "drawRate": 0.5676,
+          "avgPlies": 22.54
+        },
+        {
+          "key": "fragment:net02m/guard",
+          "games": 38,
+          "p1": 18,
+          "p2": 0,
+          "draw": 20,
+          "p2SurvivalRate": 0.5263,
+          "p2WinRate": 0,
+          "drawRate": 0.5263,
+          "avgPlies": 23.32
+        },
+        {
+          "key": "fragment:net05/vanguard",
+          "games": 21,
+          "p1": 10,
+          "p2": 0,
+          "draw": 11,
+          "p2SurvivalRate": 0.5238,
+          "p2WinRate": 0,
+          "drawRate": 0.5238,
+          "avgPlies": 22.19
+        },
+        {
+          "key": "fragment:net08/realmKnight",
+          "games": 66,
+          "p1": 32,
+          "p2": 0,
+          "draw": 34,
+          "p2SurvivalRate": 0.5152,
+          "p2WinRate": 0,
+          "drawRate": 0.5152,
+          "avgPlies": 22.73
+        }
+      ],
+      "firstMoveResponses": [
+        {
+          "key": "fragment:net08/realmKnight => fragment:net01/chaosBeast",
+          "games": 5,
+          "p1": 1,
+          "p2": 0,
+          "draw": 4,
+          "p2SurvivalRate": 0.8,
+          "p2WinRate": 0,
+          "drawRate": 0.8,
+          "avgPlies": 26.2
+        },
+        {
+          "key": "fragment:net04/charger => fragment:net08/realmKnight",
+          "games": 5,
+          "p1": 1,
+          "p2": 0,
+          "draw": 4,
+          "p2SurvivalRate": 0.8,
+          "p2WinRate": 0,
+          "drawRate": 0.8,
+          "avgPlies": 26.2
+        },
+        {
+          "key": "fragment:net08/realmKnight => move:realmKnight:capture",
+          "games": 5,
+          "p1": 1,
+          "p2": 0,
+          "draw": 4,
+          "p2SurvivalRate": 0.8,
+          "p2WinRate": 0,
+          "drawRate": 0.8,
+          "avgPlies": 26.2
+        },
+        {
+          "key": "fragment:net04m/charger => move:realmKnight:capture",
+          "games": 5,
+          "p1": 1,
+          "p2": 0,
+          "draw": 4,
+          "p2SurvivalRate": 0.8,
+          "p2WinRate": 0,
+          "drawRate": 0.8,
+          "avgPlies": 26.2
+        },
+        {
+          "key": "fragment:net04/charger => fragment:net03/barrier",
+          "games": 5,
+          "p1": 1,
+          "p2": 1,
+          "draw": 3,
+          "p2SurvivalRate": 0.8,
+          "p2WinRate": 0.2,
+          "drawRate": 0.6,
+          "avgPlies": 24.2
+        },
+        {
+          "key": "fragment:net04/charger => move:realmKnight:capture",
+          "games": 5,
+          "p1": 1,
+          "p2": 0,
+          "draw": 4,
+          "p2SurvivalRate": 0.8,
+          "p2WinRate": 0,
+          "drawRate": 0.8,
+          "avgPlies": 27.8
+        },
+        {
+          "key": "fragment:net02m/guard => fragment:net03m/barrier",
+          "games": 5,
+          "p1": 1,
+          "p2": 0,
+          "draw": 4,
+          "p2SurvivalRate": 0.8,
+          "p2WinRate": 0,
+          "drawRate": 0.8,
+          "avgPlies": 26.6
+        },
+        {
+          "key": "fragment:net10/disruptor => fragment:net11m/decoy",
+          "games": 6,
+          "p1": 2,
+          "p2": 0,
+          "draw": 4,
+          "p2SurvivalRate": 0.6667,
+          "p2WinRate": 0,
+          "drawRate": 0.6667,
+          "avgPlies": 26
+        },
+        {
+          "key": "fragment:net04m/charger => fragment:net04/charger",
+          "games": 8,
+          "p1": 3,
+          "p2": 0,
+          "draw": 5,
+          "p2SurvivalRate": 0.625,
+          "p2WinRate": 0,
+          "drawRate": 0.625,
+          "avgPlies": 26.38
+        },
+        {
+          "key": "fragment:net07m/rider => move:realmKnight:capture",
+          "games": 5,
+          "p1": 2,
+          "p2": 0,
+          "draw": 3,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 22.8
+        },
+        {
+          "key": "fragment:net01/chaosBeast => move:destroyer:capture",
+          "games": 5,
+          "p1": 2,
+          "p2": 0,
+          "draw": 3,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 24
+        },
+        {
+          "key": "fragment:net10/disruptor => fragment:net08/realmKnight",
+          "games": 5,
+          "p1": 2,
+          "p2": 0,
+          "draw": 3,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 23.2
+        },
+        {
+          "key": "fragment:net07m/rider => fragment:net11/decoy",
+          "games": 5,
+          "p1": 2,
+          "p2": 0,
+          "draw": 3,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 22.8
+        },
+        {
+          "key": "fragment:net04/charger => fragment:net02m/guard",
+          "games": 5,
+          "p1": 2,
+          "p2": 0,
+          "draw": 3,
+          "p2SurvivalRate": 0.6,
+          "p2WinRate": 0,
+          "drawRate": 0.6,
+          "avgPlies": 26.4
+        }
+      ]
+    },
+    "riskyHandsObservedOnly": [
+      {
+        "key": "net04/charger | net04m/charger | net08/realmKnight",
+        "games": 13,
+        "p1": 13,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 15.92
+      },
+      {
+        "key": "net06/destroyer | net07m/rider | net11/decoy",
+        "games": 10,
+        "p1": 10,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 16.8
+      },
+      {
+        "key": "net08/realmKnight | net10/disruptor | net11/decoy",
+        "games": 9,
+        "p1": 9,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 15.89
+      },
+      {
+        "key": "net01/chaosBeast | net05/vanguard | net05m/vanguard",
+        "games": 9,
+        "p1": 9,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 18.33
+      },
+      {
+        "key": "net05m/vanguard | net08/realmKnight | net09m/flanker",
+        "games": 9,
+        "p1": 9,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 25.89
+      },
+      {
+        "key": "net04m/charger | net08/realmKnight | net11/decoy",
+        "games": 8,
+        "p1": 8,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 16.25
+      },
+      {
+        "key": "net04m/charger | net07/rider | net10m/disruptor",
+        "games": 8,
+        "p1": 8,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 19.75
+      },
+      {
+        "key": "net04/charger | net05/vanguard | net09/flanker",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 14.14
+      },
+      {
+        "key": "net02/guard | net08/realmKnight | net09/flanker",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 15.86
+      },
+      {
+        "key": "net05/vanguard | net06/destroyer | net10/disruptor",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 17.29
+      },
+      {
+        "key": "net02/guard | net07/rider | net11/decoy",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 17.57
+      },
+      {
+        "key": "net03/barrier | net07m/rider | net09m/flanker",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 22.43
+      },
+      {
+        "key": "net07m/rider | net09/flanker | net09m/flanker",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 11.67
+      },
+      {
+        "key": "net04/charger | net07m/rider | net11m/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 12
+      },
+      {
+        "key": "net06/destroyer | net10m/disruptor | net11/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 13.33
+      },
+      {
+        "key": "net07/rider | net11/decoy | net11m/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 13.67
+      },
+      {
+        "key": "net07m/rider | net09/flanker | net11/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 15.33
+      },
+      {
+        "key": "net02m/guard | net05/vanguard | net07m/rider",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 16.67
+      },
+      {
+        "key": "net02m/guard | net07/rider | net11m/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 17.67
+      },
+      {
+        "key": "net02m/guard | net07m/rider | net11m/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 17.67
+      },
+      {
+        "key": "net05/vanguard | net06/destroyer | net10m/disruptor",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 18.33
+      },
+      {
+        "key": "net02/guard | net05m/vanguard | net09/flanker",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 19.33
+      },
+      {
+        "key": "net01/chaosBeast | net02m/guard | net06/destroyer",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 20.33
+      },
+      {
+        "key": "net04m/charger | net07/rider | net11/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 21.67
+      }
+    ]
+  },
+  "focus": {
+    "outcome": {
+      "key": "focus",
+      "games": 4878,
+      "p1": 3337,
+      "p2": 818,
+      "draw": 723,
+      "p2SurvivalRate": 0.3159,
+      "p2WinRate": 0.1677,
+      "drawRate": 0.1482,
+      "avgPlies": 23.83
+    },
+    "bestHands": [
+      {
+        "key": "net03/barrier | net08/realmKnight | net10/disruptor",
+        "games": 5,
+        "p1": 0,
+        "p2": 1,
+        "draw": 4,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0.2,
+        "drawRate": 0.8,
+        "avgPlies": 35.6
+      },
+      {
+        "key": "net01/chaosBeast | net09/flanker | net10/disruptor",
+        "games": 5,
+        "p1": 0,
+        "p2": 2,
+        "draw": 3,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0.4,
+        "drawRate": 0.6,
+        "avgPlies": 33.6
+      },
+      {
+        "key": "net03m/barrier | net04/charger | net07/rider",
+        "games": 7,
+        "p1": 1,
+        "p2": 4,
+        "draw": 2,
+        "p2SurvivalRate": 0.8571,
+        "p2WinRate": 0.5714,
+        "drawRate": 0.2857,
+        "avgPlies": 23.86
+      },
+      {
+        "key": "net03m/barrier | net06/destroyer | net09/flanker",
+        "games": 6,
+        "p1": 1,
+        "p2": 3,
+        "draw": 2,
+        "p2SurvivalRate": 0.8333,
+        "p2WinRate": 0.5,
+        "drawRate": 0.3333,
+        "avgPlies": 32.83
+      },
+      {
+        "key": "net03m/barrier | net04/charger | net11/decoy",
+        "games": 6,
+        "p1": 1,
+        "p2": 3,
+        "draw": 2,
+        "p2SurvivalRate": 0.8333,
+        "p2WinRate": 0.5,
+        "drawRate": 0.3333,
+        "avgPlies": 33.17
+      },
+      {
+        "key": "net04m/charger | net09m/flanker | net10m/disruptor",
+        "games": 5,
+        "p1": 1,
+        "p2": 0,
+        "draw": 4,
+        "p2SurvivalRate": 0.8,
+        "p2WinRate": 0,
+        "drawRate": 0.8,
+        "avgPlies": 27.8
+      },
+      {
+        "key": "net01/chaosBeast | net03m/barrier | net09m/flanker",
+        "games": 5,
+        "p1": 1,
+        "p2": 2,
+        "draw": 2,
+        "p2SurvivalRate": 0.8,
+        "p2WinRate": 0.4,
+        "drawRate": 0.4,
+        "avgPlies": 36.2
+      },
+      {
+        "key": "net02/guard | net09m/flanker | net10m/disruptor",
+        "games": 5,
+        "p1": 1,
+        "p2": 2,
+        "draw": 2,
+        "p2SurvivalRate": 0.8,
+        "p2WinRate": 0.4,
+        "drawRate": 0.4,
+        "avgPlies": 34.6
+      },
+      {
+        "key": "net02m/guard | net03/barrier | net03m/barrier",
+        "games": 7,
+        "p1": 2,
+        "p2": 2,
+        "draw": 3,
+        "p2SurvivalRate": 0.7143,
+        "p2WinRate": 0.2857,
+        "drawRate": 0.4286,
+        "avgPlies": 31.43
+      },
+      {
+        "key": "net01/chaosBeast | net02m/guard | net04/charger",
+        "games": 7,
+        "p1": 2,
+        "p2": 2,
+        "draw": 3,
+        "p2SurvivalRate": 0.7143,
+        "p2WinRate": 0.2857,
+        "drawRate": 0.4286,
+        "avgPlies": 33.71
+      },
+      {
+        "key": "net02/guard | net02m/guard | net11m/decoy",
+        "games": 7,
+        "p1": 2,
+        "p2": 4,
+        "draw": 1,
+        "p2SurvivalRate": 0.7143,
+        "p2WinRate": 0.5714,
+        "drawRate": 0.1429,
+        "avgPlies": 36.57
+      },
+      {
+        "key": "net03m/barrier | net04/charger | net08/realmKnight",
+        "games": 7,
+        "p1": 2,
+        "p2": 4,
+        "draw": 1,
+        "p2SurvivalRate": 0.7143,
+        "p2WinRate": 0.5714,
+        "drawRate": 0.1429,
+        "avgPlies": 22.29
+      },
+      {
+        "key": "net03/barrier | net08/realmKnight | net09/flanker",
+        "games": 13,
+        "p1": 4,
+        "p2": 3,
+        "draw": 6,
+        "p2SurvivalRate": 0.6923,
+        "p2WinRate": 0.2308,
+        "drawRate": 0.4615,
+        "avgPlies": 33.69
+      },
+      {
+        "key": "net04/charger | net07m/rider | net10/disruptor",
+        "games": 9,
+        "p1": 3,
+        "p2": 2,
+        "draw": 4,
+        "p2SurvivalRate": 0.6667,
+        "p2WinRate": 0.2222,
+        "drawRate": 0.4444,
+        "avgPlies": 27.22
+      },
+      {
+        "key": "net02/guard | net04m/charger | net07/rider",
+        "games": 6,
+        "p1": 2,
+        "p2": 2,
+        "draw": 2,
+        "p2SurvivalRate": 0.6667,
+        "p2WinRate": 0.3333,
+        "drawRate": 0.3333,
+        "avgPlies": 30
+      },
+      {
+        "key": "net01/chaosBeast | net02m/guard | net04m/charger",
+        "games": 6,
+        "p1": 2,
+        "p2": 1,
+        "draw": 3,
+        "p2SurvivalRate": 0.6667,
+        "p2WinRate": 0.1667,
+        "drawRate": 0.5,
+        "avgPlies": 27.67
+      },
+      {
+        "key": "net02m/guard | net03/barrier | net06/destroyer",
+        "games": 6,
+        "p1": 2,
+        "p2": 2,
+        "draw": 2,
+        "p2SurvivalRate": 0.6667,
+        "p2WinRate": 0.3333,
+        "drawRate": 0.3333,
+        "avgPlies": 29
+      },
+      {
+        "key": "net02/guard | net02m/guard | net08/realmKnight",
+        "games": 6,
+        "p1": 2,
+        "p2": 1,
+        "draw": 3,
+        "p2SurvivalRate": 0.6667,
+        "p2WinRate": 0.1667,
+        "drawRate": 0.5,
+        "avgPlies": 27
+      },
+      {
+        "key": "net03/barrier | net08/realmKnight | net11m/decoy",
+        "games": 8,
+        "p1": 3,
+        "p2": 4,
+        "draw": 1,
+        "p2SurvivalRate": 0.625,
+        "p2WinRate": 0.5,
+        "drawRate": 0.125,
+        "avgPlies": 36.38
+      },
+      {
+        "key": "net01/chaosBeast | net03/barrier | net08/realmKnight",
+        "games": 10,
+        "p1": 4,
+        "p2": 3,
+        "draw": 3,
+        "p2SurvivalRate": 0.6,
+        "p2WinRate": 0.3,
+        "drawRate": 0.3,
+        "avgPlies": 28
+      }
+    ],
+    "deadHands": [
+      {
+        "key": "net04/charger | net04m/charger | net08/realmKnight",
+        "games": 13,
+        "p1": 13,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 15.92
+      },
+      {
+        "key": "net06/destroyer | net07m/rider | net11/decoy",
+        "games": 10,
+        "p1": 10,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 16.8
+      },
+      {
+        "key": "net08/realmKnight | net10/disruptor | net11/decoy",
+        "games": 9,
+        "p1": 9,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 15.89
+      },
+      {
+        "key": "net01/chaosBeast | net05/vanguard | net05m/vanguard",
+        "games": 9,
+        "p1": 9,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 18.33
+      },
+      {
+        "key": "net05m/vanguard | net08/realmKnight | net09m/flanker",
+        "games": 9,
+        "p1": 9,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 25.89
+      },
+      {
+        "key": "net04m/charger | net08/realmKnight | net11/decoy",
+        "games": 8,
+        "p1": 8,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 16.25
+      },
+      {
+        "key": "net04m/charger | net07/rider | net10m/disruptor",
+        "games": 8,
+        "p1": 8,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 19.75
+      },
+      {
+        "key": "net04/charger | net05/vanguard | net09/flanker",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 14.14
+      },
+      {
+        "key": "net02/guard | net08/realmKnight | net09/flanker",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 15.86
+      },
+      {
+        "key": "net05/vanguard | net06/destroyer | net10/disruptor",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 17.29
+      },
+      {
+        "key": "net02/guard | net07/rider | net11/decoy",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 17.57
+      },
+      {
+        "key": "net03/barrier | net07m/rider | net09m/flanker",
+        "games": 7,
+        "p1": 7,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 22.43
+      },
+      {
+        "key": "net07m/rider | net09/flanker | net09m/flanker",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 11.67
+      },
+      {
+        "key": "net04/charger | net07m/rider | net11m/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 12
+      },
+      {
+        "key": "net06/destroyer | net10m/disruptor | net11/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 13.33
+      },
+      {
+        "key": "net07/rider | net11/decoy | net11m/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 13.67
+      },
+      {
+        "key": "net07m/rider | net09/flanker | net11/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 15.33
+      },
+      {
+        "key": "net02m/guard | net05/vanguard | net07m/rider",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 16.67
+      },
+      {
+        "key": "net02m/guard | net07/rider | net11m/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 17.67
+      },
+      {
+        "key": "net02m/guard | net07m/rider | net11m/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 17.67
+      },
+      {
+        "key": "net05/vanguard | net06/destroyer | net10m/disruptor",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 18.33
+      },
+      {
+        "key": "net02/guard | net05m/vanguard | net09/flanker",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 19.33
+      },
+      {
+        "key": "net01/chaosBeast | net02m/guard | net06/destroyer",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 20.33
+      },
+      {
+        "key": "net04m/charger | net07/rider | net11/decoy",
+        "games": 6,
+        "p1": 6,
+        "p2": 0,
+        "draw": 0,
+        "p2SurvivalRate": 0,
+        "p2WinRate": 0,
+        "drawRate": 0,
+        "avgPlies": 21.67
+      }
+    ]
+  },
+  "serious": {
+    "outcome": {
+      "key": "serious",
+      "games": 739,
+      "p1": 324,
+      "p2": 4,
+      "draw": 411,
+      "p2SurvivalRate": 0.5616,
+      "p2WinRate": 0.0054,
+      "drawRate": 0.5562,
+      "avgPlies": 23.36
+    },
+    "bestHands": [
+      {
+        "key": "net03/barrier | net05/vanguard | net08/realmKnight",
+        "games": 5,
+        "p1": 0,
+        "p2": 0,
+        "draw": 5,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net03/barrier | net08/realmKnight | net10/disruptor",
+        "games": 4,
+        "p1": 0,
+        "p2": 0,
+        "draw": 4,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net02/guard | net07/rider | net11m/decoy",
+        "games": 3,
+        "p1": 0,
+        "p2": 0,
+        "draw": 3,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net06/destroyer | net07m/rider | net08/realmKnight",
+        "games": 3,
+        "p1": 0,
+        "p2": 0,
+        "draw": 3,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net04m/charger | net09m/flanker | net10m/disruptor",
+        "games": 3,
+        "p1": 0,
+        "p2": 0,
+        "draw": 3,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net04/charger | net05m/vanguard | net06/destroyer",
+        "games": 3,
+        "p1": 0,
+        "p2": 1,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0.3333,
+        "drawRate": 0.6667,
+        "avgPlies": 27.33
+      },
+      {
+        "key": "net02m/guard | net03/barrier | net03m/barrier",
+        "games": 3,
+        "p1": 0,
+        "p2": 0,
+        "draw": 3,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net03/barrier | net07/rider | net10/disruptor",
+        "games": 3,
+        "p1": 0,
+        "p2": 0,
+        "draw": 3,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net04/charger | net07m/rider | net10/disruptor",
+        "games": 3,
+        "p1": 0,
+        "p2": 0,
+        "draw": 3,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net04/charger | net07m/rider | net08/realmKnight",
+        "games": 3,
+        "p1": 0,
+        "p2": 0,
+        "draw": 3,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net05/vanguard | net10/disruptor | net11/decoy",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net04/charger | net06/destroyer | net11/decoy",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net06/destroyer | net08/realmKnight | net09/flanker",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net02/guard | net02m/guard | net10m/disruptor",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net03m/barrier | net07m/rider | net10/disruptor",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net03/barrier | net09m/flanker | net10/disruptor",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net02/guard | net09m/flanker | net10/disruptor",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net06/destroyer | net08/realmKnight | net11m/decoy",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      },
+      {
+        "key": "net01/chaosBeast | net03m/barrier | net06/destroyer",
+        "games": 2,
+        "p1": 0,
+        "p2": 1,
+        "draw": 1,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0.5,
+        "drawRate": 0.5,
+        "avgPlies": 24
+      },
+      {
+        "key": "net02/guard | net05/vanguard | net11m/decoy",
+        "games": 2,
+        "p1": 0,
+        "p2": 0,
+        "draw": 2,
+        "p2SurvivalRate": 1,
+        "p2WinRate": 0,
+        "drawRate": 1,
+        "avgPlies": 30
+      }
+    ]
+  }
+}

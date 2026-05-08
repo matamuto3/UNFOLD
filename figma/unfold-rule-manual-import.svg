@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="4130" height="3890" viewBox="0 0 4130 3890">
+  <defs>
+    <style>
+      .page { fill: #fffaf0; stroke: #d9c6a8; stroke-width: 2; }
+      .accent { fill: #985b18; }
+      .title { font: 700 54px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #1e1b18; }
+      .hero { font: 700 92px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #1e1b18; letter-spacing: 3px; }
+      .section { font: 700 18px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #985b18; letter-spacing: 4px; }
+      .body { font: 400 23px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #74685b; }
+      .body-dark { font: 400 22px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #1e1b18; }
+      .small { font: 400 16px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #74685b; }
+      .small-bold { font: 700 16px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #1e1b18; }
+      .card { fill: #fffdf7; stroke: #d9c6a8; stroke-width: 1.5; }
+      .chip { fill: #985b18; }
+      .chip-text { font: 700 16px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #fff; }
+      .grid { fill: #f7f0e3; stroke: #d9c6a8; stroke-width: 1; }
+      .own { fill: #74beb4; stroke: #d9c6a8; stroke-width: 1; }
+      .enemy { fill: #d99075; stroke: #d9c6a8; stroke-width: 1; }
+      .frag { fill: #c9974c; stroke: #fffaf0; stroke-width: 2; }
+      .enemy-frag { fill: #cf8068; stroke: #fffaf0; stroke-width: 2; }
+      .valid { fill: #cceee6; stroke: #2c746d; stroke-width: 2; }
+      .invalid { fill: #f3c3bb; stroke: #8e3f36; stroke-width: 2; }
+      .piece { fill: #985b18; stroke: #fff; stroke-width: 2; }
+      .piece-blue { fill: #2c746d; stroke: #fff; stroke-width: 2; }
+      .piece-red { fill: #8e3f36; stroke: #fff; stroke-width: 2; }
+      .piece-text { font: 700 18px 'Noto Sans JP','Yu Gothic','Meiryo',sans-serif; fill: #fff; text-anchor: middle; dominant-baseline: central; }
+      .move { fill: #cceee6; stroke: #2c746d; stroke-width: 1.5; }
+      .jump { fill: #d5a650; stroke: #985b18; stroke-width: 1.5; }
+      .move-origin { fill: #985b18; }
+      .center { text-anchor: middle; }
+    </style>
+    <g id="grid-7x8">
+      <rect class="grid" x="0" y="0" width="34" height="34" rx="5"/><rect class="grid" x="36" y="0" width="34" height="34" rx="5"/><rect class="grid" x="72" y="0" width="34" height="34" rx="5"/><rect class="grid" x="108" y="0" width="34" height="34" rx="5"/><rect class="grid" x="144" y="0" width="34" height="34" rx="5"/><rect class="grid" x="180" y="0" width="34" height="34" rx="5"/><rect class="grid" x="216" y="0" width="34" height="34" rx="5"/><rect class="grid" x="252" y="0" width="34" height="34" rx="5"/>
+      <rect class="grid" x="0" y="36" width="34" height="34" rx="5"/><rect class="grid" x="36" y="36" width="34" height="34" rx="5"/><rect class="grid" x="72" y="36" width="34" height="34" rx="5"/><rect class="grid" x="108" y="36" width="34" height="34" rx="5"/><rect class="grid" x="144" y="36" width="34" height="34" rx="5"/><rect class="grid" x="180" y="36" width="34" height="34" rx="5"/><rect class="grid" x="216" y="36" width="34" height="34" rx="5"/><rect class="grid" x="252" y="36" width="34" height="34" rx="5"/>
+      <rect class="grid" x="0" y="72" width="34" height="34" rx="5"/><rect class="grid" x="36" y="72" width="34" height="34" rx="5"/><rect class="grid" x="72" y="72" width="34" height="34" rx="5"/><rect class="grid" x="108" y="72" width="34" height="34" rx="5"/><rect class="grid" x="144" y="72" width="34" height="34" rx="5"/><rect class="grid" x="180" y="72" width="34" height="34" rx="5"/><rect class="grid" x="216" y="72" width="34" height="34" rx="5"/><rect class="grid" x="252" y="72" width="34" height="34" rx="5"/>
+      <rect class="grid" x="0" y="108" width="34" height="34" rx="5"/><rect class="grid" x="36" y="108" width="34" height="34" rx="5"/><rect class="grid" x="72" y="108" width="34" height="34" rx="5"/><rect class="grid" x="108" y="108" width="34" height="34" rx="5"/><rect class="grid" x="144" y="108" width="34" height="34" rx="5"/><rect class="grid" x="180" y="108" width="34" height="34" rx="5"/><rect class="grid" x="216" y="108" width="34" height="34" rx="5"/><rect class="grid" x="252" y="108" width="34" height="34" rx="5"/>
+      <rect class="grid" x="0" y="144" width="34" height="34" rx="5"/><rect class="grid" x="36" y="144" width="34" height="34" rx="5"/><rect class="grid" x="72" y="144" width="34" height="34" rx="5"/><rect class="grid" x="108" y="144" width="34" height="34" rx="5"/><rect class="grid" x="144" y="144" width="34" height="34" rx="5"/><rect class="grid" x="180" y="144" width="34" height="34" rx="5"/><rect class="grid" x="216" y="144" width="34" height="34" rx="5"/><rect class="grid" x="252" y="144" width="34" height="34" rx="5"/>
+      <rect class="grid" x="0" y="180" width="34" height="34" rx="5"/><rect class="grid" x="36" y="180" width="34" height="34" rx="5"/><rect class="grid" x="72" y="180" width="34" height="34" rx="5"/><rect class="grid" x="108" y="180" width="34" height="34" rx="5"/><rect class="grid" x="144" y="180" width="34" height="34" rx="5"/><rect class="grid" x="180" y="180" width="34" height="34" rx="5"/><rect class="grid" x="216" y="180" width="34" height="34" rx="5"/><rect class="grid" x="252" y="180" width="34" height="34" rx="5"/>
+      <rect class="grid" x="0" y="216" width="34" height="34" rx="5"/><rect class="grid" x="36" y="216" width="34" height="34" rx="5"/><rect class="grid" x="72" y="216" width="34" height="34" rx="5"/><rect class="grid" x="108" y="216" width="34" height="34" rx="5"/><rect class="grid" x="144" y="216" width="34" height="34" rx="5"/><rect class="grid" x="180" y="216" width="34" height="34" rx="5"/><rect class="grid" x="216" y="216" width="34" height="34" rx="5"/><rect class="grid" x="252" y="216" width="34" height="34" rx="5"/>
+    </g>
+  </defs>
+
+  <rect width="4130" height="3890" fill="#eee4d2"/>
+
+  <g id="page-cover" transform="translate(40 40)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="86" y="185">UNFOLD PROTOTYPE</text>
+    <text class="hero" x="84" y="292">UNFOLD</text>
+    <text class="body" x="90" y="350">ルール説明書 / クイックリファレンス</text>
+    <rect class="chip" x="90" y="386" width="250" height="44" rx="22"/><text class="chip-text" x="112" y="414">展開図で陣地を広げる</text>
+    <rect class="chip" x="360" y="386" width="270" height="44" rx="22"/><text class="chip-text" x="382" y="414">駒で相手を追い詰める</text>
+    <rect class="chip" x="650" y="386" width="220" height="44" rx="22"/><text class="chip-text" x="672" y="414">オンライン対戦対応</text>
+    <g transform="translate(780 160) scale(1.35)"><use href="#grid-7x8"/>
+      <rect class="own" x="36" y="180" width="34" height="34" rx="5"/><rect class="own" x="72" y="180" width="34" height="34" rx="5"/><rect class="own" x="36" y="216" width="34" height="34" rx="5"/><rect class="own" x="72" y="216" width="34" height="34" rx="5"/>
+      <rect class="enemy" x="216" y="36" width="34" height="34" rx="5"/><rect class="enemy" x="252" y="36" width="34" height="34" rx="5"/><rect class="enemy" x="216" y="72" width="34" height="34" rx="5"/><rect class="enemy" x="252" y="72" width="34" height="34" rx="5"/>
+      <rect class="frag" x="108" y="144" width="34" height="34" rx="5"/><rect class="frag" x="144" y="144" width="34" height="34" rx="5"/><rect class="frag" x="180" y="144" width="34" height="34" rx="5"/><rect class="frag" x="180" y="180" width="34" height="34" rx="5"/><rect class="frag" x="180" y="216" width="34" height="34" rx="5"/>
+      <circle class="piece" cx="72" cy="234" r="15"/><text class="piece-text" x="72" y="234">展</text>
+      <circle class="piece-blue" cx="36" cy="198" r="15"/><text class="piece-text" x="36" y="198">界</text>
+      <circle class="piece-blue" cx="108" cy="198" r="15"/><text class="piece-text" x="108" y="198">護</text>
+    </g>
+    <text class="body-dark" x="90" y="555">Figmaに取り込める編集用ルール原稿です。</text>
+    <text class="body" x="90" y="590">ページごとに、説明文・盤面図・展開図カタログ・駒移動サマリーを整理しています。</text>
+  </g>
+
+  <g id="page-components" transform="translate(1416 40)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">BASIC COMPONENTS</text><text class="title" x="64" y="158">このゲームで使うもの</text>
+    <text class="body" x="64" y="210">UNFOLDは、盤面・展開図・駒の3つを使って、相手本陣へ圧力をかける陣取りゲームです。</text>
+    <g transform="translate(70 280)"><rect class="card" width="340" height="390" rx="24"/><text class="title" x="28" y="70" font-size="32">盤面</text><use href="#grid-7x8" transform="translate(38 100)"/><text class="small" x="28" y="345">展開図を置ける広さの制限です。</text></g>
+    <g transform="translate(470 280)"><rect class="card" width="340" height="390" rx="24"/><text class="title" x="28" y="70" font-size="32">展開図</text><rect class="frag" x="110" y="120" width="30" height="30" rx="5"/><rect class="frag" x="110" y="152" width="30" height="30" rx="5"/><rect class="frag" x="142" y="152" width="30" height="30" rx="5"/><rect class="frag" x="174" y="152" width="30" height="30" rx="5"/><rect class="frag" x="206" y="152" width="30" height="30" rx="5"/><rect class="frag" x="110" y="184" width="30" height="30" rx="5"/><text class="small" x="28" y="345">手札から置いて自分の陣地を広げます。</text></g>
+    <g transform="translate(870 280)"><rect class="card" width="340" height="390" rx="24"/><text class="title" x="28" y="70" font-size="32">駒</text><circle class="piece" cx="115" cy="155" r="36"/><text class="piece-text" x="115" y="155" font-size="28">展</text><circle class="piece-blue" cx="195" cy="155" r="36"/><text class="piece-text" x="195" y="155" font-size="28">界</text><text class="small" x="28" y="345">展開図や本陣の上で移動します。</text></g>
+  </g>
+
+  <g id="page-win" transform="translate(2792 40)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">WIN CONDITIONS</text><text class="title" x="64" y="158">勝利条件</text>
+    <text class="body" x="64" y="210">勝ち方は2つ。相手の展界者/王将を取るか、相手本陣中心を自分の展開図で上書きします。</text>
+    <g transform="translate(70 275)"><rect class="card" width="530" height="430" rx="24"/><text class="body-dark" x="30" y="62">1. 自分の駒で相手の王を取る</text><use href="#grid-7x8" transform="translate(80 105)"/><rect class="frag" x="224" y="249" width="34" height="34" rx="5"/><circle class="piece" cx="242" cy="267" r="15"/><text class="piece-text" x="242" y="267">突</text><circle class="piece-red" cx="314" cy="159" r="15"/><text class="piece-text" x="314" y="159">王</text><rect class="valid" x="296" y="141" width="34" height="34" rx="5"/></g>
+    <g transform="translate(680 275)"><rect class="card" width="530" height="430" rx="24"/><text class="body-dark" x="30" y="62">2. 相手本陣中心を上書きする</text><use href="#grid-7x8" transform="translate(80 105)"/><rect class="enemy" x="296" y="141" width="34" height="34" rx="5"/><rect class="valid" x="296" y="141" width="34" height="34" rx="5"/><rect class="frag" x="296" y="141" width="34" height="34" rx="5"/><rect class="frag" x="296" y="177" width="34" height="34" rx="5"/><rect class="frag" x="332" y="177" width="34" height="34" rx="5"/><text class="small" x="30" y="365">駒で占有するだけでは勝利ではありません。</text></g>
+  </g>
+
+  <g id="page-setup" transform="translate(40 1010)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">SETUP</text><text class="title" x="64" y="158">ゲーム開始時の状態</text>
+    <text class="body" x="64" y="210">本陣に初期駒を置き、山札から手札を3枚引いて始めます。</text>
+    <g transform="translate(80 270) scale(1.35)"><use href="#grid-7x8"/><rect class="own" x="36" y="180" width="34" height="34" rx="5"/><rect class="own" x="72" y="180" width="34" height="34" rx="5"/><rect class="own" x="108" y="180" width="34" height="34" rx="5"/><rect class="own" x="36" y="216" width="34" height="34" rx="5"/><rect class="own" x="72" y="216" width="34" height="34" rx="5"/><rect class="own" x="108" y="216" width="34" height="34" rx="5"/><circle class="piece" cx="72" cy="234" r="15"/><text class="piece-text" x="72" y="234">展</text><circle class="piece-blue" cx="36" cy="198" r="15"/><text class="piece-text" x="36" y="198">界</text><circle class="piece-blue" cx="108" cy="198" r="15"/><text class="piece-text" x="108" y="198">護</text></g>
+    <g transform="translate(650 270)"><rect class="card" width="500" height="390" rx="24"/><text class="body-dark" x="30" y="60">オリジナル駒</text><text class="body" x="30" y="105">展界者を中央、界騎士と護衛士を斜め前へ。</text><text class="body-dark" x="30" y="175">将棋駒モード</text><text class="body" x="30" y="220">王将を中央、銀将と金将を斜め前へ。</text><text class="body-dark" x="30" y="290">手札</text><text class="body" x="30" y="335">最初に3枚引きます。手札上限は3枚です。</text></g>
+  </g>
+
+  <g id="page-actions" transform="translate(1416 1010)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">TURN ACTIONS</text><text class="title" x="64" y="158">1手で選べる行動</text>
+    <text class="body" x="64" y="210">手番では6つから1つだけ選びます。行動が終わったら手番終了です。</text>
+    <g transform="translate(70 285)"><rect class="card" width="340" height="160" rx="24"/><text class="body-dark" x="28" y="58">1. 展開図を置く</text><text class="small" x="28" y="100">陣地を広げ、対応駒を1体置く。</text></g>
+    <g transform="translate(470 285)"><rect class="card" width="340" height="160" rx="24"/><text class="body-dark" x="28" y="58">2. 駒を移動する</text><text class="small" x="28" y="100">相手駒を取って持ち駒にできる。</text></g>
+    <g transform="translate(870 285)"><rect class="card" width="340" height="160" rx="24"/><text class="body-dark" x="28" y="58">3. 持ち駒を打つ</text><text class="small" x="28" y="100">本陣を含む自陣へ置く。</text></g>
+    <g transform="translate(70 500)"><rect class="card" width="340" height="160" rx="24"/><text class="body-dark" x="28" y="58">4. 手札を入れ替える</text><text class="small" x="28" y="100">山札に戻して3枚引き直す。</text></g>
+    <g transform="translate(470 500)"><rect class="card" width="340" height="160" rx="24"/><text class="body-dark" x="28" y="58">5. 駒を回収する</text><text class="small" x="28" y="100">自陣上の自駒1体。王は不可。</text></g>
+    <g transform="translate(870 500)"><rect class="card" width="340" height="160" rx="24"/><text class="body-dark" x="28" y="58">6. 展開図を回収する</text><text class="small" x="28" y="100">手札3枚未満などの条件あり。</text></g>
+  </g>
+
+  <g id="page-fragment" transform="translate(2792 1010)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">PLACE A FRAGMENT</text><text class="title" x="64" y="158">展開図を置く流れ</text>
+    <text class="body" x="64" y="210">手札から1枚選び、0/90/180/270度で回転し、自分の陣地と1辺で接する位置へ置きます。</text>
+    <g transform="translate(70 275)"><rect class="card" width="340" height="420" rx="24"/><text class="body-dark" x="28" y="60">手札から1枚選ぶ</text><rect class="frag" x="105" y="120" width="32" height="32" rx="5"/><rect class="frag" x="105" y="154" width="32" height="32" rx="5"/><rect class="frag" x="139" y="154" width="32" height="32" rx="5"/><rect class="frag" x="173" y="154" width="32" height="32" rx="5"/><rect class="frag" x="207" y="154" width="32" height="32" rx="5"/><rect class="frag" x="105" y="188" width="32" height="32" rx="5"/><text class="small" x="28" y="340">選択中の展開図が盤面にプレビューされます。</text></g>
+    <g transform="translate(470 275)"><rect class="card" width="340" height="420" rx="24"/><text class="body-dark" x="28" y="60">置ける例</text><use href="#grid-7x8" transform="translate(28 95)"/><rect class="own" x="64" y="239" width="34" height="34" rx="5"/><rect class="frag" x="100" y="203" width="34" height="34" rx="5"/><rect class="frag" x="136" y="203" width="34" height="34" rx="5"/><text class="small" x="28" y="340">一辺が接していればOK。</text></g>
+    <g transform="translate(870 275)"><rect class="card" width="340" height="420" rx="24"/><text class="body-dark" x="28" y="60">置けない例</text><use href="#grid-7x8" transform="translate(28 95)"/><rect class="own" x="64" y="239" width="34" height="34" rx="5"/><rect class="invalid" x="100" y="203" width="34" height="34" rx="5"/><line x1="104" y1="207" x2="130" y2="233" stroke="#8e3f36" stroke-width="4"/><line x1="130" y1="207" x2="104" y2="233" stroke="#8e3f36" stroke-width="4"/><text class="small" x="28" y="340">角だけ触れる配置は不可。</text></g>
+  </g>
+
+  <g id="page-overwrite" transform="translate(40 1980)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">OVERWRITE</text><text class="title" x="64" y="158">上書きと対応駒</text>
+    <text class="body" x="64" y="210">相手展開図に重ねて置ける場合は上書きできます。ただし上書き先に駒がある場合は不可です。</text>
+    <g transform="translate(70 275)"><rect class="card" width="340" height="430" rx="24"/><text class="body-dark" x="28" y="60">上書き前</text><use href="#grid-7x8" transform="translate(28 95)"/><rect class="frag" x="100" y="239" width="34" height="34" rx="5"/><rect class="enemy-frag" x="136" y="203" width="34" height="34" rx="5"/></g>
+    <g transform="translate(470 275)"><rect class="card" width="340" height="430" rx="24"/><text class="body-dark" x="28" y="60">上書き後</text><use href="#grid-7x8" transform="translate(28 95)"/><rect class="frag" x="100" y="239" width="34" height="34" rx="5"/><rect class="frag" x="136" y="203" width="34" height="34" rx="5"/><rect class="valid" x="136" y="203" width="34" height="34" rx="5"/></g>
+    <g transform="translate(870 275)"><rect class="card" width="340" height="430" rx="24"/><text class="body-dark" x="28" y="60">対応駒を置く</text><use href="#grid-7x8" transform="translate(28 95)"/><rect class="frag" x="100" y="167" width="34" height="34" rx="5"/><rect class="valid" x="100" y="167" width="34" height="34" rx="5"/><circle class="piece" cx="117" cy="184" r="15"/><text class="piece-text" x="117" y="184">混</text></g>
+  </g>
+
+  <g id="page-piece-actions" transform="translate(1416 1980)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">PIECE ACTIONS</text><text class="title" x="64" y="158">駒を動かす / 持ち駒を打つ</text>
+    <text class="body" x="64" y="210">駒は展開図や本陣の上だけを移動できます。相手展開図上にも移動できます。</text>
+    <g transform="translate(80 290)"><rect class="card" width="520" height="420" rx="24"/><text class="body-dark" x="30" y="60">駒を移動して取る</text><use href="#grid-7x8" transform="translate(80 105)"/><rect class="frag" x="152" y="285" width="34" height="34" rx="5"/><rect class="frag" x="188" y="285" width="34" height="34" rx="5"/><rect class="enemy-frag" x="224" y="249" width="34" height="34" rx="5"/><rect class="valid" x="224" y="249" width="34" height="34" rx="5"/><circle class="piece" cx="169" cy="302" r="15"/><text class="piece-text" x="169" y="302">突</text><circle class="piece-red" cx="241" cy="266" r="15"/><text class="piece-text" x="241" y="266">敵</text></g>
+    <g transform="translate(680 290)"><rect class="card" width="520" height="420" rx="24"/><text class="body-dark" x="30" y="60">持ち駒を打つ</text><use href="#grid-7x8" transform="translate(80 105)"/><rect class="own" x="116" y="285" width="34" height="34" rx="5"/><rect class="valid" x="116" y="285" width="34" height="34" rx="5"/><rect class="frag" x="188" y="249" width="34" height="34" rx="5"/><rect class="valid" x="188" y="249" width="34" height="34" rx="5"/><rect class="enemy-frag" x="260" y="213" width="34" height="34" rx="5"/><rect class="invalid" x="260" y="213" width="34" height="34" rx="5"/></g>
+  </g>
+
+  <g id="page-support" transform="translate(2792 1980)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">SUPPORT ACTIONS</text><text class="title" x="64" y="158">補助行動</text>
+    <text class="body" x="64" y="210">手札入れ替え、駒回収、展開図回収も1手として実行できます。</text>
+    <g transform="translate(70 290)"><rect class="card" width="340" height="380" rx="24"/><text class="body-dark" x="28" y="60">手札入れ替え</text><text class="small" x="28" y="110">手札すべてを山札に戻し、シャッフル後3枚引き直します。</text></g>
+    <g transform="translate(470 290)"><rect class="card" width="340" height="380" rx="24"/><text class="body-dark" x="28" y="60">駒の回収</text><text class="small" x="28" y="110">自陣上の自駒1体を持ち駒へ。展界者/王将は不可。</text></g>
+    <g transform="translate(870 290)"><rect class="card" width="340" height="380" rx="24"/><text class="body-dark" x="28" y="60">展開図の回収</text><text class="small" x="28" y="110">手札3枚未満、上に駒なし、他の展開図が重なっていない時だけ。</text></g>
+  </g>
+
+  <g id="page-catalog" transform="translate(40 2950)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">FRAGMENT CATALOG</text><text class="title" x="64" y="158">展開図カタログ</text>
+    <text class="body" x="64" y="210">名前と対応駒。通常形とミラー形は別札。ティー・クロス・ソーは1枚だけです。</text>
+    <text class="body-dark" x="90" y="290">net01 ティー = 混沌獣</text><text class="body-dark" x="460" y="290">net02/m クランク = 護衛士</text><text class="body-dark" x="850" y="290">net03/m サイス = 結界士</text>
+    <text class="body-dark" x="90" y="350">net04/m ジェイ = 突撃士</text><text class="body-dark" x="460" y="350">net05/m ジグザグ = 前衛士</text><text class="body-dark" x="850" y="350">net06 クロス = 滅界者</text>
+    <text class="body-dark" x="90" y="410">net07/m スピア = 騎乗士</text><text class="body-dark" x="460" y="410">net08 ソー = 界騎士</text><text class="body-dark" x="850" y="410">net09/m フック = 側撃士</text>
+    <text class="body-dark" x="90" y="470">net10/m ステップ = 攪乱士</text><text class="body-dark" x="460" y="470">net11/m ブロック = 誘引士</text>
+    <rect class="card" x="80" y="550" width="1120" height="170" rx="24"/>
+    <text class="body" x="110" y="615">Figma版では各展開図を個別図形に分けているため、必要に応じてミラー形や大きい図版を追加できます。</text>
+  </g>
+
+  <g id="page-movement-original" transform="translate(1416 2950)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">ORIGINAL MOVEMENT</text><text class="title" x="64" y="158">駒移動サマリー</text>
+    <text class="body" x="64" y="210">中央が駒の位置。色の付いたマスへ移動できます。黄色の「跳」は跳躍です。</text>
+    <text class="body-dark" x="90" y="300">展界者: 全方向1</text><text class="body-dark" x="360" y="300">誘引士: 後方1〜2</text><text class="body-dark" x="660" y="300">側撃士: 横と前斜め</text>
+    <text class="body-dark" x="90" y="360">護衛士: 横と後方</text><text class="body-dark" x="360" y="360">前衛士: 十字1</text><text class="body-dark" x="660" y="360">騎乗士: 跳躍</text>
+    <text class="body-dark" x="90" y="420">突撃士: 前方1〜3</text><text class="body-dark" x="360" y="420">攪乱士: 斜め</text><text class="body-dark" x="660" y="420">結界士: 前後と斜め</text>
+    <text class="body-dark" x="90" y="480">界騎士: 前と横</text><text class="body-dark" x="360" y="480">混沌獣: 十字+跳</text><text class="body-dark" x="660" y="480">滅界者: 前方射線</text>
+    <rect class="card" x="90" y="570" width="1030" height="150" rx="24"/>
+    <text class="body" x="125" y="630">実際のFigma仕上げ時は、ここを5×5の小盤面で個別駒ごとに展開すると、掲示・配布資料として読みやすくなります。</text>
+  </g>
+
+  <g id="page-shogi-online" transform="translate(2792 2950)">
+    <rect class="page" width="1280" height="900" rx="28"/><rect class="accent" width="1280" height="14"/>
+    <text class="section" x="64" y="105">SHOGI MODE AND PLAY</text><text class="title" x="64" y="158">将棋駒モード / オンライン / 検討</text>
+    <text class="body" x="64" y="210">基本ルールはUNFOLD共通。将棋駒モードでは、駒の移動ルールだけ将棋駒になります。</text>
+    <g transform="translate(80 285)"><rect class="card" width="520" height="360" rx="24"/><text class="body-dark" x="30" y="60">将棋駒モード</text><text class="body" x="30" y="110">王将・金将・銀将・歩兵・香車・桂馬・飛車・角行を使用。</text><text class="body" x="30" y="170">現状の基本ルールでは成駒は扱いません。</text></g>
+    <g transform="translate(680 285)"><rect class="card" width="520" height="360" rx="24"/><text class="body-dark" x="30" y="60">オンライン / 検討</text><text class="body" x="30" y="110">部屋作成、参加コード、公開部屋一覧。</text><text class="body" x="30" y="170">対局後は棋譜を見返し、分岐やメモで検討できます。</text></g>
+  </g>
+</svg>

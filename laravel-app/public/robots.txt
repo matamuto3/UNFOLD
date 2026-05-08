@@ -1,2 +1,3 @@
 User-agent: *
 Disallow:
+Sitemap: https://unfold.sakura.ne.jp/sitemap.xml

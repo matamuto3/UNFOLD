@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD | オンライン対戦</title>
+  <meta name="description" content="UNFOLDのオンライン対戦ページです。部屋作成、参加コードでの入室、公開中の部屋参加をブラウザ上で行えます。">
+  <meta name="robots" content="max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#20242a">
+  <link rel="canonical" href="https://unfold.sakura.ne.jp/online.html">
+  <meta property="og:site_name" content="UNFOLD">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="UNFOLD | オンライン対戦">
+  <meta property="og:description" content="UNFOLDのオンライン対戦ページ。部屋作成、参加コード入室、公開部屋への参加をブラウザ上で行えます。">
+  <meta property="og:url" content="https://unfold.sakura.ne.jp/online.html">
+  <meta property="og:image" content="https://unfold.sakura.ne.jp/assets/rules/start-state.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="UNFOLDの初期局面ボード">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="UNFOLD | オンライン対戦">
+  <meta name="twitter:description" content="部屋作成、参加コード入室、公開部屋への参加をブラウザで行える UNFOLD のオンライン対戦ページ。">
+  <meta name="twitter:image" content="https://unfold.sakura.ne.jp/assets/rules/start-state.png">
+  <link rel="stylesheet" href="styles.css?v=20260505advice">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": "https://unfold.sakura.ne.jp/online.html#webpage",
+      "url": "https://unfold.sakura.ne.jp/online.html",
+      "name": "UNFOLD | オンライン対戦",
+      "description": "UNFOLDのオンライン対戦ページです。部屋作成、参加コードでの入室、公開中の部屋参加をブラウザ上で行えます。",
+      "inLanguage": "ja-JP",
+      "isPartOf": {
+        "@id": "https://unfold.sakura.ne.jp/#website"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main class="app">
+    <section id="lobbyView" class="view-stack">
+      <a class="site-top-brand" href="index.html" aria-label="トップ画面へ戻る">UNFOLD</a>
+      <section class="hero card">
+        <div>
+          <p class="eyebrow">UNFOLD PROTOTYPE</p>
+          <div class="hero-title-row">
+            <h1>UNFOLD</h1>
+            <div class="access-mini" aria-label="アクセス数">
+              <span>総 <strong id="accessTotalLabel">-</strong></span>
+              <span>今日 <strong id="accessTodayLabel">-</strong></span>
+              <span>昨日 <strong id="accessYesterdayLabel">-</strong></span>
+            </div>
+          </div>
+          <p class="lead">
+            将棋のように駒を動かし、立体の展開図を盤面へ広げながら陣地を競う対戦ボードゲームです。
+            ここではオンライン対戦の部屋を作成したり、公開中の部屋へ参加したりできます。
+          </p>
+          <div class="hero-actions">
+            <a class="button-link" href="rules-summary.html" target="_blank" rel="noopener noreferrer">簡易ルール</a>
+            <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">詳細ルール</a>
+            <a class="button-link" href="joseki.html" target="_blank" rel="noopener noreferrer">攻守ガイド</a>
+            <a class="button-link" href="formations.html" target="_blank" rel="noopener noreferrer">囲い・戦型ガイド</a>
+            <a class="button-link" href="feedback.html" target="_blank" rel="noopener noreferrer">意見掲示板</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="card site-info-card" aria-label="アクセスカウンタと意見掲示板">
+        <div class="site-count-box">
+          <p class="label">アクセスカウンタ</p>
+          <p class="site-count"><span id="accessCountLabel">-</span><span class="site-count-unit"> visits</span></p>
+          <p id="accessUpdatedLabel" class="scene-note">読み込み中...</p>
+        </div>
+        <div class="feedback-box">
+          <p class="label">意見掲示板</p>
+          <p class="scene-note">名前を出さずに、感想・改善案・気になった点を投稿できます。</p>
+          <textarea id="feedbackInput" maxlength="400" placeholder="意見・感想を書く"></textarea>
+          <div class="panel-actions">
+            <button id="submitFeedbackBtn" class="primary" type="button">投稿する</button>
+            <button id="refreshFeedbackBtn" type="button">掲示板を更新</button>
+          </div>
+          <p id="feedbackStatus" class="scene-note"></p>
+          <div id="feedbackList" class="feedback-list" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <div class="lobby-utility-bar" aria-label="サイト情報">
+        <span>アクセス <strong id="accessCountSubtleLabel">-</strong></span>
+        <a href="feedback.html" target="_blank" rel="noopener noreferrer">意見掲示板</a>
+      </div>
+
+      <section class="card online-card">
+        <div class="online-header">
+          <div>
+            <p class="label">オンライン対戦ロビー</p>
+            <p id="onlineStatus" class="online-status">まずは左の大きいカードから部屋を作るのがおすすめです</p>
+          </div>
+          <div class="online-meta">
+            <span>担当: <strong id="onlineSideLabel">-</strong></span>
+          </div>
+        </div>
+
+        <section class="card lobby-panel common-player-panel">
+          <p class="label">共通設定</p>
+          <p class="scene-note">ここで入力した名前は、部屋を作るときも参加するときも使われます。</p>
+          <div class="panel-fields">
+            <label class="field">
+              <span>あなたの名前</span>
+              <input id="onlineNameInput" type="text" maxlength="20" placeholder="プレイヤー名">
+            </label>
+          </div>
+          <div class="solo-play-grid">
+            <button id="newGameBtn" type="button">ひとりテストプレイ（オリジナル駒）</button>
+            <button id="newGameShogiBtn" type="button">ひとりテストプレイ（将棋駒）</button>
+            <button id="npcGameBtn" type="button">NPC と対戦する（オリジナル駒）</button>
+            <button id="npcGameShogiBtn" type="button">NPC と対戦する（将棋駒）</button>
+          </div>
+        </section>
+
+        <div class="lobby-grid">
+          <section class="card lobby-panel create-panel">
+            <p class="label">まずここ: 新しい部屋を作る</p>
+            <p class="scene-note">名前を入れて、駒モードを選んで、必要なら鍵を付けます。迷ったら鍵は空欄で大丈夫です。</p>
+            <div class="panel-fields">
+              <label class="field">
+                <span>部屋の表示名</span>
+                <input id="onlineRoomNameInput" type="text" maxlength="40" placeholder="例: 週末対戦">
+              </label>
+              <label class="field">
+                <span>駒モード</span>
+                <select id="onlineModeSelect">
+                  <option value="original">オリジナル駒</option>
+                  <option value="shogi">将棋駒</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>合言葉</span>
+                <input id="onlineRoomPasswordInput" type="password" maxlength="24" placeholder="空欄なら公開部屋">
+              </label>
+            </div>
+            <button id="createRoomBtn" class="primary" type="button">この内容で部屋を作る</button>
+          </section>
+
+          <section class="card lobby-panel">
+            <p class="label">参加コードで入る</p>
+            <p class="scene-note">友だちから参加コードを受け取っているときはこちらです。鍵付き部屋なら同じ合言葉も使います。</p>
+            <div class="panel-fields">
+              <label class="field">
+                <span>参加コード</span>
+                <input id="onlineRoomInput" type="text" maxlength="6" placeholder="例: AB12CD">
+              </label>
+            </div>
+            <div class="panel-actions">
+              <button id="joinRoomBtn" type="button">参加コードで入る</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="lobby-actions card">
+          <div class="delete-room-box">
+            <label class="field">
+              <span>外部削除: 参加コード</span>
+              <input id="deleteRoomCodeInput" type="text" maxlength="6" placeholder="例: AB12CD">
+            </label>
+            <label class="field">
+              <span>管理キー</span>
+              <input id="deleteRoomKeyInput" type="text" maxlength="12" placeholder="作成時に表示">
+            </label>
+            <button id="deleteRoomByKeyBtn" type="button">部屋を削除</button>
+          </div>
+        </div>
+        <div class="card room-list-card">
+          <div class="room-list-head">
+            <div>
+              <p class="label">公開中の部屋一覧</p>
+              <p class="scene-note">待機中の部屋はここからそのまま参加できます。古い部屋は自動で整理されます。</p>
+            </div>
+            <button id="refreshRoomsBtn" type="button">一覧更新</button>
+          </div>
+          <div id="roomList" class="room-list"></div>
+        </div>
+        <p class="scene-note">
+          部屋作成後は対戦画面へ切り替わります。オンライン対戦中は同じ参加コードを相手に共有してください。
+        </p>
+      </section>
+    </section>
+
+    <section id="gameView" class="view-stack" hidden>
+      <section class="card match-shell">
+        <div class="match-head">
+          <div>
+            <p class="eyebrow">MATCH</p>
+            <h2 id="matchTitle">ローカル対戦</h2>
+            <p id="matchMeta" class="scene-note">オンライン対戦の情報がここに表示されます。</p>
+          </div>
+          <div class="match-actions">
+            <button id="startMatchBtn" class="primary" type="button" hidden>対戦を始める</button>
+            <button id="backToLobbyBtn" type="button">ロビーへ戻る</button>
+            <button id="practiceRestartBtn" type="button" hidden>新しく始める</button>
+            <button id="leaveRoomBtn" type="button" hidden>退出</button>
+            <button id="waitApproveBtn" type="button" hidden>待った承認</button>
+            <button id="waitRejectBtn" type="button" hidden>待った却下</button>
+            <details class="match-menu">
+              <summary>メニュー</summary>
+              <div class="match-menu-panel">
+                <button id="practiceModeBtn" type="button" hidden>駒タイプ変更</button>
+                <button id="runTestsBtn" type="button" hidden>ルールテスト表示</button>
+                <button id="waitBtn" type="button" hidden>待った</button>
+                <button id="disbandRoomBtn" type="button" hidden>部屋を解散</button>
+                <a class="button-link" href="rules-summary.html" target="_blank" rel="noopener noreferrer">簡易ルール</a>
+                <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">詳細ルール</a>
+                <a class="button-link" href="joseki.html" target="_blank" rel="noopener noreferrer">攻守ガイド</a>
+                <a class="button-link" href="formations.html" target="_blank" rel="noopener noreferrer">囲い・戦型ガイド</a>
+              </div>
+            </details>
+          </div>
+        </div>
+        <div class="match-code-bar">
+          <div class="match-code-item">
+            <span class="label">参加コード</span>
+            <strong id="matchRoomCode">-</strong>
+          </div>
+          <div class="match-code-item">
+            <span class="label">参加中メンバー</span>
+            <strong id="matchPlayers">-</strong>
+          </div>
+          <div class="match-code-item">
+            <span class="label">管理キー</span>
+            <strong id="matchAdminKey">-</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="status-grid compact-status">
+        <article id="turnCard" class="card status-card">
+          <p class="label">手番</p>
+          <p id="turnLabel" class="value">-</p>
+        </article>
+        <article class="card status-card">
+          <p class="label">選択中</p>
+          <p id="modeLabel" class="value">-</p>
+        </article>
+        <article class="card status-card">
+          <p class="label">勝者</p>
+          <p id="winnerLabel" class="value">-</p>
+        </article>
+      </section>
+
+      <section class="layout">
+        <aside id="p1Panel" class="card panel">
+          <h2><span id="p1NameLabel">プレイヤー1</span> <span class="camp-chip camp-p1">先手</span></h2>
+          <p class="subtle">持ち駒</p>
+          <div id="p1Reserve" class="list"></div>
+          <p class="subtle">持ち展開図</p>
+          <div id="p1FragmentReserve" class="list"></div>
+          <p class="subtle">手札</p>
+          <div id="p1Hand" class="list"></div>
+          <p class="subtle">山札</p>
+          <p id="p1DeckCount" class="count">0枚</p>
+          <p class="subtle">補助行動</p>
+          <div class="action-list">
+            <button id="p1MulliganBtn" type="button">手札入れ替え</button>
+            <button id="p1RecoverPieceBtn" type="button">駒回収</button>
+            <button id="p1RecoverFragmentBtn" type="button">展開図回収</button>
+            <button id="p1WaitBtn" type="button">待った</button>
+          </div>
+        </aside>
+
+        <section class="center">
+          <div class="card board-card">
+            <div class="board-tools">
+              <div class="inline-guide">
+                <p id="messageLabel" class="inline-guide-text">盤面上のメッセージがここに表示されます。</p>
+              </div>
+              <details class="board-display-menu">
+                <summary>表示設定</summary>
+                <div class="board-tool-buttons">
+                  <button id="toggleAiDebugBtn" type="button">AIデバッグ OFF</button>
+                  <button id="toggle3DLabelsBtn" type="button">立体文字 ON</button>
+                </div>
+              </details>
+            </div>
+            <div class="scene-control-guide" aria-label="盤面の操作方法">
+              <span class="scene-control-chip">ドラッグ: 盤面移動</span>
+              <span class="scene-control-chip">ホイール: 拡大縮小</span>
+              <span class="scene-control-chip">駒と展開図だけ立体表示</span>
+            </div>
+            <div id="aiDebugStatus" class="ai-debug-status" hidden></div>
+            <div id="pendingPieceBanner" class="pending-piece-banner" hidden></div>
+            <div id="sceneViewport" class="scene-viewport" aria-label="UNFOLD 3D盤面"></div>
+            <div id="board" class="board" aria-label="UNFOLD盤面"></div>
+            <div id="winnerOverlay" class="winner-overlay" hidden>
+              <p class="winner-overlay-label">勝利</p>
+              <p id="winnerOverlayText" class="winner-overlay-text">-</p>
+              <p id="winnerOverlayReason" class="winner-overlay-reason">-</p>
+            </div>
+            <div id="contextMenu" class="context-menu" hidden>
+              <button id="contextRotateBtn" type="button">形を回転</button>
+              <button id="contextCancelBtn" type="button">選択を解除</button>
+            </div>
+            <div id="placementConfirm" class="context-menu confirm-pop" hidden>
+              <p id="confirmText" class="confirm-text">この場所に設置しますか？</p>
+              <button id="confirmPlaceBtn" type="button">設置する</button>
+              <button id="cancelPlaceBtn" type="button">やめる</button>
+            </div>
+          </div>
+          <div class="card log-card action-log-card">
+            <p class="label">行動ログ</p>
+            <ol id="logList" class="log-list"></ol>
+          </div>
+          <div id="historyCard" class="card test-card">
+            <div class="history-head">
+              <p class="label">棋譜</p>
+              <div class="history-nav">
+                <button id="historyPrevBtn" type="button">前へ</button>
+                <button id="historyNextBtn" type="button">次へ</button>
+              </div>
+            </div>
+            <p id="historyTitle" class="choice-subtitle">現在局面</p>
+            <div id="historyBoard" class="history-board"></div>
+            <div id="historyList" class="history-list"></div>
+          </div>
+          <div class="card test-card diagnostics-card" hidden>
+            <p class="label">ルールテスト</p>
+            <pre id="testOutput" class="test-output">まだ実行していません。</pre>
+          </div>
+          <details class="card test-card collapsible-reference-card movement-summary-card">
+            <summary class="reference-summary">
+              <span class="label">駒の移動サマリー</span>
+            </summary>
+            <div id="movementSummary" class="summary-list"></div>
+          </details>
+          <details class="card test-card collapsible-reference-card fragment-catalog-card">
+            <summary class="reference-summary">
+              <span class="label">展開図カタログ</span>
+            </summary>
+            <div id="fragmentCatalog" class="fragment-catalog"></div>
+          </details>
+        </section>
+
+        <aside id="p2Panel" class="card panel">
+          <h2><span id="p2NameLabel">プレイヤー2</span> <span class="camp-chip camp-p2">後手</span></h2>
+          <p class="subtle">持ち駒</p>
+          <div id="p2Reserve" class="list"></div>
+          <p class="subtle">持ち展開図</p>
+          <div id="p2FragmentReserve" class="list"></div>
+          <p class="subtle">手札</p>
+          <div id="p2Hand" class="list"></div>
+          <p class="subtle">山札</p>
+          <p id="p2DeckCount" class="count">0枚</p>
+          <p class="subtle">補助行動</p>
+          <div class="action-list">
+            <button id="p2MulliganBtn" type="button">手札入れ替え</button>
+            <button id="p2RecoverPieceBtn" type="button">駒回収</button>
+            <button id="p2RecoverFragmentBtn" type="button">展開図回収</button>
+            <button id="p2WaitBtn" type="button">待った</button>
+          </div>
+        </aside>
+      </section>
+    </section>
+
+    <section class="card site-footer-note" aria-label="サイト情報">
+      <p class="site-footer-title">UNFOLD Prototype</p>
+      <p>個人制作の試作版です。表示やルールは予告なく更新されることがあります。</p>
+      <p>© 2026 UNFOLD Prototype</p>
+    </section>
+  </main>
+
+  <script>window.__UNFOLD_BOOTED = false;</script>
+  <script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
+  <script src="app.js?v=20260509basepieces"></script>
+  <script src="three-board.js?v=20260503c"></script>
+  <script>
+    if (!window.__UNFOLD_BOOTED) {
+      var message = document.getElementById("messageLabel");
+      var tests = document.getElementById("testOutput");
+      if (message) {
+        message.textContent = "JavaScript の初期化に失敗しました。ページを再読み込みしてください。";
+      }
+      if (tests) {
+        tests.textContent = "INIT ERROR\napp.js did not boot correctly.";
+      }
+    }
+  </script>
+</body>
+</html>

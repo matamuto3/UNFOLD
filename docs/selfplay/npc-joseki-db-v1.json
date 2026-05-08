@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "source": [
+    "docs/selfplay/all-kifu-deep-review.md",
+    "docs/experiments/original-depth3-max50-5000/selfplay/original-depth3-max50-progress-deep-review.md"
+  ],
+  "purpose": "Seed weights for UNFOLD NPC opening, defense, recovery, and selective reading.",
+  "dangerousOpeningFragments": {
+    "net04": {
+      "label": "jay",
+      "weight": 1.0,
+      "reason": "High first-player win rate and easy king-capture route creation."
+    },
+    "net04m": {
+      "label": "mirror-jay",
+      "weight": 0.98,
+      "reason": "Similar diagonal route pressure to jay."
+    },
+    "net06": {
+      "label": "cross",
+      "weight": 0.94,
+      "reason": "Creates central pressure and king-zone influence at the same time."
+    },
+    "net01": {
+      "label": "tee",
+      "weight": 0.9,
+      "reason": "Wide connection surface makes base-center pressure easy."
+    },
+    "net08": {
+      "label": "saw",
+      "weight": 0.84,
+      "reason": "Realm-knight king captures were frequent in the full kifu review."
+    }
+  },
+  "defenseShapes": {
+    "bandColumnFromBase": 3,
+    "preferredP2LeftEdge": 10,
+    "preferredP1RightEdge": 4,
+    "notes": [
+      "Treat the third file ahead of home base as the defensive band.",
+      "Penalize overextended friendly fragments because they can become enemy roads.",
+      "Score the defensive band by friendly pieces, friendly attacks, and edge contact with home territory."
+    ]
+  },
+  "recoveryTriggers": [
+    "A friendly fragment becomes an enemy landing road near the king.",
+    "Recovery removes an overextended road from the home base.",
+    "Recovery improves the defensive band or king-zone control.",
+    "Recovery increases options when the hand is nearly empty."
+  ],
+  "selectiveReading": {
+    "defaultDepth": 3,
+    "kingZoneDepth": 5,
+    "extendWhen": [
+      "own king is attacked",
+      "opponent has a one-move win",
+      "king-zone risk is high",
+      "dangerous opening pressure remains"
+    ]
+  }
+}

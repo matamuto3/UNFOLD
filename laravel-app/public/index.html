@@ -3,12 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UNFOLD</title>
-  <link rel="stylesheet" href="styles.css?v=20260426a">
+  <title>UNFOLD | 展開図で陣地を競う将棋風ブラウザ対戦ゲーム</title>
+  <meta name="description" content="UNFOLDは、将棋のように駒を動かし、立体の展開図を盤面へ広げながら陣地を競うブラウザ対戦ゲームです。オンライン対戦、簡易ルール、詳細ルール、初心者向けガイドを公開しています。">
+  <meta name="robots" content="max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#20242a">
+  <link rel="canonical" href="https://unfold.sakura.ne.jp/">
+  <meta property="og:site_name" content="UNFOLD">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="UNFOLD | 展開図で陣地を競う将棋風ブラウザ対戦ゲーム">
+  <meta property="og:description" content="将棋のように駒を動かし、立体の展開図を盤面へ広げながら陣地を競うブラウザ対戦ゲーム UNFOLD。ルールとガイドを公開中です。">
+  <meta property="og:url" content="https://unfold.sakura.ne.jp/">
+  <meta property="og:image" content="https://unfold.sakura.ne.jp/assets/rules/start-state.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="UNFOLDの初期局面ボード">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="UNFOLD | 展開図で陣地を競う将棋風ブラウザ対戦ゲーム">
+  <meta name="twitter:description" content="オンライン対戦、簡易ルール、詳細ルール、初心者向けガイドを公開しているブラウザゲーム UNFOLD。">
+  <meta name="twitter:image" content="https://unfold.sakura.ne.jp/assets/rules/start-state.png">
+  <link rel="stylesheet" href="styles.css?v=20260505advice">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://unfold.sakura.ne.jp/#website",
+          "url": "https://unfold.sakura.ne.jp/",
+          "name": "UNFOLD",
+          "inLanguage": "ja-JP",
+          "description": "将棋のように駒を動かし、立体の展開図を盤面へ広げながら陣地を競うブラウザ対戦ゲーム。"
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://unfold.sakura.ne.jp/#webpage",
+          "url": "https://unfold.sakura.ne.jp/",
+          "name": "UNFOLD | 展開図で陣地を競う将棋風ブラウザ対戦ゲーム",
+          "description": "UNFOLDは、将棋のように駒を動かし、立体の展開図を盤面へ広げながら陣地を競うブラウザ対戦ゲームです。オンライン対戦、簡易ルール、詳細ルール、初心者向けガイドを公開しています。",
+          "inLanguage": "ja-JP",
+          "isPartOf": {
+            "@id": "https://unfold.sakura.ne.jp/#website"
+          }
+        }
+      ]
+    }
+  </script>
 </head>
 <body>
   <main class="app">
     <section id="lobbyView" class="view-stack">
+      <a class="site-top-brand" href="index.html" aria-label="トップ画面へ戻る">UNFOLD</a>
       <section class="hero card">
         <div>
           <p class="eyebrow">UNFOLD PROTOTYPE</p>
@@ -27,6 +72,8 @@
           <div class="hero-actions">
             <a class="button-link" href="rules-summary.html" target="_blank" rel="noopener noreferrer">簡易ルール</a>
             <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">詳細ルール</a>
+            <a class="button-link" href="joseki.html" target="_blank" rel="noopener noreferrer">攻守ガイド</a>
+            <a class="button-link" href="formations.html" target="_blank" rel="noopener noreferrer">囲い・戦型ガイド</a>
             <a class="button-link" href="feedback.html" target="_blank" rel="noopener noreferrer">意見掲示板</a>
           </div>
         </div>
@@ -164,15 +211,22 @@
             <button id="startMatchBtn" class="primary" type="button" hidden>対戦を始める</button>
             <button id="backToLobbyBtn" type="button">ロビーへ戻る</button>
             <button id="practiceRestartBtn" type="button" hidden>新しく始める</button>
-            <button id="practiceModeBtn" type="button" hidden>駒タイプ変更</button>
-            <button id="runTestsBtn" type="button">ルールテスト表示</button>
-            <button id="waitBtn" type="button" hidden>待った</button>
             <button id="leaveRoomBtn" type="button" hidden>退出</button>
-            <button id="disbandRoomBtn" type="button" hidden>部屋を解散</button>
             <button id="waitApproveBtn" type="button" hidden>待った承認</button>
             <button id="waitRejectBtn" type="button" hidden>待った却下</button>
-            <a class="button-link" href="rules-summary.html" target="_blank" rel="noopener noreferrer">簡易ルール</a>
-            <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">詳細ルール</a>
+            <details class="match-menu">
+              <summary>メニュー</summary>
+              <div class="match-menu-panel">
+                <button id="practiceModeBtn" type="button" hidden>駒タイプ変更</button>
+                <button id="runTestsBtn" type="button" hidden>ルールテスト表示</button>
+                <button id="waitBtn" type="button" hidden>待った</button>
+                <button id="disbandRoomBtn" type="button" hidden>部屋を解散</button>
+                <a class="button-link" href="rules-summary.html" target="_blank" rel="noopener noreferrer">簡易ルール</a>
+                <a class="button-link" href="rules.html" target="_blank" rel="noopener noreferrer">詳細ルール</a>
+                <a class="button-link" href="joseki.html" target="_blank" rel="noopener noreferrer">攻守ガイド</a>
+                <a class="button-link" href="formations.html" target="_blank" rel="noopener noreferrer">囲い・戦型ガイド</a>
+              </div>
+            </details>
           </div>
         </div>
         <div class="match-code-bar">
@@ -211,6 +265,8 @@
           <h2><span id="p1NameLabel">プレイヤー1</span> <span class="camp-chip camp-p1">先手</span></h2>
           <p class="subtle">持ち駒</p>
           <div id="p1Reserve" class="list"></div>
+          <p class="subtle">持ち展開図</p>
+          <div id="p1FragmentReserve" class="list"></div>
           <p class="subtle">手札</p>
           <div id="p1Hand" class="list"></div>
           <p class="subtle">山札</p>
@@ -230,15 +286,18 @@
               <div class="inline-guide">
                 <p id="messageLabel" class="inline-guide-text">盤面上のメッセージがここに表示されます。</p>
               </div>
-              <div class="board-tool-buttons">
-                <button id="toggleAiDebugBtn" type="button">AIデバッグ OFF</button>
-                <button id="toggle3DLabelsBtn" type="button">立体文字 ON</button>
-              </div>
+              <details class="board-display-menu">
+                <summary>表示設定</summary>
+                <div class="board-tool-buttons">
+                  <button id="toggleAiDebugBtn" type="button">AIデバッグ OFF</button>
+                  <button id="toggle3DLabelsBtn" type="button">立体文字 ON</button>
+                </div>
+              </details>
             </div>
-            <div class="scene-control-guide" aria-label="3D盤面の操作方法">
-              <span class="scene-control-chip">ドラッグ: 回転</span>
-              <span class="scene-control-chip">Shift + ドラッグ: 視点をずらす</span>
+            <div class="scene-control-guide" aria-label="盤面の操作方法">
+              <span class="scene-control-chip">ドラッグ: 盤面移動</span>
               <span class="scene-control-chip">ホイール: 拡大縮小</span>
+              <span class="scene-control-chip">駒と展開図だけ立体表示</span>
             </div>
             <div id="aiDebugStatus" class="ai-debug-status" hidden></div>
             <div id="pendingPieceBanner" class="pending-piece-banner" hidden></div>
@@ -259,7 +318,7 @@
               <button id="cancelPlaceBtn" type="button">やめる</button>
             </div>
           </div>
-          <div class="card log-card">
+          <div class="card log-card action-log-card">
             <p class="label">行動ログ</p>
             <ol id="logList" class="log-list"></ol>
           </div>
@@ -275,24 +334,30 @@
             <div id="historyBoard" class="history-board"></div>
             <div id="historyList" class="history-list"></div>
           </div>
-          <div class="card test-card">
+          <div class="card test-card diagnostics-card" hidden>
             <p class="label">ルールテスト</p>
             <pre id="testOutput" class="test-output">まだ実行していません。</pre>
           </div>
-          <div class="card test-card">
-            <p class="label">駒の移動サマリー</p>
+          <details class="card test-card collapsible-reference-card movement-summary-card">
+            <summary class="reference-summary">
+              <span class="label">駒の移動サマリー</span>
+            </summary>
             <div id="movementSummary" class="summary-list"></div>
-          </div>
-          <div class="card test-card">
-            <p class="label">展開図カタログ</p>
+          </details>
+          <details class="card test-card collapsible-reference-card fragment-catalog-card">
+            <summary class="reference-summary">
+              <span class="label">展開図カタログ</span>
+            </summary>
             <div id="fragmentCatalog" class="fragment-catalog"></div>
-          </div>
+          </details>
         </section>
 
         <aside id="p2Panel" class="card panel">
           <h2><span id="p2NameLabel">プレイヤー2</span> <span class="camp-chip camp-p2">後手</span></h2>
           <p class="subtle">持ち駒</p>
           <div id="p2Reserve" class="list"></div>
+          <p class="subtle">持ち展開図</p>
+          <div id="p2FragmentReserve" class="list"></div>
           <p class="subtle">手札</p>
           <div id="p2Hand" class="list"></div>
           <p class="subtle">山札</p>
@@ -317,8 +382,8 @@
 
   <script>window.__UNFOLD_BOOTED = false;</script>
   <script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
-  <script src="app.js?v=20260426a"></script>
-  <script src="three-board.js?v=20260424c"></script>
+  <script src="app.js?v=20260509basepieces"></script>
+  <script src="three-board.js?v=20260503c"></script>
   <script>
     if (!window.__UNFOLD_BOOTED) {
       var message = document.getElementById("messageLabel");

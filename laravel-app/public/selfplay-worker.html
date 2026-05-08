@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNFOLD Self-play Worker</title>
+  <meta name="description" content="UNFOLDの自己対戦検証用ワーカーページです。">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="styles.css?v=20260505advice">
+  <style>
+    body {
+      min-height: 100vh;
+    }
+
+    .worker-page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .worker-hero {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+
+    .worker-hero h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 8vw, 5rem);
+      letter-spacing: .08em;
+    }
+
+    .worker-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 380px) 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .worker-panel {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(90, 70, 44, .18);
+      border-radius: 24px;
+      background: rgba(255, 252, 244, .86);
+      box-shadow: 0 18px 46px rgba(60, 44, 22, .12);
+    }
+
+    .worker-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .worker-field {
+      display: grid;
+      gap: 6px;
+      font-size: .86rem;
+      color: #6e5a3d;
+    }
+
+    .worker-field input,
+    .worker-field select {
+      width: 100%;
+      padding: 12px 13px;
+      border: 1px solid rgba(100, 80, 52, .22);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .9);
+      font: inherit;
+      color: #1f2731;
+    }
+
+    .worker-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .worker-actions button,
+    .worker-actions a {
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 999px;
+    }
+
+    .worker-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .worker-stat {
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .78);
+      border: 1px solid rgba(100, 80, 52, .14);
+    }
+
+    .worker-stat span {
+      display: block;
+      color: #7b6a50;
+      font-size: .78rem;
+    }
+
+    .worker-stat strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.2rem;
+    }
+
+    .worker-log,
+    .worker-list {
+      display: grid;
+      gap: 8px;
+      max-height: 460px;
+      overflow: auto;
+    }
+
+    .worker-log-item,
+    .worker-kifu-item {
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .72);
+      border: 1px solid rgba(100, 80, 52, .14);
+    }
+
+    .worker-log-item.error {
+      border-color: rgba(174, 55, 55, .45);
+      color: #8f2424;
+    }
+
+    .worker-kifu-item {
+      display: grid;
+      gap: 8px;
+    }
+
+    .worker-kifu-head {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .worker-kifu-title {
+      font-weight: 700;
+    }
+
+    .worker-kifu-meta {
+      color: #6e5a3d;
+      font-size: .86rem;
+    }
+
+    .worker-frame {
+      width: 1px;
+      height: 1px;
+      position: fixed;
+      left: -20px;
+      top: -20px;
+      opacity: .01;
+      pointer-events: none;
+    }
+
+    @media (max-width: 860px) {
+      .worker-page {
+        padding: 12px;
+      }
+
+      .worker-grid,
+      .worker-fields,
+      .worker-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="worker-page">
+    <section class="worker-hero card">
+      <p class="eyebrow">UNFOLD LAB</p>
+      <h1>SELF-PLAY</h1>
+      <p class="lead">この画面をサーバー上で開いておくと、NPC同士の対局を自動で回して棋譜JSONをサーバーへ保存します。</p>
+      <div class="worker-actions">
+        <a class="button-link" href="index.html">トップへ</a>
+        <a class="button-link" href="joseki.html" target="_blank" rel="noopener noreferrer">定石解説</a>
+      </div>
+    </section>
+
+    <section class="worker-grid">
+      <form id="workerForm" class="worker-panel">
+        <div>
+          <p class="label">RUN SETTINGS</p>
+          <h2>自動対局を回す</h2>
+          <p class="scene-note">処理はこのブラウザで行い、保存だけをサーバーに任せます。サーバー単独実行はPHP版AIエンジン化が必要です。</p>
+        </div>
+
+        <div class="worker-fields">
+          <label class="worker-field">
+            <span>ラベル</span>
+            <input id="labelInput" type="text" value="server-worker" maxlength="80">
+          </label>
+          <label class="worker-field">
+            <span>駒モード</span>
+            <select id="modeInput">
+              <option value="original">オリジナル駒</option>
+              <option value="shogi">将棋駒</option>
+            </select>
+          </label>
+          <label class="worker-field">
+            <span>合計対局数</span>
+            <input id="totalInput" type="number" min="1" max="5000" value="100">
+          </label>
+          <label class="worker-field">
+            <span>1回の保存単位</span>
+            <input id="chunkInput" type="number" min="1" max="20" value="1">
+          </label>
+          <label class="worker-field">
+            <span>最大手数</span>
+            <input id="maxPliesInput" type="number" min="10" max="300" value="30">
+          </label>
+          <label class="worker-field">
+            <span>読み深さ</span>
+            <select id="lookaheadInput">
+              <option value="1">1手</option>
+              <option value="3" selected>3手</option>
+              <option value="5">5手</option>
+            </select>
+          </label>
+          <label class="worker-field">
+            <span>戦型</span>
+            <select id="strategyInput">
+              <option value="attack-defense" selected>先手攻め / 後手守り</option>
+              <option value="balanced">両者バランス</option>
+              <option value="defense-attack">先手守り / 後手攻め</option>
+              <option value="attack-attack">両者攻め</option>
+            </select>
+          </label>
+          <label class="worker-field">
+            <span>開始シード</span>
+            <input id="seedInput" type="number" value="20260506">
+          </label>
+        </div>
+
+        <div class="worker-actions">
+          <button id="startBtn" class="primary" type="submit">開始</button>
+          <button id="stopBtn" type="button" disabled>停止予約</button>
+          <button id="refreshBtn" type="button">保存済みを更新</button>
+        </div>
+
+        <p id="workerStatus" class="scene-note">待機中です。</p>
+
+        <div class="worker-stats" aria-live="polite">
+          <div class="worker-stat"><span>完了</span><strong id="doneCount">0</strong></div>
+          <div class="worker-stat"><span>先手勝ち</span><strong id="p1Wins">0</strong></div>
+          <div class="worker-stat"><span>後手勝ち</span><strong id="p2Wins">0</strong></div>
+          <div class="worker-stat"><span>未決着</span><strong id="draws">0</strong></div>
+        </div>
+      </form>
+
+      <section class="worker-panel">
+        <div>
+          <p class="label">SERVER KIFU</p>
+          <h2>保存済み棋譜</h2>
+          <p class="scene-note">サーバーの `storage/app/private/selfplay-kifu` に保存されます。</p>
+        </div>
+        <div id="kifuList" class="worker-list" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <section class="worker-panel" style="margin-top:16px;">
+      <p class="label">LOG</p>
+      <div id="workerLog" class="worker-log" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="selfplay-worker.js?v=20260506b"></script>
+</body>
+</html>

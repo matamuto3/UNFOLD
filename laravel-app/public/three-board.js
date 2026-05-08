@@ -14,14 +14,18 @@
   var BOARD_ROWS = api.boardRows;
   var BOARD_COLS = api.boardCols;
   var CELL_SIZE = 1;
-  var BASE_HEIGHT = 0.18;
-  var ZONE_HEIGHT = 0.12;
-  var CENTER_HEIGHT = 0.07;
-  var STACK_HEIGHT = 0.12;
+  var BASE_HEIGHT = 0.025;
+  var ZONE_HEIGHT = 0;
+  var CENTER_HEIGHT = 0;
+  var STACK_HEIGHT = 0.105;
+  var MARBLE_TEXTURE_URL = "assets/materials/marble_01_diff_1k.jpg";
+  var PLAYER_CAMERA_VIEW_HEIGHT = 17.2;
+  var LANDSCAPE_CAMERA_VIEW_HEIGHT = 11.2;
   var DEFAULT_CAMERA_ORBIT = {
-    yaw: 0,
-    pitch: 0.06,
-    distance: 14.6,
+    yaw: Math.PI,
+    pitch: 0,
+    distance: 22,
+    viewHeight: PLAYER_CAMERA_VIEW_HEIGHT,
     targetX: 0,
     targetZ: 0
   };
@@ -44,6 +48,9 @@
       yaw: DEFAULT_CAMERA_ORBIT.yaw,
       pitch: DEFAULT_CAMERA_ORBIT.pitch,
       distance: DEFAULT_CAMERA_ORBIT.distance,
+      viewHeight: DEFAULT_CAMERA_ORBIT.viewHeight,
+      viewMode: "player",
+      userZoomed: false,
       dragging: false,
       moved: false,
       lastX: 0,
@@ -54,13 +61,82 @@
     }
   };
 
+  function syncReviewOverlay() {
+    if (typeof window.UNFOLD_REVIEW_OVERLAY_SYNC === "function") {
+      window.UNFOLD_REVIEW_OVERLAY_SYNC();
+    }
+  }
+
+  function getViewerSide() {
+    if (api && typeof api.getViewerSide === "function") {
+      return api.getViewerSide() === "P2" ? "P2" : "P1";
+    }
+    return "P1";
+  }
+
+  function getBoardViewMode() {
+    var width = viewport.clientWidth || window.innerWidth || 0;
+    var height = viewport.clientHeight || 0;
+    var aspect;
+    if (!height && width) {
+      height = Math.round(width / 1.62);
+    }
+    if (!width || !height) {
+      return window.innerWidth >= 980 ? "landscape" : "player";
+    }
+    aspect = width / height;
+    return window.innerWidth >= 980 && aspect >= 1.34 ? "landscape" : "player";
+  }
+
+  function getDefaultViewHeight(viewMode) {
+    return viewMode === "landscape" ? LANDSCAPE_CAMERA_VIEW_HEIGHT : PLAYER_CAMERA_VIEW_HEIGHT;
+  }
+
+  function syncBoardViewMode() {
+    var nextMode = getBoardViewMode();
+    var currentMode = sceneData.orbit.viewMode || nextMode;
+    var oldDefault = getDefaultViewHeight(currentMode);
+    var shouldUseDefaultZoom = !sceneData.orbit.userZoomed
+      || Math.abs((sceneData.orbit.viewHeight || oldDefault) - oldDefault) < 0.4;
+    if (currentMode !== nextMode) {
+      sceneData.orbit.viewMode = nextMode;
+      if (shouldUseDefaultZoom) {
+        sceneData.orbit.viewHeight = getDefaultViewHeight(nextMode);
+      }
+    } else {
+      sceneData.orbit.viewMode = nextMode;
+    }
+    document.body.classList.toggle("board-view-landscape", nextMode === "landscape");
+    document.body.classList.toggle("board-view-player", nextMode !== "landscape");
+    return nextMode;
+  }
+
+  function getDefaultCameraOrbit() {
+    var side = getViewerSide();
+    var viewMode = getBoardViewMode();
+    return {
+      yaw: side === "P2" ? 0 : Math.PI,
+      pitch: DEFAULT_CAMERA_ORBIT.pitch,
+      distance: DEFAULT_CAMERA_ORBIT.distance,
+      viewHeight: getDefaultViewHeight(viewMode),
+      viewMode: viewMode,
+      targetX: DEFAULT_CAMERA_ORBIT.targetX,
+      targetZ: DEFAULT_CAMERA_ORBIT.targetZ
+    };
+  }
+
   function resetCameraView() {
-    sceneData.orbit.yaw = DEFAULT_CAMERA_ORBIT.yaw;
-    sceneData.orbit.pitch = DEFAULT_CAMERA_ORBIT.pitch;
-    sceneData.orbit.distance = DEFAULT_CAMERA_ORBIT.distance;
-    sceneData.orbit.targetX = DEFAULT_CAMERA_ORBIT.targetX;
-    sceneData.orbit.targetZ = DEFAULT_CAMERA_ORBIT.targetZ;
+    var defaultOrbit = getDefaultCameraOrbit();
+    sceneData.orbit.yaw = defaultOrbit.yaw;
+    sceneData.orbit.pitch = defaultOrbit.pitch;
+    sceneData.orbit.distance = defaultOrbit.distance;
+    sceneData.orbit.viewHeight = defaultOrbit.viewHeight;
+    sceneData.orbit.viewMode = defaultOrbit.viewMode;
+    sceneData.orbit.userZoomed = false;
+    sceneData.orbit.targetX = defaultOrbit.targetX;
+    sceneData.orbit.targetZ = defaultOrbit.targetZ;
     applyCameraPreset();
+    resizeRenderer();
     updateCameraPosition();
     renderScene();
   }
@@ -78,6 +154,9 @@
     }
     if (typeof preset.distance === "number") {
       sceneData.orbit.distance = preset.distance;
+    }
+    if (typeof preset.viewHeight === "number") {
+      sceneData.orbit.viewHeight = preset.viewHeight;
     }
     if (typeof preset.targetX === "number") {
       sceneData.orbit.targetX = preset.targetX;
@@ -105,35 +184,174 @@
       ((cell.stack ? cell.stack.length : 0) * STACK_HEIGHT);
   }
 
+  function projectBoardCell(row, col, yOffset) {
+    var state = api.getState();
+    var cell = state && state.board && state.board[row] ? state.board[row][col] : null;
+    var world = boardToWorld(row, col);
+    var vector;
+    var width;
+    var height;
+    if (!sceneData.camera || !sceneData.renderer) {
+      return null;
+    }
+    vector = new THREE.Vector3(
+      world.x,
+      (cell ? getCellTopY(cell) : BASE_HEIGHT) + (typeof yOffset === "number" ? yOffset : 0.24),
+      world.z
+    );
+    vector.project(sceneData.camera);
+    width = sceneData.renderer.domElement.clientWidth || viewport.clientWidth || 0;
+    height = sceneData.renderer.domElement.clientHeight || viewport.clientHeight || 0;
+    if (!width || !height || !isFinite(vector.x) || !isFinite(vector.y) || !isFinite(vector.z)) {
+      return null;
+    }
+    return {
+      x: (vector.x * 0.5 + 0.5) * width,
+      y: (-vector.y * 0.5 + 0.5) * height,
+      visible: vector.z >= -1 && vector.z <= 1
+    };
+  }
+
   function getOwnerColor(owner) {
     if (owner === "P1") {
-      return 0x6a9b90;
+      return 0x6baea7;
     }
     if (owner === "P2") {
-      return 0xaf6e57;
+      return 0xbc8278;
     }
-    return 0xa88d64;
+    return 0xf1eee6;
   }
 
   function getSideColor(owner) {
     if (owner === "P1") {
-      return 0x44655e;
+      return 0x2d625d;
     }
     if (owner === "P2") {
-      return 0x7a4838;
+      return 0x6c4641;
     }
-    return 0x70593a;
+    return 0xb9b7b0;
   }
 
   function getPreviewColor(player) {
-    return player === "P1" ? 0x6a9b90 : 0xaf6e57;
+    return player === "P1" ? 0x6baea7 : 0xbc8278;
+  }
+
+  var stoneTextureCache = {};
+  var imageTextureCache = {};
+
+  function seededRandom(seed) {
+    var value = Math.sin(seed) * 10000;
+    return value - Math.floor(value);
+  }
+
+  function getStoneTexture(key, base, vein, softVein) {
+    if (stoneTextureCache[key]) {
+      return stoneTextureCache[key];
+    }
+
+    var canvas = document.createElement("canvas");
+    var size = 256;
+    var ctx = canvas.getContext("2d");
+    var i;
+    canvas.width = size;
+    canvas.height = size;
+
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, size, size);
+
+    var glow = ctx.createRadialGradient(58, 44, 8, 58, 44, 190);
+    glow.addColorStop(0, "rgba(255, 255, 255, 0.34)");
+    glow.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, size, size);
+
+    for (i = 0; i < 18; i += 1) {
+      var seed = key.length * 31 + i * 17;
+      var startY = seededRandom(seed) * size;
+      var drift = 44 + seededRandom(seed + 1) * 80;
+      ctx.beginPath();
+      ctx.moveTo(-24, startY);
+      ctx.bezierCurveTo(
+        size * 0.28,
+        startY + drift * (seededRandom(seed + 2) - 0.5),
+        size * 0.62,
+        startY + drift * (seededRandom(seed + 3) - 0.5),
+        size + 24,
+        startY + drift * (seededRandom(seed + 4) - 0.5)
+      );
+      ctx.strokeStyle = i % 3 === 0 ? vein : softVein;
+      ctx.globalAlpha = i % 3 === 0 ? 0.32 : 0.18;
+      ctx.lineWidth = i % 4 === 0 ? 2.2 : 1.1;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    var texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(2, 2);
+    texture.anisotropy = 4;
+    stoneTextureCache[key] = texture;
+    return texture;
+  }
+
+  function getImageStoneTexture(key, url, repeatX, repeatY) {
+    if (imageTextureCache[key]) {
+      return imageTextureCache[key];
+    }
+    var texture = new THREE.TextureLoader().load(url, function () {
+      texture.needsUpdate = true;
+      renderScene();
+    });
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(repeatX || 1, repeatY || 1);
+    texture.anisotropy = 4;
+    if ("colorSpace" in texture && THREE.SRGBColorSpace) {
+      texture.colorSpace = THREE.SRGBColorSpace;
+    } else if ("encoding" in texture && THREE.sRGBEncoding) {
+      texture.encoding = THREE.sRGBEncoding;
+    }
+    imageTextureCache[key] = texture;
+    return texture;
+  }
+
+  function createStoneMaterial(key, base, vein, options) {
+    var materialOptions;
+    var textureUrl;
+    var repeat;
+    options = options || {};
+    textureUrl = options.textureUrl;
+    repeat = options.textureRepeat || [1, 1];
+    delete options.textureUrl;
+    delete options.textureRepeat;
+    materialOptions = Object.assign({
+      color: 0xffffff,
+      map: textureUrl
+        ? getImageStoneTexture(key + "-image", textureUrl, repeat[0], repeat[1])
+        : getStoneTexture(key, base, vein, "rgba(255, 255, 255, 0.36)"),
+      roughness: 0.84,
+      metalness: 0.02
+    }, options);
+    return new THREE.MeshStandardMaterial(materialOptions);
+  }
+
+  function createGeneratedStoneMaterial(key, base, vein, options) {
+    var materialOptions = Object.assign({
+      color: 0xffffff,
+      map: getStoneTexture(key, base, vein, "rgba(255, 255, 255, 0.36)"),
+      roughness: 0.84,
+      metalness: 0.02
+    }, options || {});
+    return new THREE.MeshStandardMaterial(materialOptions);
   }
 
   function createScene() {
     var scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x5c452d);
+    scene.background = new THREE.Color(0xf1eee8);
 
-    var camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    var camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
     var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.shadowMap.enabled = true;
@@ -145,39 +363,93 @@
 
     viewport.appendChild(renderer.domElement);
     document.body.classList.add("has-3d-board");
+    document.body.classList.add("has-flat-board");
 
-    scene.add(new THREE.AmbientLight(0xd8bc8f, 0.26));
-    var hemi = new THREE.HemisphereLight(0xcdae7a, 0x3a2a1a, 0.34);
+    scene.add(new THREE.AmbientLight(0xf8f6ef, 0.58));
+    var hemi = new THREE.HemisphereLight(0xf7f5ef, 0x343a42, 0.34);
     scene.add(hemi);
 
-    var dir = new THREE.DirectionalLight(0xf2ddb5, 0.62);
-    dir.position.set(8, 12, 6);
+    var dir = new THREE.DirectionalLight(0xfffcf2, 0.62);
+    dir.position.set(6, 13, 4);
     dir.castShadow = true;
     dir.shadow.mapSize.width = 1024;
     dir.shadow.mapSize.height = 1024;
     scene.add(dir);
 
     var table = new THREE.Mesh(
-      new THREE.CylinderGeometry(13, 14.4, 1.1, 48),
-      new THREE.MeshStandardMaterial({ color: 0x4f3922, roughness: 0.98 })
+      new THREE.CylinderGeometry(12.6, 13.6, 0.24, 64),
+      createGeneratedStoneMaterial("obsidian-table", "#191e24", "rgba(255, 255, 255, 0.16)", {
+        color: 0x20262d,
+        roughness: 0.68,
+        metalness: 0.18
+      })
     );
-    table.position.y = -0.78;
+    table.position.y = -0.32;
     table.receiveShadow = true;
     scene.add(table);
 
-    var boardBase = new THREE.Mesh(
-      new THREE.BoxGeometry(BOARD_COLS * 1.05, 0.38, BOARD_ROWS * 1.05),
-      new THREE.MeshStandardMaterial({ color: 0x654728, roughness: 0.9 })
+    var blackFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(BOARD_COLS * 1.14, 0.08, BOARD_ROWS * 1.12),
+      createGeneratedStoneMaterial("obsidian-board-frame", "#181d23", "rgba(255, 255, 255, 0.2)", {
+        color: 0x1d232a,
+        roughness: 0.58,
+        metalness: 0.22
+      })
     );
-    boardBase.position.y = -0.2;
+    blackFrame.position.y = -0.13;
+    blackFrame.receiveShadow = true;
+    scene.add(blackFrame);
+
+    var boardBase = new THREE.Mesh(
+      new THREE.BoxGeometry(BOARD_COLS * 1.015, 0.045, BOARD_ROWS * 1.015),
+      createGeneratedStoneMaterial("white-board-base", "#f2f0ea", "rgba(76, 84, 96, 0.18)", {
+        color: 0xffffff,
+        roughness: 0.76,
+        metalness: 0.04
+      })
+    );
+    boardBase.position.y = -0.055;
     boardBase.receiveShadow = true;
     scene.add(boardBase);
+    scene.add(createBoardGridLines());
 
     sceneData.scene = scene;
     sceneData.camera = camera;
     sceneData.renderer = renderer;
     sceneData.markers = new THREE.Group();
     scene.add(sceneData.markers);
+  }
+
+  function createBoardGridLines() {
+    var group = new THREE.Group();
+    var material = new THREE.MeshBasicMaterial({
+      color: 0x9b9487,
+      transparent: true,
+      opacity: 0.62,
+      depthWrite: false
+    });
+    var lineWidth = 0.018;
+    var lineHeight = 0.008;
+    var topY = BASE_HEIGHT + 0.012;
+    var i;
+    var line;
+    for (i = 0; i <= BOARD_COLS; i += 1) {
+      line = new THREE.Mesh(
+        new THREE.BoxGeometry(lineWidth, lineHeight, BOARD_ROWS * CELL_SIZE),
+        material
+      );
+      line.position.set((i - BOARD_COLS / 2) * CELL_SIZE, topY, 0);
+      group.add(line);
+    }
+    for (i = 0; i <= BOARD_ROWS; i += 1) {
+      line = new THREE.Mesh(
+        new THREE.BoxGeometry(BOARD_COLS * CELL_SIZE, lineHeight, lineWidth),
+        material
+      );
+      line.position.set(0, topY, (i - BOARD_ROWS / 2) * CELL_SIZE);
+      group.add(line);
+    }
+    return group;
   }
 
   function createCellLayerMesh(owner) {
@@ -201,17 +473,20 @@
       for (var col = 0; col < BOARD_COLS; col += 1) {
         var group = new THREE.Group();
         var base = new THREE.Mesh(
-          new THREE.BoxGeometry(0.96, BASE_HEIGHT, 0.96),
-          new THREE.MeshStandardMaterial({ color: 0xa88d64, roughness: 0.9 })
+          new THREE.BoxGeometry(0.94, BASE_HEIGHT, 0.94),
+          createGeneratedStoneMaterial("white-board-cell", "#f5f3ee", "rgba(71, 78, 90, 0.2)", {
+            color: 0xffffff,
+            roughness: 0.8
+          })
         );
-        base.castShadow = true;
+        base.castShadow = false;
         base.receiveShadow = true;
         base.userData = { row: row, col: col };
         group.add(base);
 
         var ring = new THREE.Mesh(
           new THREE.TorusGeometry(0.18, 0.025, 12, 24),
-          new THREE.MeshStandardMaterial({ color: 0x6d5130, roughness: 0.4, metalness: 0.15 })
+          new THREE.MeshStandardMaterial({ color: 0xbda76a, roughness: 0.34, metalness: 0.28 })
         );
         ring.rotation.x = Math.PI / 2;
         ring.visible = false;
@@ -237,8 +512,8 @@
     var visual = sceneData.cells[row][col];
     var visiblePlacementIds = getVisiblePlacementIds(cell);
     var stackCount = visiblePlacementIds.length;
-    var baseHeight = BASE_HEIGHT + (cell.baseOwner ? ZONE_HEIGHT : 0) + (cell.isBaseCenter ? CENTER_HEIGHT : 0);
-    visual.base.scale.y = baseHeight / BASE_HEIGHT;
+    var baseHeight = BASE_HEIGHT;
+    visual.base.scale.y = 1;
     visual.base.position.y = baseHeight / 2;
     visual.base.material.color.setHex(getOwnerColor(cell.controller || cell.baseOwner || null));
     visual.base.material.emissive.setHex(0x000000);
@@ -292,11 +567,11 @@
     visual.ring.visible = !!cell.isBaseCenter;
     visual.ring.position.y = getCellTopY(cell) + 0.03;
     if (cell.baseOwner === "P1") {
-      visual.ring.material.color.setHex(0x1f6658);
+      visual.ring.material.color.setHex(0x2d625d);
     } else if (cell.baseOwner === "P2") {
-      visual.ring.material.color.setHex(0x8c3f26);
+      visual.ring.material.color.setHex(0x6c4641);
     } else {
-      visual.ring.material.color.setHex(0x6d5130);
+      visual.ring.material.color.setHex(0xbda76a);
     }
 
     visual.ring.scale.set(1, 1, 1);
@@ -438,10 +713,11 @@
     var body = new THREE.Mesh(
       new THREE.CylinderGeometry(0.4, 0.4, 0.2, 6),
       new THREE.MeshStandardMaterial({
-        color: piece.owner === "P1" ? 0xa4ddd1 : 0xefb59d,
-        emissive: piece.owner === "P1" ? 0x183b34 : 0x4f2316,
-        emissiveIntensity: 0.05,
-        roughness: 0.72
+        color: piece.owner === "P1" ? 0xb7d3cf : 0xd4aaa2,
+        emissive: piece.owner === "P1" ? 0x102d29 : 0x35201d,
+        emissiveIntensity: 0.035,
+        roughness: 0.66,
+        metalness: 0.04
       })
     );
     body.castShadow = true;
@@ -688,8 +964,8 @@
   }
 
   function createFragmentFace(owner, highlightRoot) {
-    var topColor = owner === "P1" ? 0x6a9b90 : 0xaf6e57;
-    var sideColor = owner === "P1" ? 0x44655e : 0x7a4838;
+    var topColor = owner === "P1" ? 0x5e9992 : 0xa66a61;
+    var sideColor = owner === "P1" ? 0x3a6560 : 0x6e463f;
     var group = new THREE.Group();
     var body = new THREE.Mesh(
       new THREE.BoxGeometry(0.92, STACK_HEIGHT, 0.92),
@@ -710,7 +986,7 @@
     if (highlightRoot) {
       var cap = new THREE.Mesh(
         new THREE.BoxGeometry(0.46, 0.03, 0.46),
-        new THREE.MeshStandardMaterial({ color: 0xe5d2ad, emissive: 0x6f5325, emissiveIntensity: 0.14 })
+        new THREE.MeshStandardMaterial({ color: 0xe8e3d5, emissive: 0x8f7337, emissiveIntensity: 0.12 })
       );
       cap.position.y = STACK_HEIGHT + 0.02;
       group.add(cap);
@@ -916,6 +1192,42 @@
     return mesh;
   }
 
+  function makeComparePieceMarker(row, col) {
+    var world = boardToWorld(row, col);
+    var state = api.getState();
+    var cell = state.board[row][col];
+    var mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.82, 0.05, 0.82),
+      new THREE.MeshStandardMaterial({
+        color: 0xd9a63d,
+        emissive: 0x9f731f,
+        emissiveIntensity: 0.24,
+        transparent: true,
+        opacity: 0.78
+      })
+    );
+    mesh.position.set(world.x, getCellTopY(cell) + 0.12, world.z);
+    return mesh;
+  }
+
+  function makeCompareControlMarker(row, col) {
+    var world = boardToWorld(row, col);
+    var state = api.getState();
+    var cell = state.board[row][col];
+    var ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.24, 0.03, 14, 28),
+      new THREE.MeshStandardMaterial({
+        color: 0x1a8b82,
+        emissive: 0x1a8b82,
+        emissiveIntensity: 0.2,
+        roughness: 0.38
+      })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(world.x, getCellTopY(cell) + 0.08, world.z);
+    return ring;
+  }
+
   function makeBlockedPreview(row, col) {
     var world = boardToWorld(row, col);
     var state = api.getState();
@@ -941,10 +1253,12 @@
 
   function renderMarkers(state, uiState) {
     var overlay = api.getAiDebugOverlay ? api.getAiDebugOverlay() : null;
+    var compareOverlay = api.getCompareOverlay ? api.getCompareOverlay() : null;
     clearMarkers();
     for (var row = 0; row < BOARD_ROWS; row += 1) {
       for (var col = 0; col < BOARD_COLS; col += 1) {
         var debugCell = overlay && overlay.cells[row] ? overlay.cells[row][col] : null;
+        var compareCell = compareOverlay && compareOverlay.cells[row] ? compareOverlay.cells[row][col] : null;
         if (api.isMoveTarget(row, col) && !isPendingConfirmCell(uiState, row, col)) {
           sceneData.markers.add(makeMoveTargetMarker(row, col));
         }
@@ -972,6 +1286,14 @@
         }
         if (isPendingConfirmCell(uiState, row, col)) {
           sceneData.markers.add(makeConfirmCellMarker(row, col));
+        }
+        if (compareCell) {
+          if (compareCell.controlChanged) {
+            sceneData.markers.add(makeCompareControlMarker(row, col));
+          }
+          if (compareCell.pieceChanged) {
+            sceneData.markers.add(makeComparePieceMarker(row, col));
+          }
         }
         if (overlay && debugCell) {
           if (overlay.showDanger && debugCell.dangerCount > 0) {
@@ -1008,18 +1330,49 @@
 
   function resizeRenderer() {
     var rect = viewport.getBoundingClientRect();
+    var aspect = rect.height ? rect.width / rect.height : 1;
+    syncBoardViewMode();
+    var viewHeight = sceneData.orbit.viewHeight || DEFAULT_CAMERA_ORBIT.viewHeight;
+    var viewWidth = viewHeight * aspect;
     sceneData.renderer.setSize(rect.width, rect.height);
-    sceneData.camera.aspect = rect.width / rect.height;
+    sceneData.camera.left = -viewWidth / 2;
+    sceneData.camera.right = viewWidth / 2;
+    sceneData.camera.top = viewHeight / 2;
+    sceneData.camera.bottom = -viewHeight / 2;
     sceneData.camera.updateProjectionMatrix();
+    syncReviewOverlay();
   }
 
   function updateCameraPosition() {
     var orbit = sceneData.orbit;
-    var x = Math.cos(orbit.yaw) * Math.sin(orbit.pitch) * orbit.distance;
-    var y = Math.cos(orbit.pitch) * orbit.distance;
-    var z = Math.sin(orbit.yaw) * Math.sin(orbit.pitch) * orbit.distance;
-    sceneData.camera.position.set(x + orbit.targetX, y, z + orbit.targetZ);
+    var side = getViewerSide();
+    var viewMode = sceneData.orbit.viewMode || getBoardViewMode();
+    if (viewMode === "landscape") {
+      sceneData.camera.up.set(0, 0, side === "P2" ? 1 : -1);
+    } else {
+      sceneData.camera.up.set(side === "P2" ? -1 : 1, 0, 0);
+    }
+    sceneData.camera.position.set(orbit.targetX, orbit.distance, orbit.targetZ);
     sceneData.camera.lookAt(orbit.targetX, 0, orbit.targetZ);
+    syncReviewOverlay();
+  }
+
+  function panCameraByScreenDelta(dx, dy) {
+    var scale = (sceneData.orbit.viewHeight || DEFAULT_CAMERA_ORBIT.viewHeight) / Math.max(360, viewport.clientHeight || 360);
+    var upX = sceneData.camera.up.x;
+    var upZ = sceneData.camera.up.z;
+    var rightX = -upZ;
+    var rightZ = upX;
+    var worldDx = (-dx * rightX + dy * upX) * scale;
+    var worldDz = (-dx * rightZ + dy * upZ) * scale;
+    sceneData.orbit.targetX = Math.max(-4.8, Math.min(4.8, sceneData.orbit.targetX + worldDx));
+    sceneData.orbit.targetZ = Math.max(-3.2, Math.min(3.2, sceneData.orbit.targetZ + worldDz));
+  }
+
+  function handleViewportResize() {
+    resizeRenderer();
+    updateCameraPosition();
+    renderScene();
   }
 
   function pickCell(event) {
@@ -1037,7 +1390,7 @@
     }
     sceneData.orbit.dragging = true;
     sceneData.orbit.moved = false;
-    sceneData.orbit.mode = event.shiftKey ? "pan" : "rotate";
+    sceneData.orbit.mode = "pan";
     sceneData.orbit.lastX = event.clientX;
     sceneData.orbit.lastY = event.clientY;
   }
@@ -1056,15 +1409,7 @@
       }
       orbit.lastX = event.clientX;
       orbit.lastY = event.clientY;
-      if (orbit.mode === "pan") {
-        orbit.targetX -= dx * 0.018;
-        orbit.targetZ -= dy * 0.018;
-        orbit.targetX = Math.max(-4.5, Math.min(4.5, orbit.targetX));
-        orbit.targetZ = Math.max(-3.5, Math.min(3.5, orbit.targetZ));
-      } else {
-        orbit.yaw -= dx * 0.008;
-        orbit.pitch = Math.max(0.04, Math.min(1.28, orbit.pitch + dy * 0.008));
-      }
+      panCameraByScreenDelta(dx, dy);
       updateCameraPosition();
       return;
     }
@@ -1077,7 +1422,9 @@
 
   function onWheel(event) {
     event.preventDefault();
-    sceneData.orbit.distance = Math.max(10, Math.min(23, sceneData.orbit.distance + event.deltaY * 0.01));
+    sceneData.orbit.userZoomed = true;
+    sceneData.orbit.viewHeight = Math.max(10.6, Math.min(22, sceneData.orbit.viewHeight + event.deltaY * 0.01));
+    resizeRenderer();
     updateCameraPosition();
   }
 
@@ -1109,10 +1456,8 @@
 
   createScene();
   buildCells();
-  applyCameraPreset();
-  resizeRenderer();
-  updateCameraPosition();
-  window.addEventListener("resize", resizeRenderer);
+  resetCameraView();
+  window.addEventListener("resize", handleViewportResize);
   if (toggle3DLabelsBtn) {
     toggle3DLabelsBtn.addEventListener("click", function () {
       sceneData.labelsEnabled = !sceneData.labelsEnabled;
@@ -1130,6 +1475,7 @@
   window.UNFOLD_3D_RENDERER = {
     renderScene: renderScene,
     resetCameraView: resetCameraView,
+    projectBoardCell: projectBoardCell,
     startPieceMoveAnimation: startPieceMoveAnimation,
     startPiecePlacementAnimation: startPiecePlacementAnimation,
     startFragmentUnfoldAnimation: startFragmentUnfoldAnimation

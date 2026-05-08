@@ -1,0 +1,386 @@
+{
+  "generatedAt": "2026-05-08T19:56:08.853Z",
+  "seed": 20260503,
+  "options": {
+    "count": 1,
+    "mode": "original",
+    "maxPlies": 8,
+    "strategyProfile": "P1:attack / P2:defense",
+    "fast": false,
+    "bulk": false,
+    "lookaheadDepth": 3,
+    "initialStandbyRule": "basePieces",
+    "traceDecisions": false
+  },
+  "summary": {
+    "games": 1,
+    "wins": {
+      "P1": 0,
+      "P2": 0,
+      "draw": 1
+    },
+    "reasons": {
+      "未決着": 1
+    },
+    "averageTurns": 2,
+    "averagePlies": 8,
+    "strategyProfile": "P1:attack / P2:defense",
+    "setupPatterns": [
+      {
+        "count": 1,
+        "pattern": "P1:piece/disruptor | P2:piece/guard | P1:piece/destroyer | P2:piece/vanguard | P1:piece/barrier | P2:piece/decoy"
+      }
+    ],
+    "defenderSetupPatterns": [
+      {
+        "count": 1,
+        "pattern": "piece/guard | piece/vanguard | piece/decoy"
+      }
+    ],
+    "defenderSetupOutcomes": [
+      {
+        "pattern": "piece/guard | piece/vanguard | piece/decoy",
+        "count": 1,
+        "wins": {
+          "P1": 0,
+          "P2": 0,
+          "draw": 1
+        },
+        "p2WinRate": 0,
+        "p2DefenseSuccessRate": 100,
+        "averageTurns": 2,
+        "averageFinalDecks": {
+          "P1": 14,
+          "P2": 14
+        }
+      }
+    ],
+    "defenderSetupProfileOutcomes": [
+      {
+        "pattern": "堅守1 / 妨害2 / 反撃0",
+        "count": 1,
+        "wins": {
+          "P1": 0,
+          "P2": 0,
+          "draw": 1
+        },
+        "p2WinRate": 0,
+        "p2DefenseSuccessRate": 100,
+        "averageTurns": 2,
+        "averageFinalDecks": {
+          "P1": 14,
+          "P2": 14
+        }
+      }
+    ],
+    "firstActionPatterns": [
+      {
+        "count": 1,
+        "pattern": "P1:展開-net06/destroyer | P2:展開-net02m/guard"
+      }
+    ],
+    "actionUsage": {
+      "setupPiece": 6,
+      "fragment": 2
+    },
+    "recoveryStats": {
+      "pieceRecoveries": 0,
+      "fragmentRecoveries": 0,
+      "byPlayer": {
+        "P1": {
+          "piece": 0,
+          "fragment": 0,
+          "winsAfterRecovery": 0
+        },
+        "P2": {
+          "piece": 0,
+          "fragment": 0,
+          "winsAfterRecovery": 0
+        }
+      },
+      "threatenedPieceRecoveries": 0,
+      "lowHandFragmentRecoveries": 0,
+      "examples": []
+    },
+    "pieceUsage": {
+      "disruptor": 1,
+      "guard": 2,
+      "destroyer": 2,
+      "vanguard": 1,
+      "barrier": 1,
+      "decoy": 1
+    },
+    "decisiveGames": 0,
+    "winRates": {
+      "P1": 0,
+      "P2": 0,
+      "draw": 100
+    },
+    "decisiveWinRates": {
+      "P1": 0,
+      "P2": 0
+    },
+    "winRateGap": 0,
+    "defenderResults": {
+      "attackWins": 0,
+      "defenderWins": 0,
+      "defenderHolds": 1,
+      "defenderSuccesses": 1,
+      "attackWinRate": 0,
+      "defenderSuccessRate": 100,
+      "attackDefenseGap": 100
+    },
+    "averageFinalDecks": {
+      "P1": 14,
+      "P2": 14
+    },
+    "averageCardsDrawn": {
+      "P1": 6,
+      "P2": 6
+    },
+    "deckExhaustedGames": 0,
+    "bothDecksExhaustedGames": 0,
+    "notes": [
+      "初期スタンバイの出現頻度が高い並びは、候補手生成時の基本囲いとして重み付け候補。",
+      "短手数で勝った棋譜は、勝ち筋評価と即負け回避フィルタのテストケース候補。",
+      "主指標は defenderResults.attackDefenseGap。未決着は後手が守り切った守備成功として扱う。",
+      "山札消費は副指標。averageFinalDecks と deckExhaustedGames は長期戦化の確認に使う。",
+      "未決着が多い場合は、後手の守備成功として見ながら終盤の勝ち筋評価を調整する。"
+    ]
+  },
+  "games": [
+    {
+      "id": 1,
+      "seed": 20260503,
+      "mode": "original",
+      "initialStandbyRule": "basePieces",
+      "strategies": {
+        "P1": "attack",
+        "P2": "defense"
+      },
+      "winner": null,
+      "reason": "未決着",
+      "turns": 2,
+      "plies": 8,
+      "moves": [
+        {
+          "player": "P1",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 94041,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net10m",
+          "fragmentName": "ミラーステップ",
+          "pieceType": "disruptor",
+          "pieceName": "攪乱士",
+          "to": {
+            "row": 4,
+            "col": 2
+          },
+          "label": "先手 初期駒 攪乱士 (5, 3)"
+        },
+        {
+          "player": "P2",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 114921,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net02m",
+          "fragmentName": "ミラークランク",
+          "pieceType": "guard",
+          "pieceName": "護衛士",
+          "to": {
+            "row": 4,
+            "col": 12
+          },
+          "label": "後手 初期駒 護衛士 (5, 13)"
+        },
+        {
+          "player": "P1",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 58572,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net06",
+          "fragmentName": "クロス",
+          "pieceType": "destroyer",
+          "pieceName": "滅界者",
+          "to": {
+            "row": 3,
+            "col": 2
+          },
+          "label": "先手 初期駒 滅界者 (4, 3)"
+        },
+        {
+          "player": "P2",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 69532,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net05",
+          "fragmentName": "ジグザグ",
+          "pieceType": "vanguard",
+          "pieceName": "前衛士",
+          "to": {
+            "row": 3,
+            "col": 12
+          },
+          "label": "後手 初期駒 前衛士 (4, 13)"
+        },
+        {
+          "player": "P1",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 58084,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net03",
+          "fragmentName": "サイス",
+          "pieceType": "barrier",
+          "pieceName": "結界士",
+          "to": {
+            "row": 5,
+            "col": 2
+          },
+          "label": "先手 初期駒 結界士 (6, 3)"
+        },
+        {
+          "player": "P2",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 60626,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net11m",
+          "fragmentName": "ミラーブロック",
+          "pieceType": "decoy",
+          "pieceName": "誘引士",
+          "to": {
+            "row": 5,
+            "col": 12
+          },
+          "label": "後手 初期駒 誘引士 (6, 13)"
+        },
+        {
+          "player": "P1",
+          "turnNumber": 1,
+          "phase": "play",
+          "type": "fragment",
+          "score": 241,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "source": "fragmentReserve",
+          "fragment": "net06",
+          "fragmentName": "クロス",
+          "pieceType": "destroyer",
+          "pieceName": "滅界者",
+          "rotation": 0,
+          "anchor": {
+            "row": 3,
+            "col": 3
+          },
+          "cells": [
+            {
+              "row": 3,
+              "col": 4
+            },
+            {
+              "row": 4,
+              "col": 3
+            },
+            {
+              "row": 4,
+              "col": 4
+            },
+            {
+              "row": 4,
+              "col": 5
+            },
+            {
+              "row": 4,
+              "col": 6
+            },
+            {
+              "row": 5,
+              "col": 4
+            }
+          ],
+          "pieceCell": {
+            "row": 4,
+            "col": 6
+          },
+          "label": "先手 クロスを展開し滅界者を置く"
+        },
+        {
+          "player": "P2",
+          "turnNumber": 2,
+          "phase": "play",
+          "type": "fragment",
+          "score": 164054,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "source": "fragmentReserve",
+          "fragment": "net02m",
+          "fragmentName": "ミラークランク",
+          "pieceType": "guard",
+          "pieceName": "護衛士",
+          "rotation": 2,
+          "anchor": {
+            "row": 3,
+            "col": 8
+          },
+          "cells": [
+            {
+              "row": 5,
+              "col": 10
+            },
+            {
+              "row": 4,
+              "col": 11
+            },
+            {
+              "row": 4,
+              "col": 10
+            },
+            {
+              "row": 4,
+              "col": 9
+            },
+            {
+              "row": 4,
+              "col": 8
+            },
+            {
+              "row": 3,
+              "col": 11
+            }
+          ],
+          "pieceCell": {
+            "row": 4,
+            "col": 11
+          },
+          "label": "後手 ミラークランクを展開し護衛士を置く"
+        }
+      ],
+      "traces": [],
+      "final": {
+        "currentPlayer": "P1",
+        "phase": "play",
+        "p1Pieces": 5,
+        "p2Pieces": 5,
+        "p1Deck": 14,
+        "p2Deck": 14
+      }
+    }
+  ]
+}

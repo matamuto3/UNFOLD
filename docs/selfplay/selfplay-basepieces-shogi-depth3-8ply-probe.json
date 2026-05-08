@@ -1,0 +1,384 @@
+{
+  "generatedAt": "2026-05-08T19:56:08.854Z",
+  "seed": 20260503,
+  "options": {
+    "count": 1,
+    "mode": "shogi",
+    "maxPlies": 8,
+    "strategyProfile": "P1:attack / P2:defense",
+    "fast": false,
+    "bulk": false,
+    "lookaheadDepth": 3,
+    "initialStandbyRule": "basePieces",
+    "traceDecisions": false
+  },
+  "summary": {
+    "games": 1,
+    "wins": {
+      "P1": 0,
+      "P2": 0,
+      "draw": 1
+    },
+    "reasons": {
+      "未決着": 1
+    },
+    "averageTurns": 2,
+    "averagePlies": 8,
+    "strategyProfile": "P1:attack / P2:defense",
+    "setupPatterns": [
+      {
+        "count": 1,
+        "pattern": "P1:piece/disruptor | P2:piece/guard | P1:piece/flanker | P2:piece/vanguard | P1:piece/vanguard | P2:piece/vanguard"
+      }
+    ],
+    "defenderSetupPatterns": [
+      {
+        "count": 1,
+        "pattern": "piece/guard | piece/vanguard | piece/vanguard"
+      }
+    ],
+    "defenderSetupOutcomes": [
+      {
+        "pattern": "piece/guard | piece/vanguard | piece/vanguard",
+        "count": 1,
+        "wins": {
+          "P1": 0,
+          "P2": 0,
+          "draw": 1
+        },
+        "p2WinRate": 0,
+        "p2DefenseSuccessRate": 100,
+        "averageTurns": 2,
+        "averageFinalDecks": {
+          "P1": 14,
+          "P2": 14
+        }
+      }
+    ],
+    "defenderSetupProfileOutcomes": [
+      {
+        "pattern": "堅守1 / 妨害2 / 反撃0",
+        "count": 1,
+        "wins": {
+          "P1": 0,
+          "P2": 0,
+          "draw": 1
+        },
+        "p2WinRate": 0,
+        "p2DefenseSuccessRate": 100,
+        "averageTurns": 2,
+        "averageFinalDecks": {
+          "P1": 14,
+          "P2": 14
+        }
+      }
+    ],
+    "firstActionPatterns": [
+      {
+        "count": 1,
+        "pattern": "P1:展開-net03/flanker | P2:展開-net05/vanguard"
+      }
+    ],
+    "actionUsage": {
+      "setupPiece": 6,
+      "fragment": 2
+    },
+    "recoveryStats": {
+      "pieceRecoveries": 0,
+      "fragmentRecoveries": 0,
+      "byPlayer": {
+        "P1": {
+          "piece": 0,
+          "fragment": 0,
+          "winsAfterRecovery": 0
+        },
+        "P2": {
+          "piece": 0,
+          "fragment": 0,
+          "winsAfterRecovery": 0
+        }
+      },
+      "threatenedPieceRecoveries": 0,
+      "lowHandFragmentRecoveries": 0,
+      "examples": []
+    },
+    "pieceUsage": {
+      "disruptor": 1,
+      "guard": 1,
+      "flanker": 2,
+      "vanguard": 4
+    },
+    "decisiveGames": 0,
+    "winRates": {
+      "P1": 0,
+      "P2": 0,
+      "draw": 100
+    },
+    "decisiveWinRates": {
+      "P1": 0,
+      "P2": 0
+    },
+    "winRateGap": 0,
+    "defenderResults": {
+      "attackWins": 0,
+      "defenderWins": 0,
+      "defenderHolds": 1,
+      "defenderSuccesses": 1,
+      "attackWinRate": 0,
+      "defenderSuccessRate": 100,
+      "attackDefenseGap": 100
+    },
+    "averageFinalDecks": {
+      "P1": 14,
+      "P2": 14
+    },
+    "averageCardsDrawn": {
+      "P1": 6,
+      "P2": 6
+    },
+    "deckExhaustedGames": 0,
+    "bothDecksExhaustedGames": 0,
+    "notes": [
+      "初期スタンバイの出現頻度が高い並びは、候補手生成時の基本囲いとして重み付け候補。",
+      "短手数で勝った棋譜は、勝ち筋評価と即負け回避フィルタのテストケース候補。",
+      "主指標は defenderResults.attackDefenseGap。未決着は後手が守り切った守備成功として扱う。",
+      "山札消費は副指標。averageFinalDecks と deckExhaustedGames は長期戦化の確認に使う。",
+      "未決着が多い場合は、後手の守備成功として見ながら終盤の勝ち筋評価を調整する。"
+    ]
+  },
+  "games": [
+    {
+      "id": 1,
+      "seed": 20260503,
+      "mode": "shogi",
+      "initialStandbyRule": "basePieces",
+      "strategies": {
+        "P1": "attack",
+        "P2": "defense"
+      },
+      "winner": null,
+      "reason": "未決着",
+      "turns": 2,
+      "plies": 8,
+      "moves": [
+        {
+          "player": "P1",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 94041,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net06",
+          "fragmentName": "クロス",
+          "pieceType": "disruptor",
+          "pieceName": "角行",
+          "to": {
+            "row": 4,
+            "col": 2
+          },
+          "label": "先手 初期駒 角行 (5, 3)"
+        },
+        {
+          "player": "P2",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 114921,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net02m",
+          "fragmentName": "ミラークランク",
+          "pieceType": "guard",
+          "pieceName": "金将",
+          "to": {
+            "row": 4,
+            "col": 12
+          },
+          "label": "後手 初期駒 金将 (5, 13)"
+        },
+        {
+          "player": "P1",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 58080,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net03",
+          "fragmentName": "サイス",
+          "pieceType": "flanker",
+          "pieceName": "銀将",
+          "to": {
+            "row": 3,
+            "col": 2
+          },
+          "label": "先手 初期駒 銀将 (4, 3)"
+        },
+        {
+          "player": "P2",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 69532,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net05",
+          "fragmentName": "ジグザグ",
+          "pieceType": "vanguard",
+          "pieceName": "歩兵",
+          "to": {
+            "row": 3,
+            "col": 12
+          },
+          "label": "後手 初期駒 歩兵 (4, 13)"
+        },
+        {
+          "player": "P1",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 58076,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net10m",
+          "fragmentName": "ミラーステップ",
+          "pieceType": "vanguard",
+          "pieceName": "歩兵",
+          "to": {
+            "row": 5,
+            "col": 2
+          },
+          "label": "先手 初期駒 歩兵 (6, 3)"
+        },
+        {
+          "player": "P2",
+          "turnNumber": 1,
+          "phase": "standby",
+          "type": "setupPiece",
+          "score": 69532,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "fragment": "net11m",
+          "fragmentName": "ミラーブロック",
+          "pieceType": "vanguard",
+          "pieceName": "歩兵",
+          "to": {
+            "row": 5,
+            "col": 12
+          },
+          "label": "後手 初期駒 歩兵 (6, 13)"
+        },
+        {
+          "player": "P1",
+          "turnNumber": 1,
+          "phase": "play",
+          "type": "fragment",
+          "score": 223,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "source": "fragmentReserve",
+          "fragment": "net03",
+          "fragmentName": "サイス",
+          "pieceType": "flanker",
+          "pieceName": "銀将",
+          "rotation": 2,
+          "anchor": {
+            "row": 3,
+            "col": 3
+          },
+          "cells": [
+            {
+              "row": 5,
+              "col": 5
+            },
+            {
+              "row": 4,
+              "col": 6
+            },
+            {
+              "row": 4,
+              "col": 5
+            },
+            {
+              "row": 4,
+              "col": 4
+            },
+            {
+              "row": 4,
+              "col": 3
+            },
+            {
+              "row": 3,
+              "col": 3
+            }
+          ],
+          "pieceCell": {
+            "row": 4,
+            "col": 6
+          },
+          "label": "先手 サイスを展開し銀将を置く"
+        },
+        {
+          "player": "P2",
+          "turnNumber": 2,
+          "phase": "play",
+          "type": "fragment",
+          "score": 163343,
+          "refinedScore": null,
+          "defenseSnapshot": null,
+          "source": "fragmentReserve",
+          "fragment": "net05",
+          "fragmentName": "ジグザグ",
+          "pieceType": "vanguard",
+          "pieceName": "歩兵",
+          "rotation": 1,
+          "anchor": {
+            "row": 3,
+            "col": 9
+          },
+          "cells": [
+            {
+              "row": 4,
+              "col": 11
+            },
+            {
+              "row": 3,
+              "col": 10
+            },
+            {
+              "row": 4,
+              "col": 10
+            },
+            {
+              "row": 5,
+              "col": 10
+            },
+            {
+              "row": 6,
+              "col": 10
+            },
+            {
+              "row": 5,
+              "col": 9
+            }
+          ],
+          "pieceCell": {
+            "row": 4,
+            "col": 11
+          },
+          "label": "後手 ジグザグを展開し歩兵を置く"
+        }
+      ],
+      "traces": [],
+      "final": {
+        "currentPlayer": "P1",
+        "phase": "play",
+        "p1Pieces": 5,
+        "p2Pieces": 5,
+        "p1Deck": 14,
+        "p2Deck": 14
+      }
+    }
+  ]
+}

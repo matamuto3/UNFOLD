@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UNFOLD Rules Scene</title>
+  <meta name="robots" content="noindex, nofollow">
   <style>
     html, body {
       margin: 0;
@@ -124,6 +125,9 @@
         } else if (name === "mulligan-before" || name === "mulligan-after") {
           preset.distance = 13.8;
           preset.targetX = -3.6;
+        } else if (name === "standby-defense" || name === "standby-balance" || name === "standby-attack" || name === "standby-bad-open" || name === "standby-bad-no-escape" || name === "standby-bad-overextend") {
+          preset.distance = 12.2;
+          preset.targetX = -2.4;
         }
         return preset;
       }
@@ -133,7 +137,14 @@
         realmKnight: { label: "界騎士", short: "界" },
         chaosBeast: { label: "混沌獣", short: "混" },
         sideAttacker: { label: "側撃士", short: "側" },
-        frontliner: { label: "前衛士", short: "前" }
+        frontliner: { label: "前衛士", short: "前" },
+        guard: { label: "護衛士", short: "護" },
+        barrier: { label: "結界士", short: "結" },
+        rider: { label: "騎乗士", short: "騎" },
+        charger: { label: "突撃士", short: "突" },
+        flanker: { label: "側撃士", short: "側" },
+        disruptor: { label: "攪乱士", short: "攪" },
+        decoy: { label: "誘引士", short: "誘" }
       };
 
       function createState() {
@@ -238,6 +249,46 @@
         });
       }
 
+      function seedStandbyShell(state, placements, owner) {
+        if (owner === "P1") {
+          addPlacement(state, placements, "pl-setup-p1-1", "P1", teeCells(3, 3));
+          addPlacement(state, placements, "pl-setup-p1-2", "P1", cells([
+            [2, 0],
+            [2, 1],
+            [2, 2],
+            [2, 3],
+            [1, 3],
+            [3, 3]
+          ]));
+          addPlacement(state, placements, "pl-setup-p1-3", "P1", cells([
+            [6, 0],
+            [6, 1],
+            [6, 2],
+            [6, 3],
+            [7, 3],
+            [5, 3]
+          ]));
+          return;
+        }
+        addPlacement(state, placements, "pl-setup-p2-1", "P2", teeCells(3, 8));
+        addPlacement(state, placements, "pl-setup-p2-2", "P2", cells([
+          [2, 11],
+          [2, 12],
+          [2, 13],
+          [2, 14],
+          [1, 11],
+          [3, 11]
+        ]));
+        addPlacement(state, placements, "pl-setup-p2-3", "P2", cells([
+          [6, 11],
+          [6, 12],
+          [6, 13],
+          [6, 14],
+          [7, 11],
+          [5, 11]
+        ]));
+      }
+
       function buildScene(name) {
         var state = createState();
         var placements = {};
@@ -256,8 +307,6 @@
         seedBase(state, "P2");
         addPiece(state, "P1", "P1-king-1", "realmKing", 4, 1);
         addPiece(state, "P2", "P2-king-1", "realmKing", 4, 13);
-        addPiece(state, "P1", "P1-realm-knight-1", "realmKnight", 4, 2);
-        addPiece(state, "P2", "P2-realm-knight-1", "realmKnight", 4, 12);
 
         var title = "UNFOLD";
 
@@ -304,7 +353,61 @@
           addPlacement(state, placements, "pl-piece-only", "P1", teeCells(3, 3));
           addPiece(state, "P1", "P1-piece-only", "chaosBeast", 4, 4);
         } else if (name === "start-state") {
-          title = "ゲーム開始時";
+          title = "初期スタンバイ後";
+          addPiece(state, "P1", "P1-setup-sample-1", "chaosBeast", 4, 0);
+          addPiece(state, "P1", "P1-setup-sample-2", "frontliner", 3, 1);
+          addPiece(state, "P1", "P1-setup-sample-3", "realmKnight", 5, 2);
+          addPiece(state, "P2", "P2-setup-sample-1", "chaosBeast", 4, 14);
+          addPiece(state, "P2", "P2-setup-sample-2", "frontliner", 3, 13);
+          addPiece(state, "P2", "P2-setup-sample-3", "realmKnight", 5, 12);
+        } else if (name === "standby-defense") {
+          title = "守り重視の初期スタンバイ";
+          addPiece(state, "P1", "P1-standby-def-1", "guard", 4, 2);
+          addPiece(state, "P1", "P1-standby-def-2", "barrier", 3, 1);
+          addPiece(state, "P1", "P1-standby-def-3", "flanker", 5, 1);
+          addPiece(state, "P2", "P2-standby-def-1", "frontliner", 3, 13);
+          addPiece(state, "P2", "P2-standby-def-2", "chaosBeast", 4, 12);
+          addPiece(state, "P2", "P2-standby-def-3", "realmKnight", 5, 13);
+        } else if (name === "standby-balance") {
+          title = "バランス型の初期スタンバイ";
+          addPiece(state, "P1", "P1-standby-bal-1", "guard", 4, 2);
+          addPiece(state, "P1", "P1-standby-bal-2", "rider", 3, 1);
+          addPiece(state, "P1", "P1-standby-bal-3", "frontliner", 5, 1);
+          addPiece(state, "P2", "P2-standby-bal-1", "frontliner", 3, 13);
+          addPiece(state, "P2", "P2-standby-bal-2", "chaosBeast", 4, 12);
+          addPiece(state, "P2", "P2-standby-bal-3", "realmKnight", 5, 13);
+        } else if (name === "standby-attack") {
+          title = "攻め寄りの初期スタンバイ";
+          addPiece(state, "P1", "P1-standby-atk-1", "charger", 3, 2);
+          addPiece(state, "P1", "P1-standby-atk-2", "rider", 4, 2);
+          addPiece(state, "P1", "P1-standby-atk-3", "frontliner", 5, 2);
+          addPiece(state, "P2", "P2-standby-atk-1", "frontliner", 3, 12);
+          addPiece(state, "P2", "P2-standby-atk-2", "chaosBeast", 4, 12);
+          addPiece(state, "P2", "P2-standby-atk-3", "realmKnight", 5, 12);
+        } else if (name === "standby-bad-open") {
+          title = "悪い例: 王前が薄い";
+          addPiece(state, "P1", "P1-bad-open-1", "rider", 3, 2);
+          addPiece(state, "P1", "P1-bad-open-2", "charger", 5, 2);
+          addPiece(state, "P1", "P1-bad-open-3", "flanker", 3, 1);
+          addPiece(state, "P2", "P2-bad-open-1", "frontliner", 3, 12);
+          addPiece(state, "P2", "P2-bad-open-2", "chaosBeast", 5, 12);
+          addPiece(state, "P2", "P2-bad-open-3", "realmKnight", 3, 13);
+        } else if (name === "standby-bad-no-escape") {
+          title = "悪い例: 横の退路がない";
+          addPiece(state, "P1", "P1-bad-noesc-1", "guard", 4, 0);
+          addPiece(state, "P1", "P1-bad-noesc-2", "barrier", 4, 2);
+          addPiece(state, "P1", "P1-bad-noesc-3", "frontliner", 3, 1);
+          addPiece(state, "P2", "P2-bad-noesc-1", "frontliner", 4, 12);
+          addPiece(state, "P2", "P2-bad-noesc-2", "chaosBeast", 4, 14);
+          addPiece(state, "P2", "P2-bad-noesc-3", "realmKnight", 3, 13);
+        } else if (name === "standby-bad-overextend") {
+          title = "悪い例: 3つとも攻めに寄る";
+          addPiece(state, "P1", "P1-bad-over-1", "frontliner", 3, 2);
+          addPiece(state, "P1", "P1-bad-over-2", "rider", 4, 2);
+          addPiece(state, "P1", "P1-bad-over-3", "charger", 5, 2);
+          addPiece(state, "P2", "P2-bad-over-1", "frontliner", 3, 12);
+          addPiece(state, "P2", "P2-bad-over-2", "chaosBeast", 4, 12);
+          addPiece(state, "P2", "P2-bad-over-3", "realmKnight", 5, 12);
         } else if (name === "fragment-before") {
           title = "展開図を置く前";
         } else if (name === "fragment-place") {
@@ -471,6 +574,12 @@
         getUiState: function () { return scene.uiState; },
         getPieceById: function (pieceId) {
           return scene.state.players.P1.pieces[pieceId] || scene.state.players.P2.pieces[pieceId] || null;
+        },
+        getPieceLabel: function (pieceType) {
+          return PIECES[pieceType] ? PIECES[pieceType].label : pieceType;
+        },
+        getPieceShortLabel: function (pieceType) {
+          return PIECES[pieceType] ? PIECES[pieceType].short : "?";
         },
         getPlacementById: function (placementId) {
           return scene.placements[placementId] || null;
