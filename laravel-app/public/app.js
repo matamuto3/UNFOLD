@@ -348,10 +348,15 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260516t";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517tt01";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
+  var NPC_SEARCH_MEMORY_STORAGE_KEY = "unfoldNpcSearchMemoryV2";
+  var NPC_SEARCH_MEMORY_VERSION = "search-v2-20260517";
+  var NPC_SEARCH_MEMORY_MAX_STORAGE_ENTRIES = 360;
+  var NPC_SEARCH_MEMORY_MAX_STORAGE_HISTORY = 600;
+  var NPC_SEARCH_MEMORY_FLUSH_INTERVAL_MS = 2500;
   var WASM_BOARD_MAP_PTR = 0;
   var unfoldWasmRuntime = {
     supported: typeof WebAssembly === "object",
@@ -368,7 +373,8 @@
     disabled: false,
     requestId: 0,
     callbacks: {},
-    fallbackReason: ""
+    fallbackReason: "",
+    seeded: false
   };
 
   var els = {
@@ -10226,7 +10232,189 @@
   var NPC_HISTORY_MAX_SCORE = 260000;
   var npcPersistentSearchTable = {};
   var npcPersistentSearchKeys = [];
+  var npcPersistentSearchDirtyKeys = {};
   var npcSearchHistoryScores = {};
+  var npcSearchMemoryLoaded = false;
+  var npcSearchMemoryFlushTimer = null;
+  var npcSearchMemoryLastFlushAt = 0;
+
+  function isNpcSearchMemoryStorageAvailable() {
+    return typeof window !== "undefined"
+      && !window.__UNFOLD_NPC_WORKER__
+      && window.localStorage;
+  }
+
+  function normalizeNpcSearchMemoryEntry(entry) {
+    var score;
+    var flag;
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+    score = Number(entry.score);
+    if (!isFinite(score)) {
+      return null;
+    }
+    flag = entry.flag === "lower" || entry.flag === "upper" ? entry.flag : "exact";
+    return {
+      score: score,
+      flag: flag,
+      bestActionKey: String(entry.bestActionKey || "").slice(0, 260)
+    };
+  }
+
+  function trimNpcPersistentSearchTable(maxEntries) {
+    var limit = Math.max(20, Number(maxEntries) || NPC_PERSISTENT_TT_MAX_ENTRIES);
+    while (npcPersistentSearchKeys.length > limit) {
+      var key = npcPersistentSearchKeys.shift();
+      delete npcPersistentSearchTable[key];
+      delete npcPersistentSearchDirtyKeys[key];
+    }
+  }
+
+  function importNpcSearchMemorySnapshot(snapshot, options) {
+    var imported = 0;
+    var maxEntries = options && options.maxEntries ? options.maxEntries : NPC_PERSISTENT_TT_MAX_ENTRIES;
+    var markDirty = !!(options && options.markDirty);
+    if (!snapshot || typeof snapshot !== "object") {
+      return 0;
+    }
+    if (snapshot.version && snapshot.version !== NPC_SEARCH_MEMORY_VERSION) {
+      return 0;
+    }
+    (Array.isArray(snapshot.entries) ? snapshot.entries : []).forEach(function (pair) {
+      var key;
+      var entry;
+      if (!Array.isArray(pair) || typeof pair[0] !== "string") {
+        return;
+      }
+      key = pair[0];
+      entry = normalizeNpcSearchMemoryEntry(pair[1]);
+      if (!key || !entry) {
+        return;
+      }
+      if (!Object.prototype.hasOwnProperty.call(npcPersistentSearchTable, key)) {
+        npcPersistentSearchKeys.push(key);
+      }
+      npcPersistentSearchTable[key] = entry;
+      if (markDirty) {
+        npcPersistentSearchDirtyKeys[key] = true;
+      }
+      imported += 1;
+    });
+    if (snapshot.historyScores && typeof snapshot.historyScores === "object") {
+      Object.keys(snapshot.historyScores).slice(0, NPC_SEARCH_MEMORY_MAX_STORAGE_HISTORY).forEach(function (key) {
+        var value = Number(snapshot.historyScores[key]);
+        if (isFinite(value) && value > 0) {
+          npcSearchHistoryScores[key] = Math.min(NPC_HISTORY_MAX_SCORE, Math.max(npcSearchHistoryScores[key] || 0, value));
+        }
+      });
+    }
+    trimNpcPersistentSearchTable(maxEntries);
+    return imported;
+  }
+
+  function exportNpcSearchMemorySnapshot(options) {
+    var dirtyOnly = !!(options && options.dirtyOnly);
+    var clearDirty = !!(options && options.clearDirty);
+    var maxEntries = Math.max(1, Number(options && options.maxEntries) || NPC_SEARCH_MEMORY_MAX_STORAGE_ENTRIES);
+    var sourceKeys = dirtyOnly ? Object.keys(npcPersistentSearchDirtyKeys) : npcPersistentSearchKeys.slice();
+    var entries = [];
+    var historyScores = {};
+    sourceKeys.slice(Math.max(0, sourceKeys.length - maxEntries)).forEach(function (key) {
+      var entry = normalizeNpcSearchMemoryEntry(npcPersistentSearchTable[key]);
+      if (!entry) {
+        delete npcPersistentSearchDirtyKeys[key];
+        return;
+      }
+      entries.push([key, entry]);
+      if (clearDirty) {
+        delete npcPersistentSearchDirtyKeys[key];
+      }
+    });
+    Object.keys(npcSearchHistoryScores).sort(function (a, b) {
+      return (npcSearchHistoryScores[b] || 0) - (npcSearchHistoryScores[a] || 0);
+    }).slice(0, NPC_SEARCH_MEMORY_MAX_STORAGE_HISTORY).forEach(function (key) {
+      historyScores[key] = npcSearchHistoryScores[key];
+    });
+    if (!entries.length && !Object.keys(historyScores).length) {
+      return null;
+    }
+    return {
+      version: NPC_SEARCH_MEMORY_VERSION,
+      savedAt: new Date().toISOString(),
+      entries: entries,
+      historyScores: historyScores
+    };
+  }
+
+  function loadNpcSearchMemoryFromStorage() {
+    var raw;
+    if (npcSearchMemoryLoaded || !isNpcSearchMemoryStorageAvailable()) {
+      return;
+    }
+    npcSearchMemoryLoaded = true;
+    try {
+      raw = window.localStorage.getItem(NPC_SEARCH_MEMORY_STORAGE_KEY);
+      if (raw) {
+        importNpcSearchMemorySnapshot(JSON.parse(raw), {
+          maxEntries: NPC_PERSISTENT_TT_MAX_ENTRIES,
+          markDirty: false
+        });
+      }
+    } catch (error) {
+      // Invalid or unavailable storage should never block an NPC turn.
+    }
+  }
+
+  function saveNpcSearchMemoryToStorage() {
+    var snapshot;
+    var attempts;
+    if (!isNpcSearchMemoryStorageAvailable()) {
+      return false;
+    }
+    loadNpcSearchMemoryFromStorage();
+    for (attempts = 0; attempts < 4; attempts += 1) {
+      snapshot = exportNpcSearchMemorySnapshot({
+        dirtyOnly: false,
+        clearDirty: false,
+        maxEntries: Math.max(40, Math.floor(NPC_SEARCH_MEMORY_MAX_STORAGE_ENTRIES / Math.pow(2, attempts)))
+      });
+      try {
+        if (snapshot) {
+          window.localStorage.setItem(NPC_SEARCH_MEMORY_STORAGE_KEY, JSON.stringify(snapshot));
+        }
+        npcSearchMemoryLastFlushAt = Date.now();
+        return true;
+      } catch (error) {
+        trimNpcPersistentSearchTable(Math.max(40, Math.floor(npcPersistentSearchKeys.length / 2)));
+      }
+    }
+    return false;
+  }
+
+  function scheduleNpcSearchMemoryFlush() {
+    var elapsed;
+    if (!isNpcSearchMemoryStorageAvailable() || npcSearchMemoryFlushTimer) {
+      return;
+    }
+    elapsed = Date.now() - npcSearchMemoryLastFlushAt;
+    npcSearchMemoryFlushTimer = window.setTimeout(function () {
+      npcSearchMemoryFlushTimer = null;
+      saveNpcSearchMemoryToStorage();
+    }, Math.max(120, NPC_SEARCH_MEMORY_FLUSH_INTERVAL_MS - elapsed));
+  }
+
+  function mergeNpcSearchMemoryFromWorker(snapshot) {
+    if (!snapshot) {
+      return;
+    }
+    loadNpcSearchMemoryFromStorage();
+    importNpcSearchMemorySnapshot(snapshot, {
+      maxEntries: NPC_PERSISTENT_TT_MAX_ENTRIES,
+      markDirty: true
+    });
+    saveNpcSearchMemoryToStorage();
+  }
 
   function getCachedNpcEvalMetric(state, player, key, compute) {
     var stateCache;
@@ -10271,6 +10459,7 @@
     if (activeNpcSearchCache) {
       return callback();
     }
+    loadNpcSearchMemoryFromStorage();
     previousCache = activeNpcSearchCache;
     activeNpcSearchCache = createNpcSearchCache();
     try {
@@ -10507,6 +10696,7 @@
     value = npcSearchHistoryScores[key] || 0;
     value += (amount || 1) * Math.max(1, depth || 1) * Math.max(1, depth || 1);
     npcSearchHistoryScores[key] = Math.min(NPC_HISTORY_MAX_SCORE, value);
+    scheduleNpcSearchMemoryFlush();
   }
 
   function recordNpcKillerMove(state, player, action, depth) {
@@ -10556,9 +10746,9 @@
       npcPersistentSearchKeys.push(cacheKey);
     }
     npcPersistentSearchTable[cacheKey] = entry;
-    while (npcPersistentSearchKeys.length > NPC_PERSISTENT_TT_MAX_ENTRIES) {
-      delete npcPersistentSearchTable[npcPersistentSearchKeys.shift()];
-    }
+    npcPersistentSearchDirtyKeys[cacheKey] = true;
+    trimNpcPersistentSearchTable(NPC_PERSISTENT_TT_MAX_ENTRIES);
+    scheduleNpcSearchMemoryFlush();
   }
 
   function collectNpcActionsForStateCached(state, player) {
@@ -19389,7 +19579,12 @@
       uiState.npc.thinking = false;
       action = chooseNpcAction();
       return {
-        action: action ? JSON.parse(JSON.stringify(action)) : null
+        action: action ? JSON.parse(JSON.stringify(action)) : null,
+        searchMemory: exportNpcSearchMemorySnapshot({
+          dirtyOnly: true,
+          clearDirty: true,
+          maxEntries: NPC_SEARCH_MEMORY_MAX_STORAGE_ENTRIES
+        })
       };
     } finally {
       uiState.state = previousState;
@@ -19471,6 +19666,37 @@
     ].join("|");
   }
 
+  function getNpcSearchMemorySeedSnapshot() {
+    loadNpcSearchMemoryFromStorage();
+    return exportNpcSearchMemorySnapshot({
+      dirtyOnly: false,
+      clearDirty: false,
+      maxEntries: NPC_SEARCH_MEMORY_MAX_STORAGE_ENTRIES
+    });
+  }
+
+  function seedNpcWorkerSearchMemory() {
+    var worker = npcWorkerRuntime.worker;
+    var snapshot;
+    if (!worker || npcWorkerRuntime.seeded) {
+      return;
+    }
+    snapshot = getNpcSearchMemorySeedSnapshot();
+    if (!snapshot) {
+      npcWorkerRuntime.seeded = true;
+      return;
+    }
+    try {
+      worker.postMessage({
+        type: "seedSearchMemory",
+        payload: snapshot
+      });
+      npcWorkerRuntime.seeded = true;
+    } catch (error) {
+      npcWorkerRuntime.seeded = true;
+    }
+  }
+
   function isNpcTurnTokenCurrent(token) {
     return token === getNpcTurnToken() && isNpcTurn() && !uiState.state.winner;
   }
@@ -19493,10 +19719,14 @@
     }
     try {
       npcWorkerRuntime.worker = new Worker(NPC_WORKER_SCRIPT_URL);
+      npcWorkerRuntime.seeded = false;
       npcWorkerRuntime.worker.onmessage = function (event) {
         var data = event.data || {};
         var callback;
         if (data.type !== "result") {
+          if (data.type === "ready") {
+            seedNpcWorkerSearchMemory();
+          }
           if (data.type === "init-error") {
             npcWorkerRuntime.disabled = true;
             npcWorkerRuntime.fallbackReason = data.error || "NPC worker init error";
@@ -19514,6 +19744,9 @@
           callback.reject(new Error(data.error || "NPC worker failed"));
           return;
         }
+        if (data.searchMemory) {
+          mergeNpcSearchMemoryFromWorker(data.searchMemory);
+        }
         callback.resolve(data);
       };
       npcWorkerRuntime.worker.onerror = function (event) {
@@ -19524,6 +19757,7 @@
           npcWorkerRuntime.worker.terminate();
         }
         npcWorkerRuntime.worker = null;
+        npcWorkerRuntime.seeded = false;
       };
     } catch (error) {
       npcWorkerRuntime.disabled = true;
@@ -19540,6 +19774,7 @@
     if (!worker) {
       return Promise.reject(new Error(npcWorkerRuntime.fallbackReason || "NPC worker unavailable"));
     }
+    seedNpcWorkerSearchMemory();
     requestId = "npc-" + (++npcWorkerRuntime.requestId);
     payload = {
       state: cloneGameState(uiState.state),
@@ -21580,6 +21815,15 @@
       runNpcTacticalScenarioSuite: runNpcTacticalScenarioSuite,
       findMoveGenerationMismatches: findMoveGenerationMismatches,
       applyNpcBookOverrides: applyNpcBookOverrides,
+      importNpcSearchMemory: function (snapshot) {
+        return importNpcSearchMemorySnapshot(snapshot, {
+          maxEntries: NPC_PERSISTENT_TT_MAX_ENTRIES,
+          markDirty: false
+        });
+      },
+      exportNpcSearchMemory: function (options) {
+        return exportNpcSearchMemorySnapshot(options || {});
+      },
       getNpcBookStatus: function () {
         return npcBookStatus;
       },
@@ -21658,6 +21902,15 @@
         chooseActionForState: chooseNpcActionForExternalState,
         findMoveGenerationMismatches: findMoveGenerationMismatches,
         applyNpcBookOverrides: applyNpcBookOverrides,
+        importNpcSearchMemory: function (snapshot) {
+          return importNpcSearchMemorySnapshot(snapshot, {
+            maxEntries: NPC_PERSISTENT_TT_MAX_ENTRIES,
+            markDirty: false
+          });
+        },
+        exportNpcSearchMemory: function (options) {
+          return exportNpcSearchMemorySnapshot(options || {});
+        },
         getNpcBookStatus: function () {
           return npcBookStatus;
         },

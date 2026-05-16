@@ -212,7 +212,7 @@
   }
 
   try {
-    importScripts("app.js?v=20260516t");
+    importScripts("app.js?v=20260517tt01");
     if (!self.UNFOLD_NPC_ENGINE || typeof self.UNFOLD_NPC_ENGINE.chooseActionForState !== "function") {
       throw new Error("NPC engine API was not exposed: " + (
         self.document.getElementById("testOutput").textContent ||
@@ -260,6 +260,16 @@
       }
       return;
     }
+    if (data.type === "seedSearchMemory") {
+      try {
+        if (self.UNFOLD_NPC_ENGINE && typeof self.UNFOLD_NPC_ENGINE.importNpcSearchMemory === "function") {
+          self.UNFOLD_NPC_ENGINE.importNpcSearchMemory(data.payload || {});
+        }
+      } catch (error) {
+        // Search memory is an optimization. Ignore invalid snapshots.
+      }
+      return;
+    }
     if (data.type !== "chooseAction") {
       return;
     }
@@ -271,6 +281,7 @@
         requestId: data.requestId,
         turnToken: data.turnToken,
         action: result ? result.action : null,
+        searchMemory: result && result.searchMemory ? result.searchMemory : null,
         thinkMs: Date.now() - startedAt
       });
     } catch (error) {
