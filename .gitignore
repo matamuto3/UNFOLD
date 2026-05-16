@@ -1,4 +1,5 @@
 .edge-headless/
+NUL
 chrome-profile*/
 cc_assets*/
 cc_assets*_sheet.png
@@ -31,6 +32,11 @@ docs/selfplay/*.stderr.txt
 docs/selfplay/*-pids.txt
 docs/selfplay/*-stderr.log
 docs/selfplay/*-stdout.log
+docs/selfplay/balance-*/
+docs/selfplay/fragment-*/
+docs/selfplay/pergame-*/
+docs/selfplay/tactical/
+docs/selfplay/*review*.md
 !docs/selfplay/npc-joseki-db-v1.json
 !docs/selfplay/npc-learned-weights-v2.json
 !docs/selfplay/opening-rescue-joseki-v1.json
