@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517book01";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517budget01";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -10228,6 +10228,9 @@
   var npcEvalCache = typeof WeakMap === "function" ? new WeakMap() : null;
   var activeNpcSearchCache = null;
   var activeNpcSearchRootPlayer = null;
+  var activeNpcSearchDeadlineAt = 0;
+  var activeNpcSearchNodeCount = 0;
+  var activeNpcSearchAborted = false;
   var NPC_PERSISTENT_TT_MAX_ENTRIES = 9000;
   var NPC_HISTORY_MAX_SCORE = 260000;
   var npcPersistentSearchTable = {};
@@ -10467,6 +10470,39 @@
     } finally {
       activeNpcSearchCache = previousCache;
     }
+  }
+
+  function getNpcSearchTimestampMs() {
+    return Date.now();
+  }
+
+  function getNpcSearchTimeBudgetMs(depth, emergencyMode) {
+    var normalizedDepth = normalizeNpcLookaheadDepth(depth);
+    if (normalizedDepth < 5) {
+      return 0;
+    }
+    if (uiState.npc && uiState.npc.bulkSelfPlay) {
+      return emergencyMode ? 1800 : 1200;
+    }
+    if (window.__UNFOLD_NPC_WORKER__) {
+      return emergencyMode ? 12000 : 8500;
+    }
+    return emergencyMode ? 6500 : 4500;
+  }
+
+  function shouldStopNpcSearchForBudget() {
+    if (!activeNpcSearchDeadlineAt || activeNpcSearchAborted) {
+      return !!activeNpcSearchAborted;
+    }
+    activeNpcSearchNodeCount += 1;
+    if (activeNpcSearchNodeCount % 8 !== 0) {
+      return false;
+    }
+    if (getNpcSearchTimestampMs() >= activeNpcSearchDeadlineAt) {
+      activeNpcSearchAborted = true;
+      return true;
+    }
+    return false;
   }
 
   function getCardSearchKey(card) {
@@ -14860,6 +14896,9 @@
       var betaOriginal = beta;
       var bound;
       var immediateWins;
+      if (shouldStopNpcSearchForBudget()) {
+        return evaluateStateForNpcCached(state, rootPlayer);
+      }
       if (state.winner) {
         return getNpcTerminalSearchScore(state, rootPlayer, ply);
       }
@@ -14913,6 +14952,9 @@
       candidates.some(function (action) {
         var nextState = cloneNpcSimulationState(state);
         var score;
+        if (shouldStopNpcSearchForBudget()) {
+          return true;
+        }
         nextState.currentPlayer = currentPlayer;
         applyNpcActionToState(nextState, action);
         score = searchNpcQuiescence(nextState, rootPlayer, alpha, beta, ply - 1);
@@ -14934,6 +14976,9 @@
         }
         return false;
       });
+      if (activeNpcSearchAborted) {
+        return standPat;
+      }
       writeNpcSearchBound(cacheKey, standPat, alphaOriginal, betaOriginal);
       return standPat;
     }
@@ -15001,6 +15046,9 @@
       var bestAction = null;
       var bestActionKey = "";
       var terminalScore = getNpcTerminalSearchScore(state, rootPlayer, depth);
+      if (shouldStopNpcSearchForBudget()) {
+        return evaluateStateForNpcCached(state, rootPlayer);
+      }
       if (terminalScore !== null) {
         return terminalScore;
       }
@@ -15065,6 +15113,9 @@
         var childDepth;
         var fullDepth;
         var useScoutWindow;
+        if (shouldStopNpcSearchForBudget()) {
+          break;
+        }
         nextState.currentPlayer = currentPlayer;
         applyNpcActionToState(nextState, candidates[i]);
         tactical = isNpcSearchTacticalAction(state, currentPlayer, candidates[i], emergencyMode);
@@ -15110,17 +15161,29 @@
           break;
         }
       }
+      if (!bestAction || !isFinite(bestScore)) {
+        bestScore = evaluateStateForNpcCached(state, rootPlayer);
+        if (!activeNpcSearchAborted) {
+          writeNpcSearchExact(cacheKey, bestScore);
+        }
+        return bestScore;
+      }
       bestActionKey = getNpcActionSearchKey(bestAction);
       if (bestAction) {
         recordNpcHistorySuccess(state, currentPlayer, bestAction, depth, 36);
       }
-      writeNpcSearchBound(cacheKey, bestScore, alphaOriginal, betaOriginal, bestActionKey);
+      if (!activeNpcSearchAborted) {
+        writeNpcSearchBound(cacheKey, bestScore, alphaOriginal, betaOriginal, bestActionKey);
+      }
       return bestScore;
     }
 
     function chooseNpcActionWithLookahead(actions, npcPlayer, emergencyMode, depth) {
       return withNpcSearchCache(function () {
         var previousRootPlayer = activeNpcSearchRootPlayer;
+        var previousDeadlineAt = activeNpcSearchDeadlineAt;
+        var previousNodeCount = activeNpcSearchNodeCount;
+        var previousAborted = activeNpcSearchAborted;
         var rootCacheKey = getCachedNpcSearchStateKey(uiState.state) +
           "|search|" + npcPlayer +
           "|depth|" + depth +
@@ -15132,6 +15195,7 @@
         var opponent = getOpponentPlayer(npcPlayer);
         var childStateCache = {};
         var targetDepth = normalizeNpcLookaheadDepth(depth);
+        var budgetMs = getNpcSearchTimeBudgetMs(targetDepth, emergencyMode);
         function getRootChildInfo(action) {
           var key = getNpcActionSearchKey(action);
           var info = childStateCache[key];
@@ -15207,18 +15271,30 @@
         }
 
         activeNpcSearchRootPlayer = npcPlayer;
+        activeNpcSearchDeadlineAt = budgetMs ? getNpcSearchTimestampMs() + budgetMs : 0;
+        activeNpcSearchNodeCount = 0;
+        activeNpcSearchAborted = false;
         try {
           for (var iterationDepth = targetDepth >= 3 ? 1 : targetDepth; iterationDepth <= targetDepth; iterationDepth += 1) {
             var iterationResults = [];
+            var candidateIndex;
             bestScore = -Infinity;
-            candidates.forEach(function (action, index) {
-              var score = scoreRootAction(action, iterationDepth, bestScore, index);
+            for (candidateIndex = 0; candidateIndex < candidates.length; candidateIndex += 1) {
+              var action = candidates[candidateIndex];
+              var score;
+              if (shouldStopNpcSearchForBudget()) {
+                break;
+              }
+              score = scoreRootAction(action, iterationDepth, bestScore, candidateIndex);
               iterationResults.push({ action: action, score: score });
               if (score > bestScore || (score === bestScore && action.score > (bestAction ? bestAction.score : -Infinity))) {
                 bestScore = score;
                 bestAction = action;
               }
-            });
+            }
+            if (!iterationResults.length) {
+              break;
+            }
             iterationResults.sort(function (a, b) {
               var delta = b.score - a.score;
               if (delta) {
@@ -15230,13 +15306,19 @@
             candidates = iterationResults.map(function (entry) {
               return entry.action;
             });
+            if (activeNpcSearchAborted) {
+              break;
+            }
           }
-          if (bestAction && isFinite(bestScore)) {
+          if (bestAction && isFinite(bestScore) && !activeNpcSearchAborted) {
             writeNpcSearchBound(rootCacheKey, bestScore, -Infinity, Infinity, getNpcActionSearchKey(bestAction));
             recordNpcHistorySuccess(uiState.state, npcPlayer, bestAction, targetDepth, 120);
           }
         } finally {
           activeNpcSearchRootPlayer = previousRootPlayer;
+          activeNpcSearchDeadlineAt = previousDeadlineAt;
+          activeNpcSearchNodeCount = previousNodeCount;
+          activeNpcSearchAborted = previousAborted;
         }
         return bestAction;
       });
