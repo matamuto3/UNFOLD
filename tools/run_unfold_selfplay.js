@@ -106,6 +106,12 @@ function summarizeGames(games) {
       averageCandidateMs: 0,
       averageSearchMs: 0,
       averageCompletedDepth: 0,
+      exactHints: 0,
+      patternHints: 0,
+      patternHintMatches: 0,
+      exactHintRate: 0,
+      patternHintRate: 0,
+      patternHintMatchRate: 0,
       maxNodes: 0,
       maxElapsedMs: 0,
       depthCounts: {},
@@ -135,6 +141,9 @@ function summarizeGames(games) {
         totalCandidateMs: 0,
         totalSearchMs: 0,
         totalCompletedDepth: 0,
+        exactHints: 0,
+        patternHints: 0,
+        patternHintMatches: 0,
         maxNodes: 0,
         maxElapsedMs: 0
       };
@@ -146,6 +155,9 @@ function summarizeGames(games) {
     map[groupKey].totalCandidateMs += Number(stats.candidateMs || 0);
     map[groupKey].totalSearchMs += Number(stats.searchMs || 0);
     map[groupKey].totalCompletedDepth += Number(stats.completedDepth || 0);
+    map[groupKey].exactHints += stats.exactHint ? 1 : 0;
+    map[groupKey].patternHints += stats.patternHint ? 1 : 0;
+    map[groupKey].patternHintMatches += stats.patternHintMatched ? 1 : 0;
     map[groupKey].maxNodes = Math.max(map[groupKey].maxNodes, Number(stats.nodes || 0));
     map[groupKey].maxElapsedMs = Math.max(map[groupKey].maxElapsedMs, Number(stats.elapsedMs || 0));
   }
@@ -162,6 +174,9 @@ function summarizeGames(games) {
         averageCandidateMs: entry.count ? Math.round((entry.totalCandidateMs / entry.count) * 10) / 10 : 0,
         averageSearchMs: entry.count ? Math.round((entry.totalSearchMs / entry.count) * 10) / 10 : 0,
         averageCompletedDepth: entry.count ? Math.round((entry.totalCompletedDepth / entry.count) * 10) / 10 : 0,
+        exactHintRate: entry.count ? Math.round((entry.exactHints / entry.count) * 1000) / 10 : 0,
+        patternHintRate: entry.count ? Math.round((entry.patternHints / entry.count) * 1000) / 10 : 0,
+        patternHintMatchRate: entry.patternHints ? Math.round((entry.patternHintMatches / entry.patternHints) * 1000) / 10 : 0,
         maxNodes: entry.maxNodes,
         maxElapsedMs: entry.maxElapsedMs
       };
@@ -195,10 +210,16 @@ function summarizeGames(games) {
           searchMs: Number(stats.searchMs || 0),
           nodes: Number(stats.nodes || 0),
           aborted: !!stats.aborted,
-          emergency: !!stats.emergency
+          emergency: !!stats.emergency,
+          exactHint: !!stats.exactHint,
+          patternHint: !!stats.patternHint,
+          patternHintMatched: !!stats.patternHintMatched
         };
         summary.searchStats.moves += 1;
         summary.searchStats.aborted += stats.aborted ? 1 : 0;
+        summary.searchStats.exactHints += stats.exactHint ? 1 : 0;
+        summary.searchStats.patternHints += stats.patternHint ? 1 : 0;
+        summary.searchStats.patternHintMatches += stats.patternHintMatched ? 1 : 0;
         totalSearchNodes += Number(stats.nodes || 0);
         totalSearchElapsedMs += Number(stats.elapsedMs || 0);
         totalSearchCandidateMs += Number(stats.candidateMs || 0);
@@ -227,6 +248,11 @@ function summarizeGames(games) {
     summary.searchStats.averageCandidateMs = Math.round((totalSearchCandidateMs / summary.searchStats.moves) * 10) / 10;
     summary.searchStats.averageSearchMs = Math.round((totalSearchSearchMs / summary.searchStats.moves) * 10) / 10;
     summary.searchStats.averageCompletedDepth = Math.round((totalSearchCompletedDepth / summary.searchStats.moves) * 10) / 10;
+    summary.searchStats.exactHintRate = Math.round((summary.searchStats.exactHints / summary.searchStats.moves) * 1000) / 10;
+    summary.searchStats.patternHintRate = Math.round((summary.searchStats.patternHints / summary.searchStats.moves) * 1000) / 10;
+    summary.searchStats.patternHintMatchRate = summary.searchStats.patternHints
+      ? Math.round((summary.searchStats.patternHintMatches / summary.searchStats.patternHints) * 1000) / 10
+      : 0;
     summary.searchStats.slowestMoves = summary.searchStats.slowestMoves.sort((a, b) => b.elapsedMs - a.elapsedMs).slice(0, 10);
     summary.searchStats.abortedExamples = summary.searchStats.abortedExamples.sort((a, b) => b.elapsedMs - a.elapsedMs).slice(0, 10);
     summary.searchStats.byType = formatSearchStatsGroups(summary.searchStats.byType);
@@ -263,6 +289,7 @@ function buildBlockReviewMarkdown(blockNumber, games, summary) {
     lines.push(`- Average search nodes: ${summary.searchStats.averageNodes}`);
     lines.push(`- Average candidate/search ms: ${summary.searchStats.averageCandidateMs} / ${summary.searchStats.averageSearchMs}`);
     lines.push(`- Average completed depth: ${summary.searchStats.averageCompletedDepth}`);
+    lines.push(`- Search hints: TT ${summary.searchStats.exactHints} (${summary.searchStats.exactHintRate}%) / pattern ${summary.searchStats.patternHints} (${summary.searchStats.patternHintRate}%) / matched ${summary.searchStats.patternHintMatches} (${summary.searchStats.patternHintMatchRate}%)`);
   }
   lines.push("");
   lines.push("## Reasons");
@@ -278,14 +305,15 @@ function buildBlockReviewMarkdown(blockNumber, games, summary) {
     lines.push("");
     lines.push("## Slowest Search Moves");
     summary.searchStats.slowestMoves.slice(0, 5).forEach((move) => {
-      lines.push(`- ${move.elapsedMs}ms (cand ${move.candidateMs} / search ${move.searchMs}) / nodes ${move.nodes} / d${move.completedDepth}/${move.depth}: ${move.label || `${move.player}:${move.type}`}`);
+      const hint = move.exactHint || move.patternHint ? ` / hint ${move.exactHint ? "TT" : "pattern"}${move.patternHintMatched ? "*" : ""}` : "";
+      lines.push(`- ${move.elapsedMs}ms (cand ${move.candidateMs} / search ${move.searchMs}) / nodes ${move.nodes} / d${move.completedDepth}/${move.depth}${hint}: ${move.label || `${move.player}:${move.type}`}`);
     });
   }
   if (summary.searchStats && summary.searchStats.byType && summary.searchStats.byType.length) {
     lines.push("");
     lines.push("## Search Cost By Action");
     summary.searchStats.byType.slice(0, 8).forEach((entry) => {
-      lines.push(`- ${entry.key}: avg ${entry.averageElapsedMs}ms (cand ${entry.averageCandidateMs} / search ${entry.averageSearchMs}) / nodes ${entry.averageNodes} / abort ${entry.abortRate}% / n=${entry.count}`);
+      lines.push(`- ${entry.key}: avg ${entry.averageElapsedMs}ms (cand ${entry.averageCandidateMs} / search ${entry.averageSearchMs}) / nodes ${entry.averageNodes} / abort ${entry.abortRate}% / hint ${entry.patternHintRate}% / n=${entry.count}`);
     });
   }
   if (summary.searchStats && summary.searchStats.byPieceType && summary.searchStats.byPieceType.length) {
@@ -299,7 +327,8 @@ function buildBlockReviewMarkdown(blockNumber, games, summary) {
     lines.push("");
     lines.push("## Budget-Aborted Moves");
     summary.searchStats.abortedExamples.slice(0, 5).forEach((move) => {
-      lines.push(`- ${move.elapsedMs}ms (cand ${move.candidateMs} / search ${move.searchMs}) / nodes ${move.nodes} / d${move.completedDepth}/${move.depth}: ${move.label || `${move.player}:${move.type}`}`);
+      const hint = move.exactHint || move.patternHint ? ` / hint ${move.exactHint ? "TT" : "pattern"}${move.patternHintMatched ? "*" : ""}` : "";
+      lines.push(`- ${move.elapsedMs}ms (cand ${move.candidateMs} / search ${move.searchMs}) / nodes ${move.nodes} / d${move.completedDepth}/${move.depth}${hint}: ${move.label || `${move.player}:${move.type}`}`);
     });
   }
   lines.push("");

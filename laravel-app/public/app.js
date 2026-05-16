@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu07";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu08";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -19373,6 +19373,12 @@
         averageCandidateMs: 0,
         averageSearchMs: 0,
         averageCompletedDepth: 0,
+        exactHints: 0,
+        patternHints: 0,
+        patternHintMatches: 0,
+        exactHintRate: 0,
+        patternHintRate: 0,
+        patternHintMatchRate: 0,
         maxNodes: 0,
         maxElapsedMs: 0,
         depthCounts: {},
@@ -19428,6 +19434,9 @@
           totalCandidateMs: 0,
           totalSearchMs: 0,
           totalCompletedDepth: 0,
+          exactHints: 0,
+          patternHints: 0,
+          patternHintMatches: 0,
           maxNodes: 0,
           maxElapsedMs: 0
         };
@@ -19439,6 +19448,9 @@
       map[groupKey].totalCandidateMs += Number(stats.candidateMs) || 0;
       map[groupKey].totalSearchMs += Number(stats.searchMs) || 0;
       map[groupKey].totalCompletedDepth += Number(stats.completedDepth) || 0;
+      map[groupKey].exactHints += stats.exactHint ? 1 : 0;
+      map[groupKey].patternHints += stats.patternHint ? 1 : 0;
+      map[groupKey].patternHintMatches += stats.patternHintMatched ? 1 : 0;
       map[groupKey].maxNodes = Math.max(map[groupKey].maxNodes, Number(stats.nodes) || 0);
       map[groupKey].maxElapsedMs = Math.max(map[groupKey].maxElapsedMs, Number(stats.elapsedMs) || 0);
     }
@@ -19455,6 +19467,9 @@
           averageCandidateMs: entry.count ? Math.round((entry.totalCandidateMs / entry.count) * 10) / 10 : 0,
           averageSearchMs: entry.count ? Math.round((entry.totalSearchMs / entry.count) * 10) / 10 : 0,
           averageCompletedDepth: entry.count ? Math.round((entry.totalCompletedDepth / entry.count) * 10) / 10 : 0,
+          exactHintRate: entry.count ? Math.round((entry.exactHints / entry.count) * 1000) / 10 : 0,
+          patternHintRate: entry.count ? Math.round((entry.patternHints / entry.count) * 1000) / 10 : 0,
+          patternHintMatchRate: entry.patternHints ? Math.round((entry.patternHintMatches / entry.patternHints) * 1000) / 10 : 0,
           maxNodes: entry.maxNodes,
           maxElapsedMs: entry.maxElapsedMs
         };
@@ -19559,10 +19574,16 @@
             searchMs: Number(stats.searchMs) || 0,
             nodes: Number(stats.nodes) || 0,
             aborted: !!stats.aborted,
-            emergency: !!stats.emergency
+            emergency: !!stats.emergency,
+            exactHint: !!stats.exactHint,
+            patternHint: !!stats.patternHint,
+            patternHintMatched: !!stats.patternHintMatched
           };
           summary.searchStats.moves += 1;
           summary.searchStats.aborted += stats.aborted ? 1 : 0;
+          summary.searchStats.exactHints += stats.exactHint ? 1 : 0;
+          summary.searchStats.patternHints += stats.patternHint ? 1 : 0;
+          summary.searchStats.patternHintMatches += stats.patternHintMatched ? 1 : 0;
           totalSearchNodes += Number(stats.nodes) || 0;
           totalSearchElapsedMs += Number(stats.elapsedMs) || 0;
           totalSearchCandidateMs += Number(stats.candidateMs) || 0;
@@ -19639,6 +19660,11 @@
       summary.searchStats.averageCandidateMs = Math.round((totalSearchCandidateMs / summary.searchStats.moves) * 10) / 10;
       summary.searchStats.averageSearchMs = Math.round((totalSearchSearchMs / summary.searchStats.moves) * 10) / 10;
       summary.searchStats.averageCompletedDepth = Math.round((totalSearchCompletedDepth / summary.searchStats.moves) * 10) / 10;
+      summary.searchStats.exactHintRate = Math.round((summary.searchStats.exactHints / summary.searchStats.moves) * 1000) / 10;
+      summary.searchStats.patternHintRate = Math.round((summary.searchStats.patternHints / summary.searchStats.moves) * 1000) / 10;
+      summary.searchStats.patternHintMatchRate = summary.searchStats.patternHints
+        ? Math.round((summary.searchStats.patternHintMatches / summary.searchStats.patternHints) * 1000) / 10
+        : 0;
       summary.searchStats.slowestMoves = summary.searchStats.slowestMoves.sort(function (a, b) {
         return b.elapsedMs - a.elapsedMs;
       }).slice(0, 10);
