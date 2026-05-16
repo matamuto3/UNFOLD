@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517budget01";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517budget02";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -15075,11 +15075,15 @@
             beta,
             !uiState.npc.bulkSelfPlay && normalizeNpcLookaheadDepth(uiState.npc.lookaheadDepth) >= 5 ? 2 : 1
           );
-          writeNpcSearchExact(cacheKey, bestScore);
+          if (!activeNpcSearchAborted) {
+            writeNpcSearchExact(cacheKey, bestScore);
+          }
           return bestScore;
         }
         bestScore = evaluateStateForNpcCached(state, rootPlayer);
-        writeNpcSearchExact(cacheKey, bestScore);
+        if (!activeNpcSearchAborted) {
+          writeNpcSearchExact(cacheKey, bestScore);
+        }
         return bestScore;
       }
       currentPlayer = state.currentPlayer;
@@ -15176,6 +15180,22 @@
         writeNpcSearchBound(cacheKey, bestScore, alphaOriginal, betaOriginal, bestActionKey);
       }
       return bestScore;
+    }
+
+    function getNpcRootIterationCandidateLimit(targetDepth, iterationDepth, emergencyMode) {
+      if (targetDepth < 5) {
+        return 0;
+      }
+      if (emergencyMode) {
+        return iterationDepth >= 3 ? 4 : 5;
+      }
+      if (iterationDepth >= 4) {
+        return 2;
+      }
+      if (iterationDepth >= 2) {
+        return 3;
+      }
+      return 0;
     }
 
     function chooseNpcActionWithLookahead(actions, npcPlayer, emergencyMode, depth) {
@@ -15278,6 +15298,7 @@
           for (var iterationDepth = targetDepth >= 3 ? 1 : targetDepth; iterationDepth <= targetDepth; iterationDepth += 1) {
             var iterationResults = [];
             var candidateIndex;
+            var rootLimit;
             bestScore = -Infinity;
             for (candidateIndex = 0; candidateIndex < candidates.length; candidateIndex += 1) {
               var action = candidates[candidateIndex];
@@ -15306,6 +15327,10 @@
             candidates = iterationResults.map(function (entry) {
               return entry.action;
             });
+            rootLimit = getNpcRootIterationCandidateLimit(targetDepth, iterationDepth, emergencyMode);
+            if (rootLimit && candidates.length > rootLimit) {
+              candidates = candidates.slice(0, rootLimit);
+            }
             if (activeNpcSearchAborted) {
               break;
             }
