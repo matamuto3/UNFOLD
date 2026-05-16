@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu05";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu06";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -10487,9 +10487,9 @@
       return emergencyMode ? 1800 : 1200;
     }
     if (window.__UNFOLD_NPC_WORKER__) {
-      return emergencyMode ? 12000 : 8500;
+      return emergencyMode ? 7500 : 4200;
     }
-    return emergencyMode ? 6500 : 4500;
+    return emergencyMode ? 5800 : 3400;
   }
 
   function shouldStopNpcSearchForBudget() {
