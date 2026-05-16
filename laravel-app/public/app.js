@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517tt01";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517book01";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -14245,6 +14245,7 @@
       }
       score += getNpcMovePickerTerritoryActionScore(state, player, action, emergencyMode);
       score += getOpeningRescueResponseScore(state, player, action) * 1.8;
+      score += getNpcOpeningBookActionBias(state, player, action, null, emergencyMode) * 0.35;
       if (action.type === "move") {
         piece = getPiece(state, action.pieceId);
         cell = state.board[action.row] && state.board[action.row][action.col];
@@ -14264,7 +14265,7 @@
         score += getOwnBaseGateCellBonus(state, player, action.row, action.col) * (strategy === "defense" ? 5600 : 1200);
         score += getOwnBaseReliefCellBonus(state, player, action.pieceType, action.row, action.col) * (strategy === "defense" ? 4800 : 1000);
         score += getPieceStrategicValue(action.pieceType) * 120;
-      } else if (action.type === "fragment") {
+      } else if (action.type === "fragment" || action.type === "setupFragment") {
         card = action.card || {};
         score += getKifuFragmentDangerWeight(card, state) * (strategy === "attack" ? 46000 : strategy === "defense" ? 16000 : 28000);
         score += getPieceStrategicValue(card.pieceType) * 160;
@@ -14322,6 +14323,31 @@
       });
     }
 
+    function getNpcOpeningBookCandidateActions(state, player, actions, emergencyMode, limit) {
+      var phase = getNpcGamePhase(state);
+      var candidates = [];
+      if (phase !== "setup" && phase !== "early") {
+        return candidates;
+      }
+      actions.forEach(function (action, index) {
+        var score = getNpcOpeningBookActionBias(state, player, action, null, emergencyMode);
+        if (score <= 0) {
+          return;
+        }
+        candidates.push({
+          action: action,
+          index: index,
+          score: score + (action.moveOrderScore || action.refinedScore || action.score || 0) * 0.02
+        });
+      });
+      candidates.sort(function (a, b) {
+        return b.score - a.score || a.index - b.index;
+      });
+      return candidates.slice(0, limit || (emergencyMode ? 3 : 5)).map(function (entry) {
+        return entry.action;
+      });
+    }
+
     function getNpcCandidateActions(actions, emergencyMode, state, player) {
       state = state || uiState.state;
       player = player || state.currentPlayer;
@@ -14330,22 +14356,7 @@
       var selected = [];
 
       function actionKey(action) {
-        if (action.type === "move") {
-          return action.type + ":" + action.pieceId + ":" + action.row + ":" + action.col;
-        }
-        if (action.type === "reserve") {
-          return action.type + ":" + action.pieceType + ":" + action.row + ":" + action.col;
-        }
-        if (action.type === "fragment") {
-          return action.type + ":" + (action.source || "hand") + ":" + (action.fragmentReserveKey || (typeof action.handIndex === "number" ? action.handIndex : "")) + ":" + action.rotation + ":" + action.anchor.row + ":" + action.anchor.col + ":" + (action.pieceCell ? action.pieceCell.row : "") + ":" + (action.pieceCell ? action.pieceCell.col : "");
-        }
-        if (action.type === "recoverPiece") {
-          return action.type + ":" + action.pieceId;
-        }
-        if (action.type === "recoverFragment") {
-          return action.type + ":" + action.placementId;
-        }
-        return action.type;
+        return getNpcActionSearchKey(action);
       }
 
       function addAction(action) {
@@ -14378,6 +14389,9 @@
         getEmergencyDefenseActions(state, player, actions, 12).forEach(addAction);
       }
 
+      getNpcOpeningBookCandidateActions(state, player, actions, emergencyMode, emergencyMode ? 3 : 5)
+        .forEach(addAction);
+
       if (!activeNpcSearchCache && !isNpcGame()) {
         (uiState.npc && uiState.npc.bulkSelfPlay ? actions.slice(0, emergencyMode ? 18 : 32) : actions)
           .filter(function (action) {
@@ -14389,7 +14403,7 @@
 
       actions
         .filter(function (action) {
-          return action.type === "fragment";
+          return action.type === "fragment" || action.type === "setupFragment";
         })
         .slice(0, emergencyMode ? 2 : 6)
         .forEach(addAction);
@@ -14460,22 +14474,7 @@
       var selected = [];
 
       function actionKey(action) {
-        if (action.type === "move") {
-          return action.type + ":" + action.pieceId + ":" + action.row + ":" + action.col;
-        }
-        if (action.type === "reserve") {
-          return action.type + ":" + action.pieceType + ":" + action.row + ":" + action.col;
-        }
-        if (action.type === "fragment") {
-          return action.type + ":" + (action.source || "hand") + ":" + (action.fragmentReserveKey || (typeof action.handIndex === "number" ? action.handIndex : "")) + ":" + action.rotation + ":" + action.anchor.row + ":" + action.anchor.col + ":" + (action.pieceCell ? action.pieceCell.row : "") + ":" + (action.pieceCell ? action.pieceCell.col : "");
-        }
-        if (action.type === "recoverPiece") {
-          return action.type + ":" + action.pieceId;
-        }
-        if (action.type === "recoverFragment") {
-          return action.type + ":" + action.placementId;
-        }
-        return action.type;
+        return getNpcActionSearchKey(action);
       }
 
       function addAction(action) {
@@ -14508,9 +14507,12 @@
         getEmergencyDefenseActions(state, player, actions, 8).forEach(addAction);
       }
 
+      getNpcOpeningBookCandidateActions(state, player, actions, emergencyMode, emergencyMode ? 2 : 4)
+        .forEach(addAction);
+
       actions
         .filter(function (action) {
-          return action.type === "fragment";
+          return action.type === "fragment" || action.type === "setupFragment";
         })
         .slice(0, emergencyMode ? 3 : 4)
         .forEach(addAction);
@@ -14724,20 +14726,20 @@
           candidates = filterImmediateBlunderActions(state, player, candidates);
         }
         candidates = orderNpcActionsForSearch(state, player, candidates, emergencyMode || fullDefense, depth, bestActionKey);
-        return candidates.slice(0, Math.min(Math.max(getLookaheadBreadth(depth, emergencyMode), emergencyMode || fullDefense ? 7 : 5), candidates.length));
+        return candidates.slice(0, Math.min(Math.max(getLookaheadBreadth(depth, emergencyMode), emergencyMode || fullDefense ? (depth >= 4 ? 5 : 7) : (depth >= 4 ? 4 : 5)), candidates.length));
       }
       if (fullDefense) {
         candidates = filterImmediateBlunderActions(state, player, actions);
         candidates = filterForcedDefenseActions(state, player, candidates);
         candidates = orderNpcActionsForSearch(state, player, candidates, true, depth, bestActionKey);
-        return candidates.slice(0, Math.min(uiState.npc.bulkSelfPlay ? getLookaheadBreadth(depth, emergencyMode) : Math.max(getLookaheadBreadth(depth, emergencyMode), 8), candidates.length));
+        return candidates.slice(0, Math.min(uiState.npc.bulkSelfPlay ? getLookaheadBreadth(depth, emergencyMode) : Math.max(getLookaheadBreadth(depth, emergencyMode), depth >= 4 ? 6 : 8), candidates.length));
       } else {
         threatCreationEmergency = !uiState.npc.bulkSelfPlay &&
           (state.turnNumber || 1) <= 10 &&
           countImmediateThreatCreatingActionsInStateCached(state, getOpponentPlayer(player), 2) > 0;
         if (threatCreationEmergency) {
           candidates = orderNpcActionsForSearch(state, player, filterImmediateBlunderActions(state, player, actions), true, depth, bestActionKey);
-          return candidates.slice(0, Math.min(uiState.npc.bulkSelfPlay ? getLookaheadBreadth(depth, emergencyMode) : Math.max(getLookaheadBreadth(depth, emergencyMode), 10), candidates.length));
+          return candidates.slice(0, Math.min(uiState.npc.bulkSelfPlay ? getLookaheadBreadth(depth, emergencyMode) : Math.max(getLookaheadBreadth(depth, emergencyMode), depth >= 4 ? 6 : 10), candidates.length));
         }
         candidates = getNpcCandidateActions(actions, emergencyMode, state, player);
       }
@@ -15084,7 +15086,7 @@
         } else {
           score = searchNpcLookahead(nextState, rootPlayer, childDepth, alpha, beta);
         }
-        if (childDepth < fullDepth) {
+        if (childDepth < fullDepth && (emergencyMode || tactical || i < 2)) {
           if ((maximizing && score > alpha) || (!maximizing && score < beta)) {
             score = searchNpcLookahead(nextState, rootPlayer, fullDepth, alpha, beta);
           }
@@ -15151,11 +15153,12 @@
           return info;
         }
 
-        function scoreRootAction(action, iterationDepth, alphaFloor) {
+        function scoreRootAction(action, iterationDepth, alphaFloor, rootIndex) {
           var childInfo = getRootChildInfo(action);
           var nextState = childInfo.state;
           var score;
           var actionDepth;
+          var rootTactical;
           var opponentImmediateWins;
           var nextDefenseSnapshot;
           var terminalScore = getNpcTerminalSearchScore(nextState, npcPlayer, iterationDepth);
@@ -15167,6 +15170,10 @@
             getSelectiveNpcLookaheadDepth(uiState.state, nextState, npcPlayer, iterationDepth, emergencyMode),
             iterationDepth
           );
+          rootTactical = isNpcSearchTacticalAction(uiState.state, npcPlayer, action, emergencyMode) || opponentImmediateWins > 0;
+          if (iterationDepth >= 5 && !rootTactical) {
+            actionDepth = Math.min(actionDepth, rootIndex < 3 ? 4 : 3);
+          }
           score = searchNpcLookahead(nextState, npcPlayer, actionDepth - 1, alphaFloor, Infinity);
           if (opponentImmediateWins) {
             score -= 2200000 + opponentImmediateWins * 260000;
@@ -15204,8 +15211,8 @@
           for (var iterationDepth = targetDepth >= 3 ? 1 : targetDepth; iterationDepth <= targetDepth; iterationDepth += 1) {
             var iterationResults = [];
             bestScore = -Infinity;
-            candidates.forEach(function (action) {
-              var score = scoreRootAction(action, iterationDepth, bestScore);
+            candidates.forEach(function (action, index) {
+              var score = scoreRootAction(action, iterationDepth, bestScore, index);
               iterationResults.push({ action: action, score: score });
               if (score > bestScore || (score === bestScore && action.score > (bestAction ? bestAction.score : -Infinity))) {
                 bestScore = score;
