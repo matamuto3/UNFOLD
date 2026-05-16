@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu02";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu04";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -14761,6 +14761,7 @@
         actions = filterEmergencyBaseHoldingActions(state, player, actions);
       }
       if (activeNpcSearchCache && !uiState.npc.bulkSelfPlay) {
+        var activeLimit;
         candidates = getNpcCandidateActions(actions, emergencyMode || fullDefense, state, player);
         if (fullDefense || emergencyMode) {
           candidates = filterForcedDefenseActions(state, player, candidates);
@@ -14769,7 +14770,13 @@
           candidates = filterImmediateBlunderActions(state, player, candidates);
         }
         candidates = orderNpcActionsForSearch(state, player, candidates, emergencyMode || fullDefense, depth, bestActionKey);
-        return candidates.slice(0, Math.min(Math.max(getLookaheadBreadth(depth, emergencyMode), emergencyMode || fullDefense ? (depth >= 4 ? 5 : 7) : (depth >= 4 ? 4 : 5)), candidates.length));
+        activeLimit = getLookaheadBreadth(depth, emergencyMode);
+        if (emergencyMode || fullDefense) {
+          activeLimit = Math.max(activeLimit, depth >= 4 ? 5 : 7);
+        } else if (depth < 4) {
+          activeLimit = Math.max(activeLimit, 5);
+        }
+        return candidates.slice(0, Math.min(activeLimit, candidates.length));
       }
       if (fullDefense) {
         candidates = filterImmediateBlunderActions(state, player, actions);
@@ -15211,12 +15218,14 @@
         var previousDeadlineAt = activeNpcSearchDeadlineAt;
         var previousNodeCount = activeNpcSearchNodeCount;
         var previousAborted = activeNpcSearchAborted;
+        var totalStartedAt = getNpcSearchTimestampMs();
         var rootCacheKey = getCachedNpcSearchStateKey(uiState.state) +
           "|search|" + npcPlayer +
           "|depth|" + depth +
           "|strategy|" + getNpcStrategy("P1") + ":" + getNpcStrategy("P2");
         var rootHint = readNpcSearchBound(rootCacheKey, -Infinity, Infinity);
         var candidates = getLookaheadCandidateActions(uiState.state, npcPlayer, actions, depth, emergencyMode, rootHint && rootHint.bestActionKey);
+        var candidateMs = Math.max(0, getNpcSearchTimestampMs() - totalStartedAt);
         var bestAction = candidates[0] || actions[0];
         var bestScore = -Infinity;
         var opponent = getOpponentPlayer(npcPlayer);
@@ -15355,7 +15364,9 @@
             depth: targetDepth,
             completedDepth: completedDepth,
             budgetMs: budgetMs,
-            elapsedMs: Math.max(0, getNpcSearchTimestampMs() - searchStartedAt),
+            elapsedMs: Math.max(0, getNpcSearchTimestampMs() - totalStartedAt),
+            candidateMs: candidateMs,
+            searchMs: Math.max(0, getNpcSearchTimestampMs() - searchStartedAt),
             nodes: activeNpcSearchNodeCount,
             aborted: !!activeNpcSearchAborted,
             emergency: !!emergencyMode,
@@ -18786,6 +18797,8 @@
       completedDepth: Number(stats.completedDepth) || 0,
       budgetMs: Number(stats.budgetMs) || 0,
       elapsedMs: Number(stats.elapsedMs) || 0,
+      candidateMs: Number(stats.candidateMs) || 0,
+      searchMs: Number(stats.searchMs) || 0,
       nodes: Number(stats.nodes) || 0,
       aborted: !!stats.aborted,
       emergency: !!stats.emergency,
@@ -18989,6 +19002,8 @@
         abortRate: 0,
         averageNodes: 0,
         averageElapsedMs: 0,
+        averageCandidateMs: 0,
+        averageSearchMs: 0,
         averageCompletedDepth: 0,
         maxNodes: 0,
         maxElapsedMs: 0,
@@ -19030,6 +19045,8 @@
     var totalP2Deck = 0;
     var totalSearchNodes = 0;
     var totalSearchElapsedMs = 0;
+    var totalSearchCandidateMs = 0;
+    var totalSearchSearchMs = 0;
     var totalSearchCompletedDepth = 0;
     function recordSearchStatsGroup(map, key, stats) {
       var groupKey = key || "none";
@@ -19040,6 +19057,8 @@
           aborted: 0,
           totalNodes: 0,
           totalElapsedMs: 0,
+          totalCandidateMs: 0,
+          totalSearchMs: 0,
           totalCompletedDepth: 0,
           maxNodes: 0,
           maxElapsedMs: 0
@@ -19049,6 +19068,8 @@
       map[groupKey].aborted += stats.aborted ? 1 : 0;
       map[groupKey].totalNodes += Number(stats.nodes) || 0;
       map[groupKey].totalElapsedMs += Number(stats.elapsedMs) || 0;
+      map[groupKey].totalCandidateMs += Number(stats.candidateMs) || 0;
+      map[groupKey].totalSearchMs += Number(stats.searchMs) || 0;
       map[groupKey].totalCompletedDepth += Number(stats.completedDepth) || 0;
       map[groupKey].maxNodes = Math.max(map[groupKey].maxNodes, Number(stats.nodes) || 0);
       map[groupKey].maxElapsedMs = Math.max(map[groupKey].maxElapsedMs, Number(stats.elapsedMs) || 0);
@@ -19063,6 +19084,8 @@
           abortRate: entry.count ? Math.round((entry.aborted / entry.count) * 1000) / 10 : 0,
           averageNodes: entry.count ? Math.round((entry.totalNodes / entry.count) * 10) / 10 : 0,
           averageElapsedMs: entry.count ? Math.round((entry.totalElapsedMs / entry.count) * 10) / 10 : 0,
+          averageCandidateMs: entry.count ? Math.round((entry.totalCandidateMs / entry.count) * 10) / 10 : 0,
+          averageSearchMs: entry.count ? Math.round((entry.totalSearchMs / entry.count) * 10) / 10 : 0,
           averageCompletedDepth: entry.count ? Math.round((entry.totalCompletedDepth / entry.count) * 10) / 10 : 0,
           maxNodes: entry.maxNodes,
           maxElapsedMs: entry.maxElapsedMs
@@ -19164,6 +19187,8 @@
             depth: Number(stats.depth) || 0,
             completedDepth: Number(stats.completedDepth) || 0,
             elapsedMs: Number(stats.elapsedMs) || 0,
+            candidateMs: Number(stats.candidateMs) || 0,
+            searchMs: Number(stats.searchMs) || 0,
             nodes: Number(stats.nodes) || 0,
             aborted: !!stats.aborted,
             emergency: !!stats.emergency
@@ -19172,6 +19197,8 @@
           summary.searchStats.aborted += stats.aborted ? 1 : 0;
           totalSearchNodes += Number(stats.nodes) || 0;
           totalSearchElapsedMs += Number(stats.elapsedMs) || 0;
+          totalSearchCandidateMs += Number(stats.candidateMs) || 0;
+          totalSearchSearchMs += Number(stats.searchMs) || 0;
           totalSearchCompletedDepth += Number(stats.completedDepth) || 0;
           summary.searchStats.maxNodes = Math.max(summary.searchStats.maxNodes, Number(stats.nodes) || 0);
           summary.searchStats.maxElapsedMs = Math.max(summary.searchStats.maxElapsedMs, Number(stats.elapsedMs) || 0);
@@ -19241,6 +19268,8 @@
       summary.searchStats.abortRate = Math.round((summary.searchStats.aborted / summary.searchStats.moves) * 1000) / 10;
       summary.searchStats.averageNodes = Math.round((totalSearchNodes / summary.searchStats.moves) * 10) / 10;
       summary.searchStats.averageElapsedMs = Math.round((totalSearchElapsedMs / summary.searchStats.moves) * 10) / 10;
+      summary.searchStats.averageCandidateMs = Math.round((totalSearchCandidateMs / summary.searchStats.moves) * 10) / 10;
+      summary.searchStats.averageSearchMs = Math.round((totalSearchSearchMs / summary.searchStats.moves) * 10) / 10;
       summary.searchStats.averageCompletedDepth = Math.round((totalSearchCompletedDepth / summary.searchStats.moves) * 10) / 10;
       summary.searchStats.slowestMoves = summary.searchStats.slowestMoves.sort(function (a, b) {
         return b.elapsedMs - a.elapsedMs;
@@ -19909,6 +19938,9 @@
     }
     if (stats.nodes) {
       parts.push(Math.max(0, Number(stats.nodes) || 0) + "n");
+    }
+    if (stats.candidateMs || stats.searchMs) {
+      parts.push("cand " + Math.round(Math.max(0, Number(stats.candidateMs) || 0)) + "ms/search " + Math.round(Math.max(0, Number(stats.searchMs) || 0)) + "ms");
     }
     if (stats.initialCandidates || stats.finalCandidates) {
       parts.push("候補 " + Math.max(0, Number(stats.initialCandidates) || 0) + "\u2192" + Math.max(0, Number(stats.finalCandidates) || 0));
