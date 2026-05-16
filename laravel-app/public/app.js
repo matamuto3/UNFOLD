@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu04";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu05";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -14749,6 +14749,69 @@
       return 4;
     }
 
+    function selectDiverseNpcRootCandidates(state, player, candidates, limit, emergencyMode, bestActionKey) {
+      var selected = [];
+      var seen = {};
+      var opponent = getOpponentPlayer(player);
+
+      function addAction(action) {
+        var key;
+        if (!action || selected.length >= limit) {
+          return;
+        }
+        key = getNpcActionSearchKey(action);
+        if (seen[key]) {
+          return;
+        }
+        seen[key] = true;
+        selected.push(action);
+      }
+
+      function isCaptureMove(action) {
+        var cell;
+        var targetPiece;
+        if (!action || action.type !== "move") {
+          return false;
+        }
+        cell = state.board[action.row] && state.board[action.row][action.col];
+        targetPiece = cell && cell.pieceId ? getPiece(state, cell.pieceId) : null;
+        return !!(targetPiece && targetPiece.owner === opponent);
+      }
+
+      if (!limit || candidates.length <= limit) {
+        return candidates;
+      }
+      candidates.forEach(function (action) {
+        if (bestActionKey && getNpcActionSearchKey(action) === bestActionKey) {
+          addAction(action);
+        }
+      });
+      candidates.forEach(function (action) {
+        if (isImmediateWinningActionInState(state, player, action)) {
+          addAction(action);
+        }
+      });
+      candidates.forEach(function (action) {
+        if (action.forceDefenseScore) {
+          addAction(action);
+        }
+      });
+      candidates.slice(0, emergencyMode ? 2 : 1).forEach(addAction);
+      candidates.forEach(function (action) {
+        if (action.type === "fragment" || action.type === "setupFragment") {
+          addAction(action);
+        }
+      });
+      candidates.forEach(function (action) {
+        if (isCaptureMove(action) || action.type === "move" || action.type === "reserve" ||
+          action.type === "recoverPiece" || action.type === "recoverFragment") {
+          addAction(action);
+        }
+      });
+      candidates.forEach(addAction);
+      return selected;
+    }
+
     function getLookaheadCandidateActions(state, player, actions, depth, emergencyMode, bestActionKey) {
       var candidates;
       var fullDefense = shouldUseFullDefenseCandidateSet(state, player);
@@ -14776,7 +14839,7 @@
         } else if (depth < 4) {
           activeLimit = Math.max(activeLimit, 5);
         }
-        return candidates.slice(0, Math.min(activeLimit, candidates.length));
+        return selectDiverseNpcRootCandidates(state, player, candidates, Math.min(activeLimit, candidates.length), emergencyMode || fullDefense, bestActionKey);
       }
       if (fullDefense) {
         candidates = filterImmediateBlunderActions(state, player, actions);
