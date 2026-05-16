@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu01";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu02";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -18994,7 +18994,10 @@
         maxElapsedMs: 0,
         depthCounts: {},
         slowestMoves: [],
-        abortedExamples: []
+        abortedExamples: [],
+        byType: {},
+        byPlayer: {},
+        byPieceType: {}
       },
       pieceUsage: {},
       decisiveGames: 0,
@@ -19028,6 +19031,49 @@
     var totalSearchNodes = 0;
     var totalSearchElapsedMs = 0;
     var totalSearchCompletedDepth = 0;
+    function recordSearchStatsGroup(map, key, stats) {
+      var groupKey = key || "none";
+      if (!map[groupKey]) {
+        map[groupKey] = {
+          key: groupKey,
+          count: 0,
+          aborted: 0,
+          totalNodes: 0,
+          totalElapsedMs: 0,
+          totalCompletedDepth: 0,
+          maxNodes: 0,
+          maxElapsedMs: 0
+        };
+      }
+      map[groupKey].count += 1;
+      map[groupKey].aborted += stats.aborted ? 1 : 0;
+      map[groupKey].totalNodes += Number(stats.nodes) || 0;
+      map[groupKey].totalElapsedMs += Number(stats.elapsedMs) || 0;
+      map[groupKey].totalCompletedDepth += Number(stats.completedDepth) || 0;
+      map[groupKey].maxNodes = Math.max(map[groupKey].maxNodes, Number(stats.nodes) || 0);
+      map[groupKey].maxElapsedMs = Math.max(map[groupKey].maxElapsedMs, Number(stats.elapsedMs) || 0);
+    }
+    function formatSearchStatsGroups(map) {
+      return Object.keys(map).map(function (key) {
+        var entry = map[key];
+        return {
+          key: entry.key,
+          count: entry.count,
+          aborted: entry.aborted,
+          abortRate: entry.count ? Math.round((entry.aborted / entry.count) * 1000) / 10 : 0,
+          averageNodes: entry.count ? Math.round((entry.totalNodes / entry.count) * 10) / 10 : 0,
+          averageElapsedMs: entry.count ? Math.round((entry.totalElapsedMs / entry.count) * 10) / 10 : 0,
+          averageCompletedDepth: entry.count ? Math.round((entry.totalCompletedDepth / entry.count) * 10) / 10 : 0,
+          maxNodes: entry.maxNodes,
+          maxElapsedMs: entry.maxElapsedMs
+        };
+      }).sort(function (a, b) {
+        if (b.averageElapsedMs !== a.averageElapsedMs) {
+          return b.averageElapsedMs - a.averageElapsedMs;
+        }
+        return b.count - a.count;
+      }).slice(0, 16);
+    }
     function recordDefenderOutcome(map, key, game) {
       if (!key) {
         return;
@@ -19131,6 +19177,9 @@
           summary.searchStats.maxElapsedMs = Math.max(summary.searchStats.maxElapsedMs, Number(stats.elapsedMs) || 0);
           summary.searchStats.depthCounts[stats.depth || 0] = (summary.searchStats.depthCounts[stats.depth || 0] || 0) + 1;
           summary.searchStats.slowestMoves.push(searchExample);
+          recordSearchStatsGroup(summary.searchStats.byType, move.type || "unknown", stats);
+          recordSearchStatsGroup(summary.searchStats.byPlayer, move.player || "unknown", stats);
+          recordSearchStatsGroup(summary.searchStats.byPieceType, move.pieceType || "none", stats);
           if (stats.aborted) {
             summary.searchStats.abortedExamples.push(searchExample);
           }
@@ -19199,6 +19248,9 @@
       summary.searchStats.abortedExamples = summary.searchStats.abortedExamples.sort(function (a, b) {
         return b.elapsedMs - a.elapsedMs;
       }).slice(0, 10);
+      summary.searchStats.byType = formatSearchStatsGroups(summary.searchStats.byType);
+      summary.searchStats.byPlayer = formatSearchStatsGroups(summary.searchStats.byPlayer);
+      summary.searchStats.byPieceType = formatSearchStatsGroups(summary.searchStats.byPieceType);
     }
     summary.setupPatterns = Object.keys(setupCounts).sort(function (a, b) {
       return setupCounts[b] - setupCounts[a];

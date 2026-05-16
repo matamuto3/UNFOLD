@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu01";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu02";
 
   var els = {
     form: document.getElementById("workerForm"),

@@ -108,7 +108,10 @@ function summarizeGames(games) {
       maxElapsedMs: 0,
       depthCounts: {},
       slowestMoves: [],
-      abortedExamples: []
+      abortedExamples: [],
+      byType: {},
+      byPlayer: {},
+      byPieceType: {}
     }
   };
   let turns = 0;
@@ -116,6 +119,49 @@ function summarizeGames(games) {
   let totalSearchNodes = 0;
   let totalSearchElapsedMs = 0;
   let totalSearchCompletedDepth = 0;
+  function recordSearchStatsGroup(map, key, stats) {
+    const groupKey = key || "none";
+    if (!map[groupKey]) {
+      map[groupKey] = {
+        key: groupKey,
+        count: 0,
+        aborted: 0,
+        totalNodes: 0,
+        totalElapsedMs: 0,
+        totalCompletedDepth: 0,
+        maxNodes: 0,
+        maxElapsedMs: 0
+      };
+    }
+    map[groupKey].count += 1;
+    map[groupKey].aborted += stats.aborted ? 1 : 0;
+    map[groupKey].totalNodes += Number(stats.nodes || 0);
+    map[groupKey].totalElapsedMs += Number(stats.elapsedMs || 0);
+    map[groupKey].totalCompletedDepth += Number(stats.completedDepth || 0);
+    map[groupKey].maxNodes = Math.max(map[groupKey].maxNodes, Number(stats.nodes || 0));
+    map[groupKey].maxElapsedMs = Math.max(map[groupKey].maxElapsedMs, Number(stats.elapsedMs || 0));
+  }
+  function formatSearchStatsGroups(map) {
+    return Object.keys(map).map((key) => {
+      const entry = map[key];
+      return {
+        key: entry.key,
+        count: entry.count,
+        aborted: entry.aborted,
+        abortRate: entry.count ? Math.round((entry.aborted / entry.count) * 1000) / 10 : 0,
+        averageNodes: entry.count ? Math.round((entry.totalNodes / entry.count) * 10) / 10 : 0,
+        averageElapsedMs: entry.count ? Math.round((entry.totalElapsedMs / entry.count) * 10) / 10 : 0,
+        averageCompletedDepth: entry.count ? Math.round((entry.totalCompletedDepth / entry.count) * 10) / 10 : 0,
+        maxNodes: entry.maxNodes,
+        maxElapsedMs: entry.maxElapsedMs
+      };
+    }).sort((a, b) => {
+      if (b.averageElapsedMs !== a.averageElapsedMs) {
+        return b.averageElapsedMs - a.averageElapsedMs;
+      }
+      return b.count - a.count;
+    }).slice(0, 16);
+  }
   for (const game of games) {
     const winner = game.winner || "draw";
     summary.wins[winner] = (summary.wins[winner] || 0) + 1;
@@ -148,6 +194,9 @@ function summarizeGames(games) {
         summary.searchStats.maxElapsedMs = Math.max(summary.searchStats.maxElapsedMs, Number(stats.elapsedMs || 0));
         summary.searchStats.depthCounts[stats.depth || 0] = (summary.searchStats.depthCounts[stats.depth || 0] || 0) + 1;
         summary.searchStats.slowestMoves.push(searchExample);
+        recordSearchStatsGroup(summary.searchStats.byType, move.type || "unknown", stats);
+        recordSearchStatsGroup(summary.searchStats.byPlayer, move.player || "unknown", stats);
+        recordSearchStatsGroup(summary.searchStats.byPieceType, move.pieceType || "none", stats);
         if (stats.aborted) {
           summary.searchStats.abortedExamples.push(searchExample);
         }
@@ -164,6 +213,9 @@ function summarizeGames(games) {
     summary.searchStats.averageCompletedDepth = Math.round((totalSearchCompletedDepth / summary.searchStats.moves) * 10) / 10;
     summary.searchStats.slowestMoves = summary.searchStats.slowestMoves.sort((a, b) => b.elapsedMs - a.elapsedMs).slice(0, 10);
     summary.searchStats.abortedExamples = summary.searchStats.abortedExamples.sort((a, b) => b.elapsedMs - a.elapsedMs).slice(0, 10);
+    summary.searchStats.byType = formatSearchStatsGroups(summary.searchStats.byType);
+    summary.searchStats.byPlayer = formatSearchStatsGroups(summary.searchStats.byPlayer);
+    summary.searchStats.byPieceType = formatSearchStatsGroups(summary.searchStats.byPieceType);
   }
   return summary;
 }
@@ -210,6 +262,20 @@ function buildBlockReviewMarkdown(blockNumber, games, summary) {
     lines.push("## Slowest Search Moves");
     summary.searchStats.slowestMoves.slice(0, 5).forEach((move) => {
       lines.push(`- ${move.elapsedMs}ms / nodes ${move.nodes} / d${move.completedDepth}/${move.depth}: ${move.label || `${move.player}:${move.type}`}`);
+    });
+  }
+  if (summary.searchStats && summary.searchStats.byType && summary.searchStats.byType.length) {
+    lines.push("");
+    lines.push("## Search Cost By Action");
+    summary.searchStats.byType.slice(0, 8).forEach((entry) => {
+      lines.push(`- ${entry.key}: avg ${entry.averageElapsedMs}ms / nodes ${entry.averageNodes} / abort ${entry.abortRate}% / n=${entry.count}`);
+    });
+  }
+  if (summary.searchStats && summary.searchStats.byPieceType && summary.searchStats.byPieceType.length) {
+    lines.push("");
+    lines.push("## Search Cost By Piece");
+    summary.searchStats.byPieceType.slice(0, 8).forEach((entry) => {
+      lines.push(`- ${entry.key}: avg ${entry.averageElapsedMs}ms / nodes ${entry.averageNodes} / abort ${entry.abortRate}% / n=${entry.count}`);
     });
   }
   if (summary.searchStats && summary.searchStats.abortedExamples && summary.searchStats.abortedExamples.length) {
