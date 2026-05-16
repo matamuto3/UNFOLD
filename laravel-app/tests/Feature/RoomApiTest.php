@@ -8,8 +8,11 @@ class RoomApiTest extends TestCase
 {
     private string $roomsFile;
     private string $siteFile;
+    private string $npcBookDir;
     /** @var array<string, array{exists: bool, contents: string|null}> */
     private array $fileBackups = [];
+    /** @var array<string, array{exists: bool, files: array<string, string>}> */
+    private array $directoryBackups = [];
 
     protected function setUp(): void
     {
@@ -17,9 +20,11 @@ class RoomApiTest extends TestCase
 
         $this->roomsFile = storage_path('app/private/rooms.json');
         $this->siteFile = storage_path('app/private/site.json');
+        $this->npcBookDir = storage_path('app/private/npc-book');
 
         $this->backupStorageFile($this->roomsFile);
         $this->backupStorageFile($this->siteFile);
+        $this->backupStorageDirectory($this->npcBookDir);
         $this->resetStorageSandbox();
     }
 
@@ -27,6 +32,7 @@ class RoomApiTest extends TestCase
     {
         $this->restoreStorageFile($this->roomsFile);
         $this->restoreStorageFile($this->siteFile);
+        $this->restoreStorageDirectory($this->npcBookDir);
 
         parent::tearDown();
     }
@@ -289,6 +295,69 @@ class RoomApiTest extends TestCase
             ->assertJsonCount(1, 'room.gameState.history');
     }
 
+    public function test_npc_book_proposal_can_be_saved_listed_and_fetched(): void
+    {
+        $book = [
+            'version' => 'proposal-test',
+            'source' => 'feature-test',
+            'samples' => [
+                'entries' => 1,
+                'games' => 2,
+                'moves' => 8,
+            ],
+            'kifuLearnedWeights' => [
+                'dangerousOpeningFragments' => [
+                    'net04' => 0.8,
+                ],
+            ],
+            'openingRescueJoseki' => [
+                'responseWeights' => [
+                    'fragment:net03/barrier' => 0.7,
+                ],
+            ],
+            'counterattackTransitionWeights' => [
+                'actions' => [
+                    'move:barrier:capture:rider' => 0.6,
+                ],
+            ],
+        ];
+
+        $currentResponse = $this->api('npc.book.current');
+
+        $currentResponse->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonStructure(['book']);
+
+        $saveResponse = $this->api('npc.book.proposal.save', [
+            'label' => 'proposal test',
+            'source' => 'feature-test',
+            'book' => $book,
+        ]);
+
+        $saveResponse->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('entry.label', 'proposal test')
+            ->assertJsonPath('entry.version', 'proposal-test')
+            ->assertJsonPath('entry.games', 2)
+            ->assertJsonPath('entry.moves', 8);
+
+        $bookId = (string) $saveResponse->json('entry.id');
+
+        $listResponse = $this->api('npc.book.proposal.list');
+
+        $listResponse->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(1, 'entries')
+            ->assertJsonPath('entries.0.id', $bookId);
+
+        $getResponse = $this->api('npc.book.proposal.get', [], ['id' => $bookId]);
+
+        $getResponse->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('book.version', 'proposal-test')
+            ->assertJsonPath('book.kifuLearnedWeights.dangerousOpeningFragments.net04', 0.8);
+    }
+
     private function api(string $action, array $payload = [], array $query = [])
     {
         $uri = '/api?' . http_build_query(array_merge(['action' => $action], $query));
@@ -438,5 +507,68 @@ class RoomApiTest extends TestCase
         if (is_file($this->siteFile)) {
             unlink($this->siteFile);
         }
+        $this->deleteDirectory($this->npcBookDir);
+    }
+
+    private function backupStorageDirectory(string $path): void
+    {
+        $files = [];
+        if (is_dir($path)) {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+            foreach ($iterator as $item) {
+                if ($item->isFile()) {
+                    $relativePath = substr($item->getPathname(), strlen($path) + 1);
+                    $files[$relativePath] = (string) file_get_contents($item->getPathname());
+                }
+            }
+        }
+
+        $this->directoryBackups[$path] = [
+            'exists' => is_dir($path),
+            'files' => $files,
+        ];
+    }
+
+    private function restoreStorageDirectory(string $path): void
+    {
+        $backup = $this->directoryBackups[$path] ?? ['exists' => false, 'files' => []];
+
+        $this->deleteDirectory($path);
+
+        if (!$backup['exists']) {
+            return;
+        }
+
+        foreach ($backup['files'] as $relativePath => $contents) {
+            $target = $path . DIRECTORY_SEPARATOR . $relativePath;
+            $dir = dirname($target);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            file_put_contents($target, $contents);
+        }
+    }
+
+    private function deleteDirectory(string $path): void
+    {
+        if (!is_dir($path)) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($iterator as $item) {
+            if ($item->isDir()) {
+                rmdir($item->getPathname());
+            } else {
+                unlink($item->getPathname());
+            }
+        }
+        rmdir($path);
     }
 }

@@ -17,6 +17,7 @@ class RoomApiController extends Controller
         $dataFile = storage_path('app/private/rooms.json');
         $siteDataFile = storage_path('app/private/site.json');
         $selfplayDir = storage_path('app/private/selfplay-kifu');
+        $npcBookDir = storage_path('app/private/npc-book');
         $action = (string) $request->query('action', '');
         $roomId = strtoupper((string) $request->query('roomId', ''));
 
@@ -97,6 +98,7 @@ class RoomApiController extends Controller
             }
 
             if ($action === 'selfplay.save') {
+                $this->assertToolWriteAllowed($body);
                 $payload = is_array($body['payload'] ?? null) ? $body['payload'] : $body;
                 if (!$this->isValidSelfplayPayload($payload)) {
                     throw new RuntimeException('Self-play payload is required');
@@ -111,6 +113,70 @@ class RoomApiController extends Controller
                 return $this->jsonResponse([
                     'ok' => true,
                     'entry' => $this->sanitizeSelfplayEntry($entry),
+                ]);
+            }
+
+            if ($action === 'npc.book.current') {
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'book' => $this->loadCurrentNpcBook($npcBookDir),
+                ]);
+            }
+
+            if ($action === 'npc.book.proposal.list') {
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'entries' => $this->sanitizeNpcBookEntries($this->loadNpcBookIndex($npcBookDir)),
+                ]);
+            }
+
+            if ($action === 'npc.book.proposal.get') {
+                $bookId = $this->sanitizeNpcBookId((string) $request->query('id', (string) ($body['id'] ?? '')));
+                if ($bookId === '') {
+                    throw new RuntimeException('NPC book proposal id is required');
+                }
+
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'book' => $this->loadNpcBookProposal($npcBookDir, $bookId),
+                ]);
+            }
+
+            if ($action === 'npc.book.proposal.save') {
+                $this->assertToolWriteAllowed($body);
+                $book = is_array($body['book'] ?? null) ? $body['book'] : $body;
+                if (!$this->isValidNpcBookPayload($book)) {
+                    throw new RuntimeException('NPC book proposal is required');
+                }
+                $entry = $this->saveNpcBookProposal($npcBookDir, $book, [
+                    'label' => (string) ($body['label'] ?? ''),
+                    'source' => (string) ($body['source'] ?? 'browser-worker'),
+                    'note' => (string) ($body['note'] ?? ''),
+                ]);
+
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'entry' => $this->sanitizeNpcBookEntry($entry),
+                ]);
+            }
+
+            if ($action === 'npc.book.activate') {
+                $activationKey = (string) env('UNFOLD_NPC_BOOK_KEY', '');
+                if ($activationKey === '' || !hash_equals($activationKey, (string) ($body['key'] ?? ''))) {
+                    throw new RuntimeException('NPC book activation key is not configured or does not match');
+                }
+                $bookId = $this->sanitizeNpcBookId((string) ($body['id'] ?? $request->query('id', '')));
+                $book = $bookId !== ''
+                    ? $this->loadNpcBookProposal($npcBookDir, $bookId)
+                    : (is_array($body['book'] ?? null) ? $body['book'] : []);
+                if (!$this->isValidNpcBookPayload($book)) {
+                    throw new RuntimeException('NPC book payload is required');
+                }
+                $this->saveActiveNpcBook($npcBookDir, $book);
+
+                return $this->jsonResponse([
+                    'ok' => true,
+                    'book' => $book,
                 ]);
             }
 
@@ -665,6 +731,18 @@ class RoomApiController extends Controller
         );
     }
 
+    private function assertToolWriteAllowed(array $body): void
+    {
+        if (app()->environment(['local', 'testing'])) {
+            return;
+        }
+
+        $writeKey = (string) env('UNFOLD_TOOL_WRITE_KEY', '');
+        if ($writeKey === '' || !hash_equals($writeKey, (string) ($body['key'] ?? ''))) {
+            throw new RuntimeException('Tool write key is not configured or does not match');
+        }
+    }
+
     private function loadSiteData(string $dataFile): array
     {
         $default = [
@@ -926,6 +1004,194 @@ class RoomApiController extends Controller
     }
 
     private function sanitizeSelfplayId(string $id): string
+    {
+        $id = trim($id);
+        return preg_match('/^[A-Za-z0-9_-]{8,80}$/', $id) ? $id : '';
+    }
+
+    private function isValidNpcBookPayload(mixed $payload): bool
+    {
+        if (!is_array($payload)) {
+            return false;
+        }
+
+        return is_array($payload['kifuLearnedWeights'] ?? null)
+            || is_array($payload['openingRescueJoseki'] ?? null)
+            || is_array($payload['counterattackTransitionWeights'] ?? null)
+            || is_array($payload['review'] ?? null)
+            || is_array($payload['samples'] ?? null);
+    }
+
+    private function npcBookIndexFile(string $dir): string
+    {
+        return $dir . DIRECTORY_SEPARATOR . 'index.json';
+    }
+
+    private function activeNpcBookFile(string $dir): string
+    {
+        return $dir . DIRECTORY_SEPARATOR . 'active.json';
+    }
+
+    private function ensureNpcBookDir(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+    }
+
+    private function loadJsonFile(string $path): ?array
+    {
+        if (!file_exists($path)) {
+            return null;
+        }
+
+        $raw = file_get_contents($path);
+        if ($raw === false || trim($raw) === '') {
+            return null;
+        }
+
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private function loadCurrentNpcBook(string $dir): array
+    {
+        $active = $this->loadJsonFile($this->activeNpcBookFile($dir));
+        if ($active && $this->isValidNpcBookPayload($active)) {
+            $active['source'] = (string) ($active['source'] ?? 'server-active');
+            return $active;
+        }
+
+        $static = $this->loadJsonFile(public_path('unfold-npc-book.json'));
+        if ($static && $this->isValidNpcBookPayload($static)) {
+            $static['source'] = (string) ($static['source'] ?? 'public-static');
+            return $static;
+        }
+
+        return [
+            'version' => 'empty',
+            'source' => 'embedded',
+            'notes' => ['No external NPC book is available.'],
+        ];
+    }
+
+    private function loadNpcBookIndex(string $dir): array
+    {
+        $decoded = $this->loadJsonFile($this->npcBookIndexFile($dir));
+        return is_array($decoded) ? array_values(array_filter($decoded, 'is_array')) : [];
+    }
+
+    private function saveNpcBookIndex(string $dir, array $entries): void
+    {
+        $this->ensureNpcBookDir($dir);
+        file_put_contents(
+            $this->npcBookIndexFile($dir),
+            json_encode(array_values($entries), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT),
+            LOCK_EX
+        );
+    }
+
+    private function saveNpcBookProposal(string $dir, array $book, array $options = []): array
+    {
+        $this->ensureNpcBookDir($dir);
+        $id = gmdate('Ymd-His') . '-' . bin2hex(random_bytes(4));
+        $file = 'proposal-' . $id . '.json';
+        $path = $dir . DIRECTORY_SEPARATOR . $file;
+        $book['savedAt'] = $book['savedAt'] ?? $this->nowIso();
+
+        $encoded = json_encode($book, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        if ($encoded === false) {
+            throw new RuntimeException('Failed to encode NPC book proposal');
+        }
+        file_put_contents($path, $encoded, LOCK_EX);
+
+        $entry = $this->buildNpcBookEntry($id, $file, $book, $options);
+        $entries = $this->loadNpcBookIndex($dir);
+        $entries[] = $entry;
+        $this->saveNpcBookIndex($dir, $entries);
+
+        return $entry;
+    }
+
+    private function loadNpcBookProposal(string $dir, string $id): array
+    {
+        $entry = null;
+        foreach ($this->loadNpcBookIndex($dir) as $item) {
+            if (($item['id'] ?? '') === $id) {
+                $entry = $item;
+                break;
+            }
+        }
+        if (!$entry) {
+            throw new RuntimeException('NPC book proposal not found');
+        }
+
+        $file = basename((string) ($entry['file'] ?? ('proposal-' . $id . '.json')));
+        $decoded = $this->loadJsonFile($dir . DIRECTORY_SEPARATOR . $file);
+        if (!$decoded || !$this->isValidNpcBookPayload($decoded)) {
+            throw new RuntimeException('NPC book proposal file is broken');
+        }
+
+        return $decoded;
+    }
+
+    private function saveActiveNpcBook(string $dir, array $book): void
+    {
+        $this->ensureNpcBookDir($dir);
+        $book['activatedAt'] = $this->nowIso();
+        $encoded = json_encode($book, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        if ($encoded === false) {
+            throw new RuntimeException('Failed to encode active NPC book');
+        }
+        file_put_contents($this->activeNpcBookFile($dir), $encoded, LOCK_EX);
+    }
+
+    private function buildNpcBookEntry(string $id, string $file, array $book, array $options): array
+    {
+        $samples = is_array($book['samples'] ?? null) ? $book['samples'] : [];
+        $label = trim((string) ($options['label'] ?? ''));
+
+        return [
+            'id' => $id,
+            'file' => $file,
+            'label' => $label !== '' ? mb_substr($label, 0, 80) : 'NPC book ' . $id,
+            'source' => mb_substr(trim((string) ($options['source'] ?? ($book['source'] ?? 'browser-worker'))), 0, 60),
+            'note' => mb_substr(trim((string) ($options['note'] ?? '')), 0, 300),
+            'createdAt' => $this->nowIso(),
+            'version' => (string) ($book['version'] ?? ''),
+            'games' => (int) ($samples['games'] ?? 0),
+            'moves' => (int) ($samples['moves'] ?? 0),
+            'entries' => (int) ($samples['entries'] ?? 0),
+        ];
+    }
+
+    private function sanitizeNpcBookEntries(array $entries): array
+    {
+        usort($entries, function (array $a, array $b): int {
+            return strcmp((string) ($b['createdAt'] ?? ''), (string) ($a['createdAt'] ?? ''));
+        });
+
+        return array_values(array_map(function (array $entry): array {
+            return $this->sanitizeNpcBookEntry($entry);
+        }, $entries));
+    }
+
+    private function sanitizeNpcBookEntry(array $entry): array
+    {
+        return [
+            'id' => (string) ($entry['id'] ?? ''),
+            'label' => mb_substr((string) ($entry['label'] ?? ''), 0, 80),
+            'source' => mb_substr((string) ($entry['source'] ?? ''), 0, 60),
+            'note' => mb_substr((string) ($entry['note'] ?? ''), 0, 300),
+            'createdAt' => (string) ($entry['createdAt'] ?? ''),
+            'version' => (string) ($entry['version'] ?? ''),
+            'games' => (int) ($entry['games'] ?? 0),
+            'moves' => (int) ($entry['moves'] ?? 0),
+            'entries' => (int) ($entry['entries'] ?? 0),
+        ];
+    }
+
+    private function sanitizeNpcBookId(string $id): string
     {
         $id = trim($id);
         return preg_match('/^[A-Za-z0-9_-]{8,80}$/', $id) ? $id : '';
@@ -1455,6 +1721,7 @@ class RoomApiController extends Controller
             'name' => (string) ($room['name'] ?? ('Room ' . ($room['id'] ?? ''))),
             'status' => (string) ($room['status'] ?? 'waiting'),
             'ruleMode' => (string) ($room['gameState']['ruleMode'] ?? 'original'),
+            'initialStandbyRule' => (string) ($room['gameState']['initialSetup']['rule'] ?? 'basePieces'),
             'timeControl' => (string) ($room['gameState']['clock']['timeControl'] ?? 'none'),
             'hostName' => (string) ($room['players']['P1']['name'] ?? 'Player 1'),
             'guestName' => (string) ($room['players']['P2']['name'] ?? 'Waiting'),
@@ -1482,6 +1749,7 @@ class RoomApiController extends Controller
             'createdAt' => (string) ($room['createdAt'] ?? $this->nowIso()),
             'updatedAt' => (string) ($room['updatedAt'] ?? $this->nowIso()),
             'status' => (string) ($room['status'] ?? 'waiting'),
+            'initialStandbyRule' => (string) ($room['gameState']['initialSetup']['rule'] ?? 'basePieces'),
             'ownerPlayerId' => (string) ($this->getOwnerPlayerId($room) ?? ''),
             'players' => $room['players'] ?? [],
             'spectators' => $this->sanitizeSpectators($room['spectators'] ?? []),

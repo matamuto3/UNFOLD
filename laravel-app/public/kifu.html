@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-adsense-account" content="ca-pub-2627666305329331">
+  <title>UNFOLD | 棋譜ビューア</title>
+  <meta name="description" content="UNFOLD の保存棋譜や棋譜JSONを読み込み、盤面と手順を確認するための棋譜ビューアです。">
+  <meta name="robots" content="max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#20242a">
+  <link rel="canonical" href="https://unfold.sakura.ne.jp/kifu.html">
+  <link rel="stylesheet" href="styles.css?v=20260514anim08">
+</head>
+<body class="rules-body">
+  <a class="site-top-brand" href="index.html" aria-label="トップ画面へ戻る">UNFOLD</a>
+  <main class="guide-shell kifu-viewer-shell">
+    <section class="guide-hero kifu-viewer-hero">
+      <div class="guide-hero-copy">
+        <p class="eyebrow">KIFU VIEWER</p>
+        <h1 data-i18n="kifuViewer">棋譜を見る</h1>
+        <p data-i18n="intro">保存棋譜や棋譜JSONを読み込んで、盤面と手順を確認するページです。</p>
+        <div class="hero-actions">
+          <a class="button secondary" href="solo.html" data-i18n="toSolo">一人プレイへ</a>
+          <a class="button secondary" href="index.html" data-i18n="toTop">トップへ</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="guide-section kifu-viewer-layout" aria-label="棋譜ビューア">
+      <aside class="guide-card kifu-viewer-menu">
+        <h2 data-i18n="loadKifu">読み込む棋譜</h2>
+        <div class="kifu-viewer-actions">
+          <button id="loadLatestKifuBtn" class="primary" type="button" data-i18n="latestKifu">最新の保存棋譜</button>
+          <button id="loadImportedKifuBtn" type="button" data-i18n="importedKifu">読込済み棋譜</button>
+          <label class="button secondary kifu-file-button">
+            <span data-i18n="chooseJson">棋譜JSONを選ぶ</span>
+            <input id="kifuFileInput" type="file" accept="application/json,.json" hidden>
+          </label>
+        </div>
+        <p id="kifuStatus" class="scene-note"></p>
+        <div id="kifuLibraryList" class="kifu-library-list"></div>
+      </aside>
+
+      <section class="guide-card kifu-viewer-main">
+        <div class="kifu-viewer-head">
+          <div>
+            <p class="label" data-i18n="kifu">棋譜</p>
+            <h2 id="kifuTitle">-</h2>
+            <p id="kifuMeta" class="scene-note">-</p>
+          </div>
+          <div class="history-nav">
+            <button id="kifuPrevBtn" type="button" disabled data-i18n="prev">前へ</button>
+            <button id="kifuNextBtn" type="button" disabled data-i18n="next">次へ</button>
+          </div>
+        </div>
+        <div id="kifuBoard" class="history-board kifu-viewer-board with-coordinates"></div>
+        <div class="kifu-viewer-log-wrap">
+          <h3 data-i18n="actionLog">行動ログ</h3>
+          <div id="kifuLog" class="history-list kifu-viewer-log"></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="card site-footer-note" aria-label="サイト情報">
+      <p class="site-footer-title">UNFOLD Prototype</p>
+      <p>個人制作の試作版です。表示やルールは予告なく更新されることがあります。</p>
+      <p class="site-footer-links"><a href="index.html">トップへ戻る</a><a href="privacy.html">プライバシーポリシー</a></p>
+      <p>&copy; 2026 UNFOLD Prototype</p>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var text = {
+        kifuViewer: "\u68CB\u8B5C\u3092\u898B\u308B",
+        intro: "\u4FDD\u5B58\u68CB\u8B5C\u3084\u68CB\u8B5CJSON\u3092\u8AAD\u307F\u8FBC\u3093\u3067\u3001\u76E4\u9762\u3068\u624B\u9806\u3092\u78BA\u8A8D\u3059\u308B\u30DA\u30FC\u30B8\u3067\u3059\u3002\u691C\u8A0E\u5BA4\u3084\u5C40\u9762\u7DE8\u96C6\u306F\u51FA\u3055\u305A\u3001\u68CB\u8B5C\u3068\u884C\u52D5\u30ED\u30B0\u3060\u3051\u3092\u898B\u3084\u3059\u304F\u3057\u3066\u3044\u307E\u3059\u3002",
+        toSolo: "\u4E00\u4EBA\u30D7\u30EC\u30A4\u3078",
+        toTop: "\u30C8\u30C3\u30D7\u3078",
+        loadKifu: "\u8AAD\u307F\u8FBC\u3080\u68CB\u8B5C",
+        latestKifu: "\u6700\u65B0\u306E\u4FDD\u5B58\u68CB\u8B5C",
+        importedKifu: "\u8AAD\u8FBC\u6E08\u307F\u68CB\u8B5C",
+        chooseJson: "\u68CB\u8B5CJSON\u3092\u9078\u3076",
+        choosePrompt: "\u68CB\u8B5C\u3092\u9078\u3076\u3068\u3001\u53F3\u5074\u306B\u76E4\u9762\u3068\u624B\u9806\u304C\u8868\u793A\u3055\u308C\u307E\u3059\u3002",
+        kifu: "\u68CB\u8B5C",
+        unselected: "\u672A\u9078\u629E",
+        prev: "\u524D\u3078",
+        next: "\u6B21\u3078",
+        actionLog: "\u884C\u52D5\u30ED\u30B0",
+        invalid: "\u68CB\u8B5C\u30C7\u30FC\u30BF\u3092\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002",
+        opened: "\u3092\u958B\u304D\u307E\u3057\u305F\u3002",
+        latestSource: "\u6700\u65B0\u306E\u4FDD\u5B58\u68CB\u8B5C",
+        importedSource: "\u8AAD\u8FBC\u6E08\u307F\u68CB\u8B5C",
+        librarySource: "\u30E9\u30A4\u30D6\u30E9\u30EA\u68CB\u8B5C",
+        jsonSource: "\u68CB\u8B5CJSON",
+        jsonError: "\u68CB\u8B5CJSON\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002",
+        savedKifu: "\u4FDD\u5B58\u68CB\u8B5C",
+        loadedKifu: "\u8AAD\u307F\u8FBC\u307F\u68CB\u8B5C",
+        step: "\u624B\u9806"
+      };
+      var BOARD_ROWS = 9;
+      var BOARD_COLS = 15;
+      var ROW_LABELS = ["\u4E00", "\u4E8C", "\u4E09", "\u56DB", "\u4E94", "\u516D", "\u4E03", "\u516B", "\u4E5D"];
+      var archive = null;
+      var index = 0;
+      var els = {
+        latest: document.getElementById("loadLatestKifuBtn"),
+        imported: document.getElementById("loadImportedKifuBtn"),
+        file: document.getElementById("kifuFileInput"),
+        status: document.getElementById("kifuStatus"),
+        library: document.getElementById("kifuLibraryList"),
+        title: document.getElementById("kifuTitle"),
+        meta: document.getElementById("kifuMeta"),
+        board: document.getElementById("kifuBoard"),
+        log: document.getElementById("kifuLog"),
+        prev: document.getElementById("kifuPrevBtn"),
+        next: document.getElementById("kifuNextBtn")
+      };
+      var pieceLabels = {
+        worlder: "U",
+        shifter: "B",
+        guardian: "G",
+        barrier: "W",
+        rider: "R",
+        striker: "L",
+        flanker: "F",
+        disruptor: "H",
+        vanguard: "V",
+        lure: "D",
+        chaos: "C",
+        destroyer: "O",
+        king: "K",
+        decoy: "D",
+        guard: "G",
+        charger: "L",
+        realmKnight: "B",
+        chaosBeast: "C",
+        gold: "G",
+        silver: "S",
+        knight: "N",
+        lance: "L",
+        rook: "R",
+        bishop: "B",
+        pawn: "P"
+      };
+
+      document.title = "UNFOLD | " + text.kifuViewer;
+      document.querySelectorAll("[data-i18n]").forEach(function (node) {
+        node.textContent = text[node.getAttribute("data-i18n")] || node.textContent;
+      });
+      els.status.textContent = text.choosePrompt;
+
+      function readStorage(key) {
+        try {
+          return JSON.parse(window.localStorage.getItem(key) || "null");
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function normalize(source) {
+        var raw = source && source.format === "unfold-kifu" && source.archive ? source.archive : source;
+        if (!raw || !Array.isArray(raw.history) || !raw.history.length) {
+          return null;
+        }
+        return raw;
+      }
+
+      function getPiece(snapshot, id) {
+        var pieces = snapshot && snapshot.pieces;
+        if (!pieces || !id) {
+          return null;
+        }
+        if (Array.isArray(pieces)) {
+          return pieces.find(function (piece) { return piece && piece.id === id; }) || null;
+        }
+        return pieces[id] || null;
+      }
+
+      function appendCoord(labelText, kind) {
+        var label = document.createElement("div");
+        label.className = "history-coordinate history-coordinate-" + kind;
+        label.textContent = labelText;
+        els.board.appendChild(label);
+      }
+
+      function mapBoardPoint(displayRow, displayCol) {
+        return {
+          row: displayCol,
+          col: BOARD_COLS - 1 - displayRow
+        };
+      }
+
+      function renderBoard(snapshot) {
+        var displayRow;
+        var displayCol;
+        var point;
+        els.board.innerHTML = "";
+        els.board.classList.add("with-coordinates", "player-oriented", "viewer-p1");
+        els.board.style.gridTemplateColumns = "repeat(" + BOARD_ROWS + ", minmax(0, 1fr)) 1.5rem";
+        for (displayCol = 0; displayCol < BOARD_ROWS; displayCol += 1) {
+          point = mapBoardPoint(0, displayCol);
+          appendCoord(ROW_LABELS[point.row] || String(point.row + 1), "col");
+        }
+        appendCoord("", "corner");
+        for (displayRow = 0; displayRow < BOARD_COLS; displayRow += 1) {
+          for (displayCol = 0; displayCol < BOARD_ROWS; displayCol += 1) {
+            point = mapBoardPoint(displayRow, displayCol);
+            var cell = snapshot && snapshot.board && snapshot.board[point.row] ? snapshot.board[point.row][point.col] : null;
+            var piece = cell && cell.pieceId ? getPiece(snapshot, cell.pieceId) : null;
+            var cellEl = document.createElement("div");
+            cellEl.className = "history-cell " + (cell && cell.controller ? String(cell.controller).toLowerCase() : "neutral");
+            if (cell && cell.isBaseCenter) {
+              cellEl.classList.add("base-center");
+            }
+            if (piece) {
+              var pieceEl = document.createElement("span");
+              pieceEl.className = "history-piece";
+              pieceEl.textContent = pieceLabels[piece.kind] || (piece.kind ? String(piece.kind).charAt(0) : "");
+              cellEl.appendChild(pieceEl);
+            }
+            els.board.appendChild(cellEl);
+          }
+          point = mapBoardPoint(displayRow, 0);
+          appendCoord(String(point.col + 1), "row");
+        }
+      }
+
+      function getEntryText(entry, i) {
+        return (entry && (entry.message || entry.label || entry.actionText || entry.summary)) || ((i + 1) + ". " + text.step);
+      }
+
+      function render() {
+        var history = archive && archive.history ? archive.history : [];
+        var entry = history[index] || null;
+        els.title.textContent = archive ? (archive.title || text.loadedKifu) : text.unselected;
+        els.meta.textContent = archive ? ((archive.ruleMode || "original") + " / " + (index + 1) + " / " + history.length) : "-";
+        els.prev.disabled = !archive || index <= 0;
+        els.next.disabled = !archive || index >= history.length - 1;
+        renderBoard(entry && entry.snapshot ? entry.snapshot : null);
+        els.log.innerHTML = "";
+        history.forEach(function (item, i) {
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = "history-entry" + (i === index ? " active" : "");
+          button.textContent = getEntryText(item, i);
+          button.addEventListener("click", function () {
+            index = i;
+            render();
+          });
+          els.log.appendChild(button);
+        });
+      }
+
+      function openArchive(nextArchive, sourceLabel) {
+        var normalized = normalize(nextArchive);
+        if (!normalized) {
+          els.status.textContent = text.invalid;
+          return;
+        }
+        archive = normalized;
+        index = Math.max(0, archive.history.length - 1);
+        els.status.textContent = sourceLabel + text.opened;
+        render();
+      }
+
+      function renderLibrary() {
+        var list = readStorage("unfoldReplayLibrary") || [];
+        els.library.innerHTML = "";
+        list.slice(0, 12).forEach(function (entry) {
+          var itemArchive = normalize(entry && entry.archive ? entry.archive : entry);
+          if (!itemArchive) {
+            return;
+          }
+          var button = document.createElement("button");
+          button.type = "button";
+          button.textContent = itemArchive.title || text.savedKifu;
+          button.addEventListener("click", function () {
+            openArchive(itemArchive, text.librarySource);
+          });
+          els.library.appendChild(button);
+        });
+      }
+
+      els.latest.addEventListener("click", function () {
+        openArchive(readStorage("unfoldLatestReplay"), text.latestSource);
+      });
+      els.imported.addEventListener("click", function () {
+        openArchive(readStorage("unfoldImportedReplay"), text.importedSource);
+      });
+      els.file.addEventListener("change", function () {
+        var file = els.file.files && els.file.files[0];
+        if (!file) {
+          return;
+        }
+        file.text().then(function (fileText) {
+          openArchive(JSON.parse(fileText), text.jsonSource);
+        }).catch(function () {
+          els.status.textContent = text.jsonError;
+        });
+      });
+      els.prev.addEventListener("click", function () {
+        index = Math.max(0, index - 1);
+        render();
+      });
+      els.next.addEventListener("click", function () {
+        index = Math.min((archive && archive.history ? archive.history.length : 1) - 1, index + 1);
+        render();
+      });
+
+      renderLibrary();
+      archive = normalize(readStorage("unfoldLatestReplay"));
+      if (archive) {
+        index = Math.max(0, archive.history.length - 1);
+        els.status.textContent = text.latestSource + text.opened;
+      }
+      render();
+    }());
+  </script>
+</body>
+</html>

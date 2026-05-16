@@ -35,6 +35,27 @@ body {
   font-family: "Yu Gothic UI", "Hiragino Sans", "Segoe UI", sans-serif;
 }
 
+html.unfold-booting .app {
+  opacity: 0;
+  pointer-events: none;
+}
+
+html.unfold-booting body::before {
+  content: "UNFOLD";
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+  color: rgba(32, 36, 42, 0.58);
+  letter-spacing: 0.42em;
+  font-size: clamp(1.1rem, 2vw, 1.8rem);
+  font-weight: 700;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.9), transparent 30%),
+    linear-gradient(180deg, #f7f6f1 0%, #dedbd2 100%);
+}
+
 button {
   font: inherit;
   cursor: pointer;
@@ -304,6 +325,51 @@ button.primary {
   color: var(--text) !important;
 }
 
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.site-footer-links a,
+.privacy-section a {
+  color: var(--accent);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.site-footer-links a:hover,
+.privacy-section a:hover {
+  text-decoration: underline;
+}
+
+.privacy-app {
+  max-width: 980px;
+}
+
+.privacy-hero,
+.privacy-section {
+  padding: 22px;
+}
+
+.privacy-section {
+  display: grid;
+  gap: 10px;
+}
+
+.privacy-section h2,
+.privacy-section p {
+  margin: 0;
+}
+
+.privacy-section h2 {
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+}
+
+.privacy-section p {
+  line-height: 1.75;
+}
+
 .match-shell {
   max-width: 1380px;
   width: 100%;
@@ -570,6 +636,8 @@ button.primary {
 
 .solo-stage-layout {
   grid-template-columns: 1fr;
+  justify-items: start;
+  width: 100%;
 }
 
 .lobby-hub-head {
@@ -682,6 +750,9 @@ button.primary {
 .lobby-stage-stack {
   display: grid;
   gap: 12px;
+  width: 720px;
+  max-width: 100%;
+  justify-self: start;
 }
 
 .lobby-stage-summary {
@@ -749,13 +820,15 @@ button.primary {
 }
 
 .local-rule-mode-field,
-.start-side-field {
+.npc-strength-field,
+.start-side-field,
+.initial-standby-rule-field {
   min-width: 0;
 }
 
 .lobby-settings-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 8px;
   align-items: end;
 }
@@ -794,11 +867,13 @@ button.primary {
 
 .lobby-submenu-buttons {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 6px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  width: min(360px, 100%);
 }
 
 .lobby-submenu-button {
+  position: relative;
   min-height: 44px;
   padding: 10px 12px;
   border-radius: 12px;
@@ -807,11 +882,40 @@ button.primary {
 }
 
 .lobby-submenu-button.active {
-  border-color: rgba(143, 115, 55, 0.5);
+  border-color: rgba(143, 115, 55, 0.78);
   background:
-    radial-gradient(circle at 16% 10%, rgba(255, 255, 255, 0.82), transparent 32%),
-    linear-gradient(180deg, rgba(254, 253, 249, 0.98), rgba(228, 226, 218, 0.98));
-  color: var(--accent);
+    radial-gradient(circle at 16% 10%, rgba(255, 255, 255, 0.14), transparent 32%),
+    linear-gradient(135deg, #343b43 0%, #171b20 66%, #0f1318 100%);
+  color: #fffaf0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 16px 34px rgba(31, 35, 42, 0.18);
+}
+
+.lobby-submenu-button.active::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 24px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f6d28c, #9b6729);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.14);
+}
+
+.lobby-submenu-button.active {
+  padding-left: 28px;
+}
+
+#lobbyHubBody .hub-simple-section {
+  width: min(620px, 100%);
+  box-sizing: border-box;
+}
+
+#lobbyHubBody .hub-main-stage {
+  width: min(720px, 100%);
 }
 
 .lobby-submenu-note {
@@ -825,6 +929,32 @@ button.primary {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   width: 100%;
+}
+
+.local-play-help {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(82, 60, 26, 0.12);
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.local-play-help strong {
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+
+.local-play-help ol {
+  margin: 0;
+  padding-left: 1.4em;
+}
+
+.local-play-help li + li {
+  margin-top: 4px;
 }
 
 .lobby-launch-grid-replay {
@@ -1996,6 +2126,11 @@ button.primary {
   font-size: 0.85rem;
 }
 
+.choice-piece-title {
+  color: var(--text);
+  font-weight: 800;
+}
+
 .reserve-card {
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -2110,6 +2245,16 @@ button.primary {
   color: var(--muted);
   font-size: 0.84rem;
   line-height: 1.35;
+}
+
+.inline-guide-text.tactical-alert-danger {
+  color: #7a261f;
+  font-weight: 800;
+}
+
+.inline-guide-text.tactical-alert-chance {
+  color: #0f5c4e;
+  font-weight: 800;
 }
 
 .board-tools button.active-tool,
@@ -2327,22 +2472,6 @@ button.primary {
   color: rgba(38, 45, 55, 0.78);
   font-size: 0.76rem;
   font-weight: 700;
-}
-
-.advice-meter {
-  height: 7px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(172, 88, 65, 0.28), rgba(255, 255, 255, 0.84) 50%, rgba(31, 128, 118, 0.28));
-  border: 1px solid rgba(74, 80, 91, 0.09);
-}
-
-.advice-meter span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #ad6347, #1f8076);
-  transition: width 180ms ease;
 }
 
 .advice-body ul,
@@ -2629,18 +2758,26 @@ body.has-3d-board .board {
 .cell.target::after {
   content: "";
   position: absolute;
-  width: 24%;
-  height: 24%;
+  width: 34%;
+  height: 34%;
   border-radius: 999px;
-  background: rgba(61, 139, 92, 0.85);
+  background: rgba(47, 142, 105, 0.92);
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.56),
+    0 0 18px rgba(47, 142, 105, 0.38);
 }
 
 .cell.anchor::after {
   content: "";
   position: absolute;
-  inset: 9%;
-  border: 2px solid rgba(143, 115, 55, 0.82);
+  inset: 5%;
+  border: 3px solid rgba(47, 142, 105, 0.92);
   border-radius: 12px;
+  background: rgba(47, 142, 105, 0.16);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.5),
+    0 0 0 2px rgba(47, 142, 105, 0.16),
+    0 8px 18px rgba(47, 142, 105, 0.22);
 }
 
 .cell.preview-invalid {
@@ -2649,6 +2786,8 @@ body.has-3d-board .board {
 
 .cell.preview-invalid::after {
   border-color: rgba(176, 58, 46, 0.86);
+  background: rgba(176, 58, 46, 0.08);
+  box-shadow: none;
 }
 
 .cell.move-target::before {
@@ -2848,6 +2987,20 @@ body.has-3d-board .board {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
     0 0 0 3px rgba(160, 113, 41, 0.54);
+}
+
+.cell.piece-preview-source {
+  outline: 3px dashed rgba(49, 96, 172, 0.62);
+  outline-offset: -4px;
+  box-shadow:
+    inset 0 0 0 4px rgba(58, 103, 176, 0.28),
+    inset 0 0 16px rgba(204, 226, 255, 0.2);
+}
+
+.cell.piece-preview-source .piece {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 0 3px rgba(58, 103, 176, 0.62);
 }
 
 .cell.selected.pending-move-source {
@@ -4348,25 +4501,25 @@ button.primary,
 
 .board-card {
   background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.62), transparent 44%),
-    linear-gradient(180deg, rgba(247, 246, 240, 0.84), rgba(210, 209, 201, 0.88)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.46), transparent 46%),
+    linear-gradient(180deg, rgba(245, 240, 230, 0.94), rgba(225, 220, 210, 0.9)),
     var(--marble-board);
   background-size: auto, auto, 680px auto;
-  border-color: rgba(53, 59, 68, 0.18);
+  border-color: rgba(73, 74, 75, 0.14);
 }
 
 .scene-viewport {
   border-color: var(--stone-edge);
   background:
-    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.48), transparent 30%),
-    linear-gradient(180deg, rgba(249, 248, 243, 0.9), rgba(213, 211, 203, 0.88)),
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.34), transparent 32%),
+    linear-gradient(180deg, rgba(244, 238, 228, 0.95), rgba(222, 216, 205, 0.9)),
     var(--marble-board);
   background-size: auto, auto, cover;
   box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.58),
-    inset 0 -14px 22px rgba(31, 35, 42, 0.22),
-    0 8px 0 #242a31,
-    0 14px 26px rgba(35, 39, 46, 0.24);
+    inset 0 2px 0 rgba(255, 255, 255, 0.46),
+    inset 0 -10px 16px rgba(47, 49, 52, 0.12),
+    0 8px 0 #65666a,
+    0 14px 26px rgba(43, 44, 46, 0.14);
 }
 
 .choice-card,
@@ -4422,6 +4575,17 @@ button.primary,
   margin-inline: auto;
   padding: clamp(46px, 7vw, 96px) clamp(22px, 5vw, 70px);
   border-radius: var(--mock-shell-radius);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.9), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(134, 195, 187, 0.18), transparent 34%),
+    linear-gradient(90deg, rgba(46, 52, 60, 0.045) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(46, 52, 60, 0.038) 1px, transparent 1px),
+    linear-gradient(90deg, transparent 0 70px, rgba(143, 115, 55, 0.2) 70px 74px, transparent 74px 144px),
+    linear-gradient(0deg, transparent 0 70px, rgba(143, 115, 55, 0.16) 70px 74px, transparent 74px 144px),
+    linear-gradient(90deg, transparent 0 34px, rgba(38, 124, 112, 0.14) 34px 38px, transparent 38px 108px),
+    linear-gradient(0deg, transparent 0 106px, rgba(165, 92, 80, 0.14) 106px 110px, transparent 110px 216px),
+    linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(232, 224, 210, 0.96));
+  background-size: auto, auto, 72px 72px, 72px 72px, 144px 144px, 144px 144px, 108px 108px, 216px 216px, auto;
   place-items: center;
   text-align: center;
   box-shadow:
@@ -4430,7 +4594,7 @@ button.primary,
 }
 
 #lobbyView.lobby-home-mode .hero > div {
-  width: min(430px, 100%);
+  width: min(560px, 100%);
   margin-inline: auto;
   transform: translateY(-1.5vh);
 }
@@ -4462,6 +4626,60 @@ button.primary,
   width: min(390px, 100%);
   margin-top: 26px;
   gap: 16px;
+}
+
+.home-game-overview {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin-top: 8px;
+  color: rgba(32, 36, 42, 0.82);
+}
+
+.home-japanese-title {
+  margin: 10px 0 0;
+  color: rgba(151, 120, 58, 0.92);
+  font-size: clamp(1rem, 1.8vw, 1.32rem);
+  font-weight: 900;
+  letter-spacing: 0.24em;
+}
+
+.home-game-overview p {
+  max-width: 34rem;
+  margin: 0;
+  font-size: clamp(0.86rem, 1.4vw, 0.98rem);
+  line-height: 1.75;
+}
+
+.home-game-points {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-game-points li {
+  padding: 8px 12px;
+  border: 1px solid rgba(143, 115, 55, 0.18);
+  border-radius: 999px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(236, 232, 222, 0.58));
+  color: rgba(32, 36, 42, 0.86);
+  font-size: clamp(0.78rem, 1.25vw, 0.88rem);
+  font-weight: 800;
+  line-height: 1.45;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+#lobbyView:not(.lobby-home-mode) .home-game-overview {
+  display: none;
+}
+
+#lobbyView:not(.lobby-home-mode) .home-japanese-title {
+  display: none;
 }
 
 #lobbyView.lobby-home-mode .hero-menu-button {
@@ -4666,10 +4884,10 @@ button.primary,
   border-radius: 22px;
   border-width: 2px;
   box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.58),
-    inset 0 -14px 22px rgba(31, 35, 42, 0.22),
-    0 8px 0 #4c5158,
-    0 18px 34px rgba(35, 39, 46, 0.24);
+    inset 0 2px 0 rgba(255, 255, 255, 0.44),
+    inset 0 -10px 18px rgba(48, 50, 52, 0.13),
+    0 8px 0 #686a6d,
+    0 18px 34px rgba(38, 40, 42, 0.14);
 }
 
 #gameView .scene-viewport .board-turn-badge {
@@ -4843,4 +5061,1986 @@ button.primary,
 #gameView .match-actions {
   flex-wrap: wrap;
   overflow: visible;
+}
+
+/* Match screen simplification: keep play controls visible, move references into popups. */
+#gameView .history-tools,
+#gameView #analysisMetaWrap,
+#gameView #variationTrailWrap,
+#gameView #compareWrap,
+#gameView #reviewNoteWrap,
+#gameView #branchRoomsWrap,
+#gameView .reference-source-card,
+#toggleAiDebugBtn {
+  display: none !important;
+}
+
+#gameView .match-actions {
+  align-items: center;
+  gap: 8px;
+}
+
+#gameView .match-actions > .button-link,
+#gameView .match-actions > button {
+  border-color: rgba(43, 48, 56, 0.18);
+}
+
+#gameView .board-tools {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#gameView .board-tool-buttons-inline {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  width: auto;
+}
+
+#gameView .board-tool-buttons-inline button {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+}
+
+#gameView .piece-notation-control {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid rgba(43, 48, 56, 0.18);
+  border-radius: 999px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(238, 235, 226, 0.86));
+  color: var(--text);
+  box-shadow: 0 8px 18px rgba(35, 39, 46, 0.08);
+}
+
+#gameView .piece-notation-control span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+#gameView .piece-notation-control select {
+  min-height: auto;
+  padding: 0 18px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.piece-name-detail {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.choice-popover-piece-detail {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.reference-popup[hidden] {
+  display: none !important;
+}
+
+.reference-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.reference-popup-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 22, 28, 0.32);
+  backdrop-filter: blur(3px);
+}
+
+.reference-popup-panel {
+  position: relative;
+  z-index: 1;
+  width: min(860px, calc(100vw - 28px));
+  max-height: min(760px, calc(100vh - 36px));
+  overflow: auto;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.95), transparent 34%),
+    linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(237, 233, 223, 0.98));
+  box-shadow: 0 28px 80px rgba(20, 24, 30, 0.26);
+}
+
+.reference-popup-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(40, 45, 52, 0.12);
+  background: rgba(255, 253, 247, 0.94);
+  backdrop-filter: blur(8px);
+}
+
+.reference-popup-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.reference-popup-body {
+  padding: 18px;
+}
+
+.reference-popup-body .test-card {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  box-shadow: none;
+}
+
+.reference-popup-body .reference-summary {
+  pointer-events: none;
+}
+
+.npc-restart-dialog[hidden] {
+  display: none !important;
+}
+
+.npc-restart-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.npc-restart-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 24, 30, 0.34);
+  backdrop-filter: blur(4px);
+}
+
+.npc-restart-panel {
+  position: relative;
+  z-index: 1;
+  width: min(720px, calc(100vw - 30px));
+  border-radius: 24px;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.96), transparent 34%),
+    linear-gradient(150deg, rgba(255, 253, 247, 0.98), rgba(235, 231, 222, 0.98));
+  box-shadow: 0 28px 80px rgba(20, 24, 30, 0.28);
+}
+
+.npc-restart-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.npc-restart-head h2 {
+  margin: 2px 0 0;
+  font-size: clamp(1.25rem, 2vw, 1.7rem);
+}
+
+.npc-restart-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.npc-restart-actions {
+  margin-top: 18px;
+}
+
+@media (max-width: 720px) {
+  .npc-restart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.history-board.with-coordinates {
+  grid-template-columns: 1.5rem repeat(15, minmax(0, 1fr));
+  align-items: center;
+}
+
+.history-coordinate {
+  min-width: 0;
+  min-height: 1.25rem;
+  display: grid;
+  place-items: center;
+  color: rgba(40, 48, 56, 0.62);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.history-coordinate-corner {
+  opacity: 0;
+}
+
+.board-coordinate-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.board-coordinate-label {
+  position: absolute;
+  width: 1.35rem;
+  height: 1.35rem;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 253, 244, 0.82);
+  border: 1px solid rgba(67, 61, 50, 0.22);
+  color: rgba(42, 45, 48, 0.74);
+  font-size: 0.67rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 4px 10px rgba(24, 28, 33, 0.12);
+}
+
+.board-coordinate-label.row {
+  color: rgba(33, 103, 93, 0.88);
+}
+
+.board-coordinate-label.col {
+  color: rgba(122, 83, 32, 0.88);
+}
+
+#gameView .scene-viewport {
+  border-color: rgba(66, 72, 80, 0.48);
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.62), transparent 34%),
+    linear-gradient(180deg, rgba(250, 247, 239, 0.98), rgba(226, 223, 214, 0.94)),
+    var(--marble-board);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.68),
+    inset 0 -8px 14px rgba(55, 59, 64, 0.08),
+    0 7px 0 #7b7e82,
+    0 18px 34px rgba(38, 40, 42, 0.11);
+}
+
+@media (max-width: 680px) {
+  .reference-popup {
+    padding: 10px;
+    align-items: end;
+  }
+
+  .reference-popup-panel {
+    width: 100%;
+    max-height: 86vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .board-coordinate-label {
+    width: 1.1rem;
+    height: 1.1rem;
+    font-size: 0.58rem;
+  }
+}
+
+/* Toned-down reset after the board coordinate experiment. */
+#lobbyView.lobby-home-mode .hero {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.92), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(134, 195, 187, 0.1), transparent 34%),
+    linear-gradient(90deg, transparent 0 52px, rgba(36, 128, 115, 0.12) 52px 55px, transparent 55px 162px),
+    linear-gradient(0deg, transparent 0 52px, rgba(143, 115, 55, 0.1) 52px 55px, transparent 55px 162px),
+    linear-gradient(90deg, rgba(46, 52, 60, 0.055) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(46, 52, 60, 0.05) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(232, 224, 210, 0.96));
+  background-size: auto, auto, 162px 162px, 162px 162px, 54px 54px, 54px 54px, auto;
+}
+
+#gameView .board-coordinate-overlay {
+  display: none !important;
+}
+
+#gameView .scene-viewport {
+  border-color: var(--stone-edge);
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.56), transparent 34%),
+    linear-gradient(180deg, rgba(250, 246, 237, 0.98), rgba(232, 228, 218, 0.94)),
+    var(--marble-board);
+  background-size: auto, auto, cover;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.64),
+    inset 0 -8px 14px rgba(47, 49, 52, 0.08),
+    0 8px 0 #787a7d,
+    0 14px 26px rgba(43, 44, 46, 0.12);
+}
+
+.kifu-viewer-shell {
+  padding-top: 76px;
+}
+
+.kifu-viewer-hero {
+  grid-template-columns: 1fr;
+}
+
+.kifu-viewer-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.kifu-viewer-menu,
+.kifu-viewer-main {
+  display: grid;
+  gap: 14px;
+}
+
+.kifu-viewer-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.kifu-file-button {
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.kifu-library-list {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.kifu-library-list:empty::before {
+  content: "\68CB\8B5C\30E9\30A4\30D6\30E9\30EA\306F\307E\3060\3042\308A\307E\305B\3093\3002";
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.kifu-viewer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: start;
+}
+
+.kifu-viewer-head h2 {
+  margin: 0;
+}
+
+.kifu-viewer-board {
+  width: min(100%, 880px);
+  margin-inline: auto;
+}
+
+.kifu-viewer-log-wrap {
+  display: grid;
+  gap: 8px;
+}
+
+.kifu-viewer-log-wrap h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.kifu-viewer-log {
+  max-height: 340px;
+}
+
+@media (max-width: 860px) {
+  .kifu-viewer-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .kifu-viewer-head {
+    display: grid;
+  }
+}
+
+/* Screen-level layout cleanup. */
+.lobby-back-button,
+.local-play-help {
+  display: none !important;
+}
+
+#lobbyView.lobby-online-mode .lobby-submenu-buttons {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(720px, 100%);
+  justify-self: center;
+}
+
+#lobbyView.lobby-online-mode .lobby-submenu-button {
+  min-height: 46px;
+}
+
+#lobbyView.lobby-rules-mode .lobby-stage-summary {
+  display: none !important;
+}
+
+#lobbyView.lobby-rules-mode .lobby-stage-layout {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+#lobbyView.lobby-rules-mode .lobby-stage-stack {
+  justify-self: center;
+  width: min(560px, 100%);
+}
+
+#lobbyView.lobby-rules-mode .lobby-launch-grid-rules {
+  margin-inline: auto;
+  width: 100%;
+}
+
+#lobbyView.lobby-rules-mode .lobby-launch-grid-rules button.primary {
+  color: var(--text);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.82), transparent 36%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.94), rgba(235, 230, 220, 0.92));
+  border-color: rgba(74, 80, 91, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 10px 20px rgba(40, 44, 50, 0.06);
+}
+
+.kifu-file-button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(74, 80, 91, 0.16);
+  border-radius: 999px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.88), transparent 36%),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(236, 231, 221, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 10px 22px rgba(44, 48, 54, 0.07);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.kifu-file-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 128, 118, 0.28);
+}
+
+.kifu-viewer-head .history-nav {
+  display: none;
+}
+
+.kifu-viewer-main {
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  align-items: start;
+}
+
+.kifu-viewer-head {
+  grid-column: 1 / -1;
+}
+
+.kifu-viewer-board {
+  grid-column: 1;
+  width: 100%;
+  margin-inline: 0;
+}
+
+.kifu-viewer-log-wrap {
+  grid-column: 2;
+  align-self: stretch;
+  min-width: 0;
+}
+
+.kifu-viewer-log {
+  max-height: min(62vh, 620px);
+  overflow: auto;
+}
+
+#gameView .board-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  background:
+    radial-gradient(circle at 48% 0%, rgba(255, 255, 255, 0.72), transparent 42%),
+    linear-gradient(180deg, rgba(251, 248, 240, 0.96), rgba(232, 228, 218, 0.92)),
+    var(--marble-board);
+}
+
+#gameView .board-tools {
+  margin-bottom: 0;
+}
+
+@media (min-width: 1101px) {
+  #gameView .center {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 310px);
+    grid-template-areas:
+      "board history"
+      "log history"
+      "movement movement"
+      "catalog catalog"
+      "diagnostics diagnostics";
+    align-items: start;
+    column-gap: 10px;
+  }
+
+  #gameView #historyCard {
+    align-self: start;
+    max-height: min(62vh, 620px);
+    overflow: hidden;
+  }
+
+  #gameView #historyCard .history-nav,
+  #gameView #historyBoard {
+    display: none !important;
+  }
+
+  #gameView #historyList {
+    max-height: min(54vh, 560px);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 980px) {
+  .kifu-viewer-main {
+    grid-template-columns: 1fr;
+  }
+
+  .kifu-viewer-board,
+  .kifu-viewer-log-wrap {
+    grid-column: 1;
+  }
+}
+
+/* Follow-up tuning: keep the title screen clean, restore board addresses, and place kifu under the log. */
+#lobbyView.lobby-home-mode > .site-top-brand {
+  display: none;
+}
+
+#gameView .board-coordinate-overlay {
+  display: block !important;
+  z-index: 8;
+}
+
+#gameView .board-coordinate-label {
+  width: 1.18rem;
+  height: 1.18rem;
+  border-color: rgba(78, 64, 44, 0.18);
+  background: rgba(255, 249, 232, 0.76);
+  color: rgba(52, 48, 39, 0.72);
+  font-size: 0.6rem;
+  box-shadow: 0 3px 8px rgba(30, 30, 28, 0.1);
+  backdrop-filter: blur(4px);
+}
+
+#gameView .board-coordinate-label.row {
+  color: rgba(33, 123, 105, 0.82);
+}
+
+#gameView .board-coordinate-label.col {
+  color: rgba(151, 93, 37, 0.82);
+}
+
+#gameView .scene-viewport {
+  border-color: rgba(100, 91, 72, 0.58);
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.68), transparent 34%),
+    linear-gradient(180deg, rgba(255, 245, 224, 0.98), rgba(236, 224, 203, 0.94)),
+    var(--marble-board);
+}
+
+@media (min-width: 1101px) {
+  #gameView .center {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "board"
+      "log"
+      "history"
+      "movement"
+      "catalog"
+      "diagnostics";
+    align-items: start;
+    column-gap: 0;
+  }
+
+  #gameView #historyCard {
+    align-self: start;
+    max-height: none;
+    overflow: visible;
+  }
+
+  #gameView #historyCard .history-nav {
+    display: none !important;
+  }
+
+  #gameView #historyBoard {
+    display: grid !important;
+    margin-top: 8px;
+  }
+
+  #gameView #historyList {
+    max-height: 220px;
+    overflow: auto;
+  }
+}
+
+/* Board follow-up: addresses sit outside the playable grid and the board color stays crisp. */
+#gameView .scene-viewport canvas {
+  filter: saturate(1) contrast(1.03) brightness(0.8);
+}
+
+#gameView .board-coordinate-label {
+  width: 1.08rem;
+  height: 1.08rem;
+  background: rgba(255, 244, 214, 0.92);
+  border-color: rgba(131, 92, 43, 0.24);
+  color: rgba(55, 45, 28, 0.82);
+  font-size: 0.58rem;
+  box-shadow: 0 2px 7px rgba(42, 35, 22, 0.12);
+}
+
+#gameView .board-coordinate-label.row {
+  color: rgba(9, 118, 99, 0.9);
+}
+
+#gameView .board-coordinate-label.col {
+  color: rgba(158, 88, 22, 0.9);
+}
+
+#gameView .scene-viewport {
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.28), transparent 34%),
+    linear-gradient(180deg, rgba(216, 199, 165, 0.98), rgba(198, 174, 132, 0.94)),
+    var(--marble-board);
+}
+
+/* Match layout cleanup: hidden helper panels should not reserve board space. */
+#gameView .ai-debug-status[hidden],
+#gameView .pending-piece-banner[hidden] {
+  display: none !important;
+}
+
+#gameView #historyCard {
+  position: relative;
+}
+
+#gameView #historyCard .history-tools {
+  display: flex !important;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: -2px 0 8px;
+}
+
+#gameView #historyCard .history-tools button:not(#replayExportBtn) {
+  display: none !important;
+}
+
+#gameView #replayExportBtn {
+  min-height: 34px;
+  padding-inline: 14px;
+  font-size: 0.86rem;
+}
+
+@media (min-width: 1101px) {
+  #gameView #historyCard {
+    display: grid;
+    grid-template-columns: minmax(340px, 1fr) minmax(180px, 240px);
+    grid-template-areas:
+      "head tools"
+      "title title"
+      "board list";
+    gap: 10px 12px;
+    align-items: start;
+  }
+
+  #gameView #historyCard .history-head {
+    grid-area: head;
+  }
+
+  #gameView #historyCard .history-tools {
+    grid-area: tools;
+    align-self: center;
+    margin: 0;
+  }
+
+  #gameView #historyTitle {
+    grid-area: title;
+    margin: 0;
+  }
+
+  #gameView #historyBoard {
+    grid-area: board;
+    display: grid !important;
+    margin-top: 0;
+  }
+
+  #gameView #historyList {
+    grid-area: list;
+    max-height: 390px;
+    overflow: auto;
+    align-self: stretch;
+    padding-right: 2px;
+  }
+}
+
+@media (max-width: 1100px) {
+  #gameView #historyCard .history-tools {
+    justify-content: flex-start;
+  }
+}
+
+/* Shogi-style match layout: board as the main stage, move records on the side. */
+@media (min-width: 1380px) {
+  #gameView .layout {
+    max-width: 1500px;
+    grid-template-columns: minmax(210px, 260px) minmax(680px, 1fr) minmax(230px, 290px);
+    gap: 12px;
+  }
+
+  #gameView .center {
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 330px);
+    grid-template-areas:
+      "board log"
+      "board history"
+      "movement movement"
+      "catalog catalog"
+      "diagnostics diagnostics";
+    gap: 10px 12px;
+    align-items: start;
+  }
+
+  #gameView .board-card {
+    gap: 6px;
+  }
+
+  #gameView .scene-control-guide {
+    margin-bottom: 2px;
+  }
+
+  #gameView .action-log-card {
+    grid-area: log;
+    max-height: 150px;
+  }
+
+  #gameView #historyCard {
+    grid-area: history;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "head"
+      "tools"
+      "title"
+      "list";
+    gap: 8px;
+    max-height: 430px;
+    overflow: hidden;
+  }
+
+  #gameView #historyCard .history-head {
+    grid-area: head;
+  }
+
+  #gameView #historyCard .history-tools {
+    grid-area: tools;
+    justify-content: flex-start;
+    margin: 0;
+  }
+
+  #gameView #historyTitle {
+    grid-area: title;
+    margin: 0;
+  }
+
+  #gameView #historyBoard {
+    display: none !important;
+  }
+
+  #gameView #historyList {
+    grid-area: list;
+    max-height: 320px;
+    overflow: auto;
+    margin-top: 0;
+  }
+}
+
+/* Board readability pass: less smoky filter, clearer outside coordinates. */
+#gameView .scene-viewport canvas {
+  filter: saturate(1.08) contrast(1.04) brightness(0.96);
+}
+
+#gameView .board-coordinate-label {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 8px;
+  background: rgba(255, 249, 230, 0.96);
+  border-color: rgba(99, 75, 38, 0.3);
+  color: rgba(45, 36, 22, 0.9);
+  font-size: 0.62rem;
+  font-weight: 800;
+  box-shadow: 0 3px 8px rgba(38, 32, 22, 0.14);
+}
+
+#gameView .board-coordinate-label.row,
+#gameView .board-coordinate-label.col {
+  color: rgba(45, 36, 22, 0.9);
+}
+
+#gameView .scene-viewport {
+  background:
+    radial-gradient(circle at 50% 6%, rgba(255, 255, 255, 0.36), transparent 34%),
+    linear-gradient(180deg, rgba(224, 211, 184, 0.96), rgba(206, 189, 155, 0.94)),
+    var(--marble-board);
+}
+
+/* Shogi-site match layout: board first, kifu/log on the right, hands above/below. */
+#gameView .layout {
+  max-width: min(1320px, calc(100vw - 28px));
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "opponent"
+    "board"
+    "self";
+  gap: 10px;
+  justify-items: stretch;
+}
+
+#gameView.viewer-p1 #p1Panel,
+#gameView.viewer-p2 #p2Panel {
+  grid-area: self;
+}
+
+#gameView.viewer-p1 #p2Panel,
+#gameView.viewer-p2 #p1Panel {
+  grid-area: opponent;
+}
+
+#gameView .panel {
+  width: 100%;
+  max-height: none;
+  overflow: visible;
+}
+
+#gameView .panel .list {
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+}
+
+#gameView .panel .action-list {
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+}
+
+#gameView .center {
+  width: 100%;
+  display: grid !important;
+  grid-template-columns: minmax(540px, 620px) minmax(270px, 340px) !important;
+  grid-template-areas:
+    "board log"
+    "board history"
+    "movement movement"
+    "catalog catalog"
+    "diagnostics diagnostics" !important;
+  align-items: start;
+  justify-content: center;
+  gap: 10px;
+}
+
+#gameView .board-card {
+  grid-area: board;
+  width: 100%;
+  justify-self: stretch;
+}
+
+#gameView .board-card {
+  gap: 4px;
+}
+
+#gameView .board-tools {
+  margin-bottom: 2px;
+}
+
+#gameView .scene-control-guide {
+  margin-bottom: 0;
+}
+
+#gameView .scene-viewport {
+  width: min(100%, 540px);
+  aspect-ratio: 9 / 12.4;
+  margin-inline: auto;
+  border-color: rgba(91, 82, 65, 0.58);
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.28), transparent 34%),
+    linear-gradient(180deg, rgba(216, 199, 165, 0.98), rgba(198, 174, 132, 0.94)),
+    var(--marble-board);
+}
+
+#gameView .scene-viewport canvas {
+  filter: saturate(1) contrast(1.03) brightness(0.84);
+}
+
+#gameView .board-coordinate-label {
+  width: 1.18rem;
+  height: 1.18rem;
+  background: rgba(255, 248, 226, 0.98);
+}
+
+#gameView .action-log-card {
+  grid-area: log;
+  width: 100%;
+  justify-self: stretch;
+  max-height: 150px;
+  overflow: auto;
+}
+
+#gameView #historyCard {
+  grid-area: history;
+  width: 100%;
+  justify-self: stretch;
+  max-height: 520px;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "head"
+    "tools"
+    "title"
+    "board"
+    "list";
+  gap: 8px;
+}
+
+#gameView #historyCard[hidden] {
+  display: none !important;
+}
+
+#gameView #historyCard .history-head {
+  grid-area: head;
+}
+
+#gameView #historyCard .history-tools {
+  grid-area: tools;
+  justify-content: flex-start;
+  margin: 0;
+}
+
+#gameView #historyTitle {
+  grid-area: title;
+}
+
+#gameView #historyBoard {
+  grid-area: board;
+  display: grid !important;
+}
+
+#gameView #historyList {
+  grid-area: list;
+  max-height: 180px;
+  overflow: auto;
+}
+
+#gameView .movement-summary-card {
+  grid-area: movement;
+}
+
+#gameView .fragment-catalog-card {
+  grid-area: catalog;
+}
+
+#gameView .diagnostics-card {
+  grid-area: diagnostics;
+}
+
+@media (min-width: 900px) {
+  #gameView .panel {
+    display: grid;
+    grid-template-columns: minmax(140px, 170px) minmax(104px, 1fr) minmax(104px, 1fr) minmax(220px, 1.7fr) minmax(176px, 220px);
+    grid-template-areas:
+      "name reserve fragments hand actions"
+      "deck reserve fragments hand actions";
+    align-items: start;
+    gap: 8px 10px;
+    padding: 12px;
+  }
+
+  #gameView .panel h2 {
+    grid-area: name;
+    margin: 0;
+  }
+
+  #gameView .panel > p.subtle {
+    display: none;
+  }
+
+  #gameView #p1Reserve,
+  #gameView #p2Reserve {
+    grid-area: reserve;
+  }
+
+  #gameView #p1FragmentReserve,
+  #gameView #p2FragmentReserve {
+    grid-area: fragments;
+  }
+
+  #gameView #p1Hand,
+  #gameView #p2Hand {
+    grid-area: hand;
+  }
+
+  #gameView #p1DeckCount,
+  #gameView #p2DeckCount {
+    grid-area: deck;
+    align-self: start;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+
+  #gameView #p1DeckCount::before,
+  #gameView #p2DeckCount::before {
+    content: "山札 ";
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  #gameView .panel .list {
+    align-content: start;
+    min-height: 0;
+    gap: 7px;
+  }
+
+  #gameView .panel .list::before {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  #gameView #p1Reserve::before,
+  #gameView #p2Reserve::before {
+    content: "持駒";
+  }
+
+  #gameView #p1FragmentReserve::before,
+  #gameView #p2FragmentReserve::before {
+    content: "持ち展開図";
+  }
+
+  #gameView #p1Hand::before,
+  #gameView #p2Hand::before {
+    content: "手札";
+  }
+
+  #gameView .panel .action-list {
+    grid-area: actions;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  #gameView .panel .choice-card {
+    min-height: 54px;
+    padding: 8px 10px;
+  }
+
+  #gameView .panel .fragment-preview {
+    display: none;
+  }
+}
+
+@media (max-width: 1040px) {
+  #gameView .center {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas:
+      "board"
+      "log"
+      "history"
+      "movement"
+      "catalog"
+      "diagnostics" !important;
+  }
+
+  #gameView .board-card,
+  #gameView .action-log-card,
+  #gameView #historyCard {
+    width: min(100%, 760px);
+    justify-self: center;
+  }
+}
+
+@media (max-width: 760px) {
+  #gameView .layout {
+    max-width: calc(100vw - 12px);
+    grid-template-areas:
+      "opponent"
+      "board"
+      "self"
+      "history";
+  }
+
+  #gameView .scene-viewport {
+    width: 100%;
+    aspect-ratio: 9 / 12.2;
+  }
+
+  #gameView .panel {
+    max-height: 260px;
+    overflow: auto;
+  }
+}
+
+/* Keep kifu mini boards in the same player-facing direction as the main board. */
+.history-board.with-coordinates.player-oriented {
+  grid-template-columns: repeat(9, minmax(0, 1fr)) 1.5rem;
+  align-items: stretch;
+  gap: 2px;
+  padding: 10px;
+  border: 1px solid rgba(89, 82, 66, 0.18);
+  background:
+    radial-gradient(circle at 32% 18%, rgba(255, 255, 255, 0.72), transparent 32%),
+    linear-gradient(180deg, rgba(248, 244, 235, 0.96), rgba(230, 222, 208, 0.92)),
+    var(--marble-board);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.history-board.player-oriented .history-coordinate {
+  min-height: 1.15rem;
+  border-radius: 999px;
+  background: rgba(255, 248, 228, 0.84);
+  border: 1px solid rgba(88, 78, 56, 0.16);
+  color: rgba(54, 57, 60, 0.76);
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.history-board.player-oriented .history-coordinate-row {
+  color: rgba(37, 105, 94, 0.82);
+}
+
+.history-board.player-oriented .history-coordinate-col {
+  color: rgba(130, 88, 32, 0.82);
+}
+
+.history-board.player-oriented .history-cell {
+  min-height: 0;
+  border-radius: 5px;
+  border-color: rgba(82, 76, 62, 0.15);
+  background: rgba(248, 244, 235, 0.88);
+}
+
+.history-board.player-oriented .history-cell.p1 {
+  background: rgba(82, 179, 166, 0.44);
+  border-color: rgba(39, 122, 111, 0.26);
+}
+
+.history-board.player-oriented .history-cell.p2 {
+  background: rgba(220, 135, 110, 0.42);
+  border-color: rgba(159, 84, 61, 0.24);
+}
+
+.history-board.player-oriented .history-cell.base-center {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 250, 226, 0.82),
+    inset 0 0 0 3px rgba(65, 59, 46, 0.12);
+}
+
+.history-board.player-oriented .history-piece {
+  width: 1.25em;
+  height: 1.25em;
+  display: grid;
+  place-items: center;
+  border-radius: 0.45em;
+  background: rgba(255, 250, 238, 0.92);
+  border: 1px solid rgba(62, 56, 45, 0.24);
+  color: rgba(31, 33, 35, 0.88);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#gameView #historyBoard.history-board.player-oriented {
+  margin-top: 0;
+}
+
+.kifu-viewer-board.history-board.player-oriented {
+  width: min(100%, 520px);
+  margin-inline: auto;
+}
+
+/* Desktop match board fit: compact L-shaped player rail + large landscape board. */
+@media (min-width: 960px) {
+  body.has-3d-board #gameView:not([hidden]) {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100svh;
+    max-height: 100svh;
+    overflow: hidden;
+    padding: 8px clamp(8px, 1vw, 18px);
+  }
+
+  body.has-3d-board #gameView:not([hidden]) ~ .site-footer-note {
+    display: none !important;
+  }
+
+  #gameView .match-shell {
+    flex: 0 0 auto;
+    width: min(1500px, calc(100vw - 24px));
+    margin: 0 auto;
+    padding: 8px 12px;
+    border-radius: 20px;
+  }
+
+  #gameView .match-head {
+    align-items: center;
+    gap: 10px;
+  }
+
+  #gameView .match-head h2 {
+    margin: 0;
+    font-size: clamp(1.08rem, 1.5vw, 1.45rem);
+    line-height: 1.05;
+  }
+
+  #gameView .match-head .eyebrow {
+    margin: 0 0 1px;
+    font-size: 0.58rem;
+  }
+
+  #gameView .match-head .scene-note,
+  #gameView .compact-status {
+    display: none !important;
+  }
+
+  #gameView .match-actions {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  #gameView .match-actions button,
+  #gameView .match-actions .button-link,
+  #gameView .match-menu > summary {
+    min-height: 30px;
+    padding: 6px 11px;
+    white-space: nowrap;
+  }
+
+  #gameView .layout {
+    flex: 1 1 auto;
+    width: min(1500px, calc(100vw - 24px));
+    max-width: min(1500px, calc(100vw - 24px));
+    min-height: 0;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: clamp(220px, 22vw, 300px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "opponent board"
+      "self board";
+    gap: 10px;
+    align-items: stretch;
+    justify-items: stretch;
+    overflow: hidden;
+  }
+
+  #gameView .center {
+    grid-area: board;
+    width: 100%;
+    min-height: 0;
+    height: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) clamp(230px, 24vw, 330px) !important;
+    grid-template-rows: minmax(0, 118px) minmax(0, 1fr) !important;
+    grid-template-areas:
+      "board log"
+      "board history" !important;
+    gap: 10px;
+    align-items: stretch;
+    justify-content: stretch;
+    overflow: hidden;
+  }
+
+  #gameView .board-card {
+    grid-area: board;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    padding: 10px;
+    overflow: hidden;
+  }
+
+  #gameView .board-tools {
+    flex: 0 0 auto;
+    margin: 0;
+    gap: 6px;
+  }
+
+  #gameView .inline-guide {
+    min-height: 0;
+  }
+
+  #gameView .scene-control-guide {
+    flex: 0 0 auto;
+    margin: 0;
+    gap: 5px;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+
+  #gameView .scene-control-chip {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+
+  #gameView .scene-viewport {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+    max-height: 100%;
+    min-height: 0;
+    margin: auto;
+    aspect-ratio: 15 / 9;
+    border-color: rgba(91, 82, 65, 0.54);
+  }
+
+  #gameView .scene-viewport canvas {
+    filter: saturate(1.08) contrast(1.02) brightness(0.78);
+  }
+
+  #gameView .panel {
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name deck"
+      "reserve fragments"
+      "hand hand"
+      "actions actions";
+    gap: 7px;
+    padding: 12px;
+  }
+
+  #gameView .panel h2 {
+    grid-area: name;
+    margin: 0;
+    font-size: clamp(1.08rem, 1.35vw, 1.34rem);
+  }
+
+  #gameView .panel > p.subtle {
+    display: none;
+  }
+
+  #gameView #p1DeckCount,
+  #gameView #p2DeckCount {
+    grid-area: deck;
+    justify-self: end;
+    align-self: center;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  #gameView #p1Reserve,
+  #gameView #p2Reserve {
+    grid-area: reserve;
+  }
+
+  #gameView #p1FragmentReserve,
+  #gameView #p2FragmentReserve {
+    grid-area: fragments;
+  }
+
+  #gameView #p1Hand,
+  #gameView #p2Hand {
+    grid-area: hand;
+  }
+
+  #gameView .panel .list {
+    min-height: 0;
+    overflow: auto;
+    align-content: start;
+    gap: 6px;
+  }
+
+  #gameView #p1Reserve,
+  #gameView #p2Reserve,
+  #gameView #p1FragmentReserve,
+  #gameView #p2FragmentReserve {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: 92px;
+  }
+
+  #gameView #p1Hand,
+  #gameView #p2Hand {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #gameView .panel .list::before {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: 0.64rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  #gameView #p1Reserve::before,
+  #gameView #p2Reserve::before {
+    content: "持駒";
+  }
+
+  #gameView #p1FragmentReserve::before,
+  #gameView #p2FragmentReserve::before {
+    content: "持ち展開図";
+  }
+
+  #gameView #p1Hand::before,
+  #gameView #p2Hand::before {
+    content: "手札";
+  }
+
+  #gameView .panel .choice-card {
+    min-height: 48px;
+    padding: 7px 9px;
+  }
+
+  #gameView .panel .choice-card strong {
+    font-size: 0.88rem;
+  }
+
+  #gameView .choice-subtitle,
+  #gameView .choice-count {
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+
+  #gameView .panel .fragment-preview {
+    display: none;
+  }
+
+  #gameView .panel .action-list {
+    grid-area: actions;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  #gameView .panel .action-list button {
+    min-height: 34px;
+    padding: 6px 8px;
+  }
+
+  #gameView .action-log-card {
+    grid-area: log;
+    width: 100%;
+    max-height: none;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px;
+  }
+
+  #gameView #historyCard {
+    grid-area: history;
+    width: 100%;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "head"
+      "tools"
+      "title"
+      "board"
+      "list";
+    gap: 7px;
+    padding: 12px;
+  }
+
+  #gameView #historyCard[hidden] {
+    display: none !important;
+  }
+
+  #gameView #historyCard .history-tools {
+    justify-content: flex-end;
+    margin: 0;
+  }
+
+  #gameView #historyBoard {
+    min-height: 0;
+    max-height: min(36vh, 340px);
+    overflow: hidden;
+  }
+
+  #gameView #historyList {
+    min-height: 0;
+    max-height: none;
+    overflow: auto;
+  }
+
+  #gameView .movement-summary-card,
+  #gameView .fragment-catalog-card,
+  #gameView .diagnostics-card {
+    display: none;
+  }
+}
+
+@media (min-width: 960px) and (max-width: 1180px) {
+  #gameView .layout {
+    grid-template-columns: clamp(205px, 23vw, 250px) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  #gameView .center {
+    grid-template-columns: minmax(0, 1fr) clamp(210px, 24vw, 270px) !important;
+    gap: 8px;
+  }
+
+  #gameView .panel {
+    padding: 10px;
+  }
+
+  #gameView #p1Reserve,
+  #gameView #p2Reserve,
+  #gameView #p1FragmentReserve,
+  #gameView #p2FragmentReserve {
+    max-height: 76px;
+  }
+}
+
+/* Final match fit: hands stay above/below; log and kifu stay to the board's right without clipping. */
+@media (min-width: 960px) {
+  body.has-3d-board #gameView:not([hidden]) {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #gameView .layout {
+    width: min(1460px, calc(100vw - 32px));
+    max-width: min(1460px, calc(100vw - 32px));
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(96px, auto) minmax(0, 1fr) minmax(96px, auto) !important;
+    grid-template-areas:
+      "opponent"
+      "board"
+      "self" !important;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  #gameView .center {
+    grid-area: board;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr) clamp(220px, 25vw, 320px) !important;
+    grid-template-rows: minmax(86px, 122px) minmax(0, 1fr) !important;
+    grid-template-areas:
+      "board log"
+      "board history" !important;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  #gameView .board-card,
+  #gameView .action-log-card,
+  #gameView #historyCard {
+    min-width: 0;
+  }
+
+  #gameView .panel {
+    height: auto;
+    max-height: clamp(104px, 18vh, 154px);
+    grid-template-columns: minmax(112px, 160px) minmax(92px, 150px) minmax(112px, 176px) minmax(0, 1fr) minmax(208px, 282px);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "name reserve fragments hand actions"
+      "deck reserve fragments hand actions";
+    align-items: start;
+    overflow: hidden;
+  }
+
+  #gameView .panel h2 {
+    align-self: start;
+  }
+
+  #gameView #p1DeckCount,
+  #gameView #p2DeckCount {
+    justify-self: start;
+    align-self: end;
+  }
+
+  #gameView #p1Reserve,
+  #gameView #p2Reserve,
+  #gameView #p1FragmentReserve,
+  #gameView #p2FragmentReserve {
+    max-height: 86px;
+    grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+  }
+
+  #gameView #p1Hand,
+  #gameView #p2Hand {
+    max-height: 92px;
+    grid-template-columns: repeat(3, minmax(92px, 1fr));
+  }
+
+  #gameView .panel .action-list {
+    align-self: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #gameView .action-log-card {
+    grid-area: log;
+    max-height: none;
+    overflow: auto;
+  }
+
+  #gameView #historyCard {
+    grid-area: history;
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 960px) and (max-width: 1180px) {
+  #gameView .layout {
+    width: min(100%, calc(100vw - 24px));
+    max-width: min(100%, calc(100vw - 24px));
+  }
+
+  #gameView .center {
+    grid-template-columns: minmax(0, 1fr) minmax(210px, 250px) !important;
+    grid-template-rows: minmax(78px, 110px) minmax(0, 1fr) !important;
+  }
+
+  #gameView .panel {
+    grid-template-columns: minmax(92px, 128px) minmax(78px, 124px) minmax(90px, 140px) minmax(0, 1fr) minmax(178px, 230px);
+    max-height: clamp(98px, 17vh, 132px);
+    padding: 9px;
+    gap: 6px;
+  }
+
+  #gameView #p1Hand,
+  #gameView #p2Hand {
+    grid-template-columns: repeat(3, minmax(78px, 1fr));
+  }
+}
+
+/* Viewport overflow guard: inner match blocks must fit the padded game view. */
+@media (min-width: 960px) {
+  body.has-3d-board #gameView:not([hidden]) {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    padding-inline: clamp(6px, 1vw, 14px);
+  }
+
+  #gameView .match-shell,
+  #gameView .layout {
+    width: 100%;
+    max-width: min(1460px, 100%);
+    box-sizing: border-box;
+  }
+
+  #gameView .match-actions {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  #gameView .center,
+  #gameView .panel,
+  #gameView .board-card,
+  #gameView .action-log-card,
+  #gameView #historyCard {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (min-width: 960px) and (max-width: 1180px) {
+  #gameView .center {
+    grid-template-columns: minmax(0, 1fr) minmax(188px, 228px) !important;
+  }
+
+  #gameView .panel {
+    grid-template-columns:
+      minmax(82px, 116px)
+      minmax(68px, 104px)
+      minmax(78px, 116px)
+      minmax(0, 1fr)
+      minmax(142px, 184px);
+  }
+
+  #gameView #p1Hand,
+  #gameView #p2Hand {
+    grid-template-columns: repeat(3, minmax(66px, 1fr));
+  }
+}
+
+/* Match UI cleanup: keep the screen compact, with references and menus in predictable places. */
+#practiceModeBtn {
+  display: none !important;
+}
+
+#gameView #historyBoard {
+  display: none !important;
+}
+
+#gameView #historyCard {
+  grid-template-rows: auto auto auto minmax(0, 1fr) !important;
+}
+
+#gameView .winner-overlay {
+  pointer-events: auto;
+}
+
+#gameView .winner-restart-button {
+  margin-top: 14px;
+  min-width: min(260px, 72vw);
+  border-color: rgba(255, 255, 255, 0.56);
+  background: rgba(255, 255, 255, 0.94);
+  color: rgba(28, 31, 34, 0.92);
+  font-weight: 900;
+}
+
+#gameView .winner-restart-button[hidden] {
+  display: none !important;
+}
+
+#gameView .match-menu {
+  display: block;
+  min-width: 0;
+}
+
+#gameView .match-menu > summary {
+  display: none !important;
+}
+
+#gameView .match-menu-panel {
+  position: static !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: min(100%, 620px) !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#gameView .match-menu-panel > * {
+  width: 100%;
+  justify-content: center;
+}
+
+#summaryReferenceBtn {
+  min-width: max-content;
+}
+
+.reference-popup-body.reference-popup-body-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.reference-popup-column > .card,
+.reference-popup-column > details {
+  height: 100%;
+  margin: 0;
+}
+
+.reference-popup-column .summary-list,
+.reference-popup-column .catalog-list {
+  max-height: min(68vh, 620px);
+  overflow: auto;
+}
+
+.piece-notation-control,
+.board-display-control {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.piece-notation-control select,
+.board-display-control select {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 12px;
+}
+
+body.board-display-2d #sceneViewport {
+  display: none !important;
+}
+
+body.board-display-2d #gameView .board {
+  display: grid !important;
+  width: min(100%, 680px);
+  aspect-ratio: 9 / 15;
+  margin: 0 auto;
+}
+
+body.board-display-3d #gameView .board {
+  display: none !important;
+}
+
+@media (min-width: 960px) {
+  body.has-3d-board #gameView:not([hidden]) {
+    overflow: hidden;
+  }
+
+  #gameView .match-actions {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(94px, max-content));
+    justify-content: end;
+    align-items: center;
+    gap: 6px;
+    overflow: visible;
+  }
+
+  #gameView .match-menu {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+
+  #gameView .layout {
+    width: min(1520px, calc(100vw - 24px));
+    max-width: min(1520px, calc(100vw - 24px));
+    grid-template-rows: minmax(96px, 17vh) minmax(0, 1fr) minmax(96px, 17vh) !important;
+    gap: 7px;
+  }
+
+  #gameView .center {
+    grid-template-columns: minmax(640px, 1fr) clamp(250px, 24vw, 360px) !important;
+    grid-template-rows: minmax(82px, 118px) minmax(0, 1fr) !important;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  #gameView .board-card {
+    padding: 8px;
+    gap: 4px;
+  }
+
+  #gameView .board-tools {
+    gap: 6px;
+  }
+
+  #gameView .scene-control-guide {
+    gap: 4px;
+  }
+
+  #gameView .scene-viewport {
+    width: 100%;
+    max-width: none;
+    aspect-ratio: 15 / 9.05;
+    border-radius: 20px;
+  }
+
+  #gameView .scene-viewport canvas {
+    filter: saturate(1.08) contrast(1.02) brightness(0.82) !important;
+  }
+
+  #gameView .action-log-card {
+    max-height: 118px;
+  }
+
+  #gameView #historyCard {
+    min-height: 0;
+  }
+
+  #gameView #historyList {
+    max-height: 100%;
+    overflow: auto;
+  }
+
+  #gameView .panel {
+    max-height: none;
+    height: 100%;
+    grid-template-columns:
+      minmax(116px, 160px)
+      minmax(92px, 140px)
+      minmax(104px, 156px)
+      minmax(0, 1fr)
+      minmax(210px, 278px);
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 10px 12px;
+    gap: 7px;
+  }
+
+  #gameView .panel .list {
+    overflow: hidden;
+  }
+
+  #gameView #p1Hand,
+  #gameView #p2Hand {
+    max-height: none;
+    overflow: hidden;
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
+    align-content: start;
+  }
+
+  #gameView #p1Reserve,
+  #gameView #p2Reserve,
+  #gameView #p1FragmentReserve,
+  #gameView #p2FragmentReserve {
+    max-height: none;
+    overflow: hidden;
+  }
+
+  #gameView .panel .choice-card {
+    min-height: 48px;
+    padding: 7px 9px;
+  }
+
+  #gameView .choice-card strong {
+    font-size: 0.82rem;
+  }
+
+  #gameView .choice-subtitle,
+  #gameView .choice-count {
+    font-size: 0.66rem;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 760px) {
+  .reference-popup-body.reference-popup-body-split {
+    grid-template-columns: 1fr;
+  }
+
+  #gameView .match-menu-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100% !important;
+  }
 }

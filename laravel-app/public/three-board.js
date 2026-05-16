@@ -13,7 +13,9 @@
 
   var BOARD_ROWS = api.boardRows;
   var BOARD_COLS = api.boardCols;
+  var BOARD_ROW_LABELS = ["\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d", "\u4e03", "\u516b", "\u4e5d"];
   var CELL_SIZE = 1;
+  var COORDINATE_OUTSET = 1.95;
   var BASE_HEIGHT = 0.025;
   var ZONE_HEIGHT = 0;
   var CENTER_HEIGHT = 0;
@@ -43,7 +45,9 @@
     animations: [],
     pieceAnimations: new Map(),
     hiddenPlacementIds: {},
-    labelsEnabled: true,
+    labelsEnabled: false,
+    coordinateOverlay: null,
+    coordinateLabels: { rows: [], cols: [] },
     orbit: {
       yaw: DEFAULT_CAMERA_ORBIT.yaw,
       pitch: DEFAULT_CAMERA_ORBIT.pitch,
@@ -75,17 +79,7 @@
   }
 
   function getBoardViewMode() {
-    var width = viewport.clientWidth || window.innerWidth || 0;
-    var height = viewport.clientHeight || 0;
-    var aspect;
-    if (!height && width) {
-      height = Math.round(width / 1.62);
-    }
-    if (!width || !height) {
-      return window.innerWidth >= 980 ? "landscape" : "player";
-    }
-    aspect = width / height;
-    return window.innerWidth >= 980 && aspect >= 1.34 ? "landscape" : "player";
+    return "player";
   }
 
   function getDefaultViewHeight(viewMode) {
@@ -177,11 +171,21 @@
     return getCellHeight(cell);
   }
 
+  function getCellTerritoryLayerCount(cell) {
+    if (!cell) {
+      return 0;
+    }
+    if (cell.stack && cell.stack.length) {
+      return cell.stack.length;
+    }
+    return cell.controller ? 1 : 0;
+  }
+
   function getCellHeight(cell) {
     return BASE_HEIGHT +
       (cell.baseOwner ? ZONE_HEIGHT : 0) +
       (cell.isBaseCenter ? CENTER_HEIGHT : 0) +
-      ((cell.stack ? cell.stack.length : 0) * STACK_HEIGHT);
+      (getCellTerritoryLayerCount(cell) * STACK_HEIGHT);
   }
 
   function projectBoardCell(row, col, yOffset) {
@@ -212,28 +216,92 @@
     };
   }
 
+  function ensureCoordinateOverlay() {
+    var row;
+    var col;
+    var label;
+    if (sceneData.coordinateOverlay) {
+      return sceneData.coordinateOverlay;
+    }
+    sceneData.coordinateOverlay = document.createElement("div");
+    sceneData.coordinateOverlay.className = "board-coordinate-overlay";
+    viewport.appendChild(sceneData.coordinateOverlay);
+    for (col = 0; col < BOARD_COLS; col += 1) {
+      label = document.createElement("span");
+      label.className = "board-coordinate-label col";
+      label.textContent = String(col + 1);
+      sceneData.coordinateOverlay.appendChild(label);
+      sceneData.coordinateLabels.cols.push(label);
+    }
+    for (row = 0; row < BOARD_ROWS; row += 1) {
+      label = document.createElement("span");
+      label.className = "board-coordinate-label row";
+      label.textContent = BOARD_ROW_LABELS[row] || String(row + 1);
+      sceneData.coordinateOverlay.appendChild(label);
+      sceneData.coordinateLabels.rows.push(label);
+    }
+    return sceneData.coordinateOverlay;
+  }
+
+  function placeCoordinateLabel(label, projection, offsetX, offsetY) {
+    if (!label || !projection || projection.visible === false) {
+      if (label) {
+        label.hidden = true;
+      }
+      return;
+    }
+    label.hidden = false;
+    label.style.left = (projection.x + offsetX) + "px";
+    label.style.top = (projection.y + offsetY) + "px";
+  }
+
+  function updateCoordinateLabels() {
+    var row;
+    var col;
+    var colProjection;
+    var rowProjection;
+    var viewerSide;
+    var colLabelRow;
+    var rowLabelCol;
+    if (!sceneData.camera || !sceneData.renderer) {
+      return;
+    }
+    ensureCoordinateOverlay();
+    viewerSide = getViewerSide();
+    colLabelRow = viewerSide === "P2" ? -COORDINATE_OUTSET : BOARD_ROWS - 1 + COORDINATE_OUTSET;
+    rowLabelCol = viewerSide === "P2" ? BOARD_COLS - 1 + COORDINATE_OUTSET : -COORDINATE_OUTSET;
+    for (col = 0; col < BOARD_COLS; col += 1) {
+      colProjection = projectBoardCell(colLabelRow, col, 0.34);
+      placeCoordinateLabel(sceneData.coordinateLabels.cols[col], colProjection, 0, 0);
+    }
+    for (row = 0; row < BOARD_ROWS; row += 1) {
+      rowProjection = projectBoardCell(row, rowLabelCol, 0.34);
+      placeCoordinateLabel(sceneData.coordinateLabels.rows[row], rowProjection, 0, 0);
+    }
+  }
+
   function getOwnerColor(owner) {
     if (owner === "P1") {
-      return 0x6baea7;
+      return 0x4fbfad;
     }
     if (owner === "P2") {
-      return 0xbc8278;
+      return 0xe08a68;
     }
-    return 0xf1eee6;
+    return 0xdfc79a;
   }
 
   function getSideColor(owner) {
     if (owner === "P1") {
-      return 0x2d625d;
+      return 0x318f82;
     }
     if (owner === "P2") {
-      return 0x6c4641;
+      return 0xbc624a;
     }
-    return 0xb9b7b0;
+    return 0xae8b56;
   }
 
   function getPreviewColor(player) {
-    return player === "P1" ? 0x6baea7 : 0xbc8278;
+    return getOwnerColor(player);
   }
 
   var stoneTextureCache = {};
@@ -360,16 +428,20 @@
     } else if ("outputEncoding" in renderer) {
       renderer.outputEncoding = THREE.sRGBEncoding;
     }
+    if ("toneMapping" in renderer) {
+      renderer.toneMapping = THREE.LinearToneMapping || THREE.NoToneMapping || THREE.ReinhardToneMapping;
+      renderer.toneMappingExposure = 0.84;
+    }
 
     viewport.appendChild(renderer.domElement);
     document.body.classList.add("has-3d-board");
     document.body.classList.add("has-flat-board");
 
-    scene.add(new THREE.AmbientLight(0xf8f6ef, 0.58));
-    var hemi = new THREE.HemisphereLight(0xf7f5ef, 0x343a42, 0.34);
+    scene.add(new THREE.AmbientLight(0xf8f6ef, 0.52));
+    var hemi = new THREE.HemisphereLight(0xf7f5ef, 0x343a42, 0.3);
     scene.add(hemi);
 
-    var dir = new THREE.DirectionalLight(0xfffcf2, 0.62);
+    var dir = new THREE.DirectionalLight(0xfffcf2, 0.56);
     dir.position.set(6, 13, 4);
     dir.castShadow = true;
     dir.shadow.mapSize.width = 1024;
@@ -378,10 +450,10 @@
 
     var table = new THREE.Mesh(
       new THREE.CylinderGeometry(12.6, 13.6, 0.24, 64),
-      createGeneratedStoneMaterial("obsidian-table", "#191e24", "rgba(255, 255, 255, 0.16)", {
-        color: 0x20262d,
-        roughness: 0.68,
-        metalness: 0.18
+      createGeneratedStoneMaterial("obsidian-table-warm", "#3f3c35", "rgba(255, 248, 230, 0.18)", {
+        color: 0x5f5a50,
+        roughness: 0.76,
+        metalness: 0.12
       })
     );
     table.position.y = -0.32;
@@ -390,10 +462,10 @@
 
     var blackFrame = new THREE.Mesh(
       new THREE.BoxGeometry(BOARD_COLS * 1.14, 0.08, BOARD_ROWS * 1.12),
-      createGeneratedStoneMaterial("obsidian-board-frame", "#181d23", "rgba(255, 255, 255, 0.2)", {
-        color: 0x1d232a,
-        roughness: 0.58,
-        metalness: 0.22
+      createGeneratedStoneMaterial("obsidian-board-frame-warm", "#47433c", "rgba(255, 248, 230, 0.18)", {
+        color: 0x6a6257,
+        roughness: 0.74,
+        metalness: 0.14
       })
     );
     blackFrame.position.y = -0.13;
@@ -423,12 +495,12 @@
   function createBoardGridLines() {
     var group = new THREE.Group();
     var material = new THREE.MeshBasicMaterial({
-      color: 0x9b9487,
+      color: 0x6f5130,
       transparent: true,
-      opacity: 0.62,
+      opacity: 0.68,
       depthWrite: false
     });
-    var lineWidth = 0.018;
+    var lineWidth = 0.014;
     var lineHeight = 0.008;
     var topY = BASE_HEIGHT + 0.012;
     var i;
@@ -482,6 +554,7 @@
         base.castShadow = false;
         base.receiveShadow = true;
         base.userData = { row: row, col: col };
+        base.userData.defaultMap = base.material.map;
         group.add(base);
 
         var ring = new THREE.Mesh(
@@ -511,11 +584,14 @@
   function updateCellVisual(row, col, cell, uiState) {
     var visual = sceneData.cells[row][col];
     var visiblePlacementIds = getVisiblePlacementIds(cell);
-    var stackCount = visiblePlacementIds.length;
+    var hasBuiltInTerritoryLayer = !visiblePlacementIds.length && !!cell.controller;
+    var stackCount = visiblePlacementIds.length + (hasBuiltInTerritoryLayer ? 1 : 0);
     var baseHeight = BASE_HEIGHT;
     visual.base.scale.y = 1;
     visual.base.position.y = baseHeight / 2;
-    visual.base.material.color.setHex(getOwnerColor(cell.controller || cell.baseOwner || null));
+    visual.base.material.map = visual.base.userData.defaultMap;
+    visual.base.material.color.setHex(getOwnerColor(null));
+    visual.base.material.needsUpdate = true;
     visual.base.material.emissive.setHex(0x000000);
     visual.base.material.emissiveIntensity = 0;
 
@@ -543,17 +619,17 @@
       visual.group.remove(visual.layers.pop());
     }
     while (visual.layers.length < stackCount) {
-      var nextPlacementId = visiblePlacementIds[visual.layers.length];
+      var nextPlacementId = hasBuiltInTerritoryLayer ? null : visiblePlacementIds[visual.layers.length];
       var nextPlacement = nextPlacementId ? api.getPlacementById(nextPlacementId) : null;
       var nextOwner = nextPlacement ? nextPlacement.owner : null;
-      var layer = createCellLayerMesh(nextOwner || cell.controller || cell.baseOwner || null);
+      var layer = createCellLayerMesh(nextOwner || cell.controller || null);
       visual.layers.push(layer);
       visual.group.add(layer);
     }
 
     for (var index = 0; index < visual.layers.length; index += 1) {
-      var placement = api.getPlacementById(visiblePlacementIds[index]);
-      var owner = placement ? placement.owner : null;
+      var placement = hasBuiltInTerritoryLayer ? null : api.getPlacementById(visiblePlacementIds[index]);
+      var owner = hasBuiltInTerritoryLayer ? cell.controller : (placement ? placement.owner : null);
       var layerMesh = visual.layers[index];
       var insetScale = Math.max(0.82, 1 - index * 0.06);
       for (var matIndex = 0; matIndex < layerMesh.material.length; matIndex += 1) {
@@ -567,9 +643,9 @@
     visual.ring.visible = !!cell.isBaseCenter;
     visual.ring.position.y = getCellTopY(cell) + 0.03;
     if (cell.baseOwner === "P1") {
-      visual.ring.material.color.setHex(0x2d625d);
+      visual.ring.material.color.setHex(0x5f8f87);
     } else if (cell.baseOwner === "P2") {
-      visual.ring.material.color.setHex(0x6c4641);
+      visual.ring.material.color.setHex(0x986b66);
     } else {
       visual.ring.material.color.setHex(0xbda76a);
     }
@@ -584,22 +660,23 @@
     }
     var canvas = document.createElement("canvas");
     var chars = Array.from(text).slice(0, 3);
-    canvas.width = 192;
-    canvas.height = 320;
+    canvas.width = 256;
+    canvas.height = 384;
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "bold 96px 'Yu Gothic UI', sans-serif";
+    ctx.font = "bold 104px 'Yu Gothic UI', 'Segoe UI', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.lineWidth = 12;
+    ctx.lineWidth = 13;
     ctx.strokeStyle = owner === "P1" ? "rgba(12, 42, 37, 0.9)" : "rgba(66, 26, 16, 0.9)";
     ctx.fillStyle = owner === "P1" ? "#f3fffb" : "#fff7f1";
     chars.forEach(function (char, index) {
-      var y = 64 + index * 98;
+      var y = 78 + index * 114;
       ctx.strokeText(char, canvas.width / 2, y);
       ctx.fillText(char, canvas.width / 2, y);
     });
     var texture = new THREE.CanvasTexture(canvas);
+    texture.anisotropy = 4;
     sceneData.pieceLabels.set(key, texture);
     return texture;
   }
@@ -610,16 +687,24 @@
       return sceneData.pieceLabels.get(key);
     }
     var canvas = document.createElement("canvas");
-    canvas.width = 128;
-    canvas.height = 128;
-    var ctx = canvas.getContext("2d");
+    var label = String(text || "").slice(0, 3);
+    var fontSize = label.length >= 3 ? 72 : (label.length === 2 ? 92 : 126);
+    var ctx;
+    canvas.width = 256;
+    canvas.height = 256;
+    ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = "bold 82px 'Yu Gothic UI', sans-serif";
+    ctx.font = "bold " + fontSize + "px 'Yu Gothic UI', 'Segoe UI', sans-serif";
+    while (ctx.measureText(label).width > 218 && fontSize > 42) {
+      fontSize -= 4;
+      ctx.font = "bold " + fontSize + "px 'Yu Gothic UI', 'Segoe UI', sans-serif";
+    }
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "#111111";
-    ctx.fillText(text, canvas.width / 2, 70);
+    ctx.fillText(label, canvas.width / 2, canvas.height / 2 + 4);
     var texture = new THREE.CanvasTexture(canvas);
+    texture.anisotropy = 4;
     sceneData.pieceLabels.set(key, texture);
     return texture;
   }
@@ -713,9 +798,9 @@
     var body = new THREE.Mesh(
       new THREE.CylinderGeometry(0.4, 0.4, 0.2, 6),
       new THREE.MeshStandardMaterial({
-        color: piece.owner === "P1" ? 0xb7d3cf : 0xd4aaa2,
-        emissive: piece.owner === "P1" ? 0x102d29 : 0x35201d,
-        emissiveIntensity: 0.035,
+        color: piece.owner === "P1" ? 0xcce2de : 0xe4c0ba,
+        emissive: piece.owner === "P1" ? 0x182e2b : 0x362521,
+        emissiveIntensity: 0.025,
         roughness: 0.66,
         metalness: 0.04
       })
@@ -726,7 +811,7 @@
     body.position.y = 0.11;
 
     var top = new THREE.Mesh(
-      new THREE.CircleGeometry(0.29, 28),
+      new THREE.CircleGeometry(0.35, 32),
       new THREE.MeshBasicMaterial({ transparent: true })
     );
     top.rotation.x = -Math.PI / 2;
@@ -739,8 +824,8 @@
         depthWrite: false
       })
     );
-    raisedLabel.position.set(0, 0.74, 0);
-    raisedLabel.scale.set(0.7, 1.05, 1.05);
+    raisedLabel.position.set(0, 0.86, 0);
+    raisedLabel.scale.set(0.82, 1.24, 1.24);
 
     group.add(body);
     group.add(top);
@@ -837,12 +922,38 @@
         sceneData.animations = sceneData.animations.filter(function (animation) {
           var elapsed = now - animation.startTime;
           var overall = Math.max(0, Math.min(1, elapsed / animation.duration));
-          var easedDrop = overall < 0.72
-            ? easeInCubic(overall / 0.72) * 0.56
-            : 0.56 + easeOutCubic((overall - 0.72) / 0.28) * 0.44;
-          animation.group.position.y = animation.startY + (animation.endY - animation.startY) * easedDrop;
+          var dropProgress = Math.max(0, Math.min(1, elapsed / animation.dropDuration));
+          var impactProgress = Math.max(0, Math.min(1, (elapsed - animation.dropDuration) / animation.impactDuration));
+          var unfoldElapsed = elapsed - animation.unfoldDelay;
+          var boxOpacity = 1;
+          if (elapsed < animation.dropDuration) {
+            animation.group.position.y = animation.startY + (animation.dropY - animation.startY) * easeInCubic(dropProgress);
+            if (animation.boxGroup) {
+              animation.boxGroup.visible = true;
+              animation.boxGroup.scale.set(1, 1, 1);
+              setObjectOpacity(animation.boxGroup, 1);
+            }
+            if (animation.netGroup) {
+              animation.netGroup.visible = false;
+            }
+          } else {
+            animation.group.position.y = animation.dropY + Math.sin(impactProgress * Math.PI) * 0.055 * (1 - impactProgress);
+            if (animation.boxGroup) {
+              boxOpacity = 1 - impactProgress;
+              animation.boxGroup.visible = boxOpacity > 0.04;
+              animation.boxGroup.scale.set(
+                1 + Math.sin(impactProgress * Math.PI) * 0.08,
+                Math.max(0.78, 1 - Math.sin(impactProgress * Math.PI) * 0.2),
+                1 + Math.sin(impactProgress * Math.PI) * 0.08
+              );
+              setObjectOpacity(animation.boxGroup, Math.max(0, boxOpacity));
+            }
+            if (animation.netGroup) {
+              animation.netGroup.visible = elapsed >= animation.unfoldDelay - 40;
+            }
+          }
           animation.faces.forEach(function (face) {
-            var local = Math.max(0, Math.min(1, (elapsed - face.delay) / face.duration));
+            var local = Math.max(0, Math.min(1, (unfoldElapsed - face.delay) / face.duration));
             var eased = local < 0.74
               ? easeInOutCubic(local / 0.74) * 0.64
               : 0.64 + easeOutCubic((local - 0.74) / 0.26) * 0.36;
@@ -898,11 +1009,27 @@
     });
   }
 
+  function setObjectOpacity(object, opacity) {
+    object.traverse(function (child) {
+      var materials;
+      if (!child.material) {
+        return;
+      }
+      materials = Array.isArray(child.material) ? child.material : [child.material];
+      materials.forEach(function (material) {
+        material.transparent = opacity < 1;
+        material.opacity = opacity;
+        material.needsUpdate = true;
+      });
+    });
+  }
+
   function startFragmentUnfoldAnimation(owner, cells, fragmentType, placementId) {
     var animation = buildFragmentAnimation(owner, cells, fragmentType, placementId);
     sceneData.hiddenPlacementIds[placementId] = true;
     sceneData.animations.push(animation);
     sceneData.scene.add(animation.group);
+    return animation.duration;
   }
 
   function buildFragmentAnimation(owner, cells, fragmentType, placementId) {
@@ -915,26 +1042,73 @@
     var rootWorld = boardToWorld(rootCell.row, rootCell.col);
     var rootTop = getCellTopY(api.getState().board[rootCell.row][rootCell.col]);
     var group = new THREE.Group();
-    group.position.set(rootWorld.x, rootTop + 1.15, rootWorld.z);
+    var netGroup = new THREE.Group();
+    var boxGroup = createFallingFragmentBox(owner);
+    group.position.set(rootWorld.x, rootTop + 1.82, rootWorld.z);
+    group.add(netGroup);
+    group.add(boxGroup);
+    netGroup.visible = false;
 
     var rootFace = new THREE.Object3D();
-    group.add(rootFace);
+    netGroup.add(rootFace);
     rootFace.add(createFragmentFace(owner, rootIndex === 0));
 
     var faces = [];
     buildAnimationChildren(tree, rootIndex, rootFace, faces, owner);
+    var duration = faces.reduce(function (maxDuration, face) {
+      return Math.max(maxDuration, face.delay + face.duration);
+    }, 0) + 260;
 
       return {
         placementId: placementId,
         group: group,
+        boxGroup: boxGroup,
+        netGroup: netGroup,
         faces: faces,
         startTime: performance.now(),
-        duration: 2260,
-        startY: rootTop + 1.15,
+        duration: 1020 + Math.max(2260, duration),
+        startY: rootTop + 1.82,
+        dropY: rootTop + STACK_HEIGHT / 2,
         endY: rootTop + STACK_HEIGHT / 2,
+        dropDuration: 760,
+        impactDuration: 260,
+        unfoldDelay: 1020,
         rootRow: rootCell.row,
         rootCol: rootCell.col
       };
+  }
+
+  function createFallingFragmentBox(owner) {
+    var topColor = owner === "P1" ? 0x86b8b1 : 0xc58d84;
+    var sideColor = owner === "P1" ? 0x4f766f : 0x7b5552;
+    var edgeColor = owner === "P1" ? 0xd9efea : 0xf0d9d1;
+    var group = new THREE.Group();
+    var bodyMaterials = [
+      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 0.76, metalness: 0.04 }),
+      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 0.76, metalness: 0.04 }),
+      new THREE.MeshStandardMaterial({ color: topColor, roughness: 0.62, metalness: 0.05 }),
+      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 0.82, metalness: 0.02 }),
+      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 0.76, metalness: 0.04 }),
+      new THREE.MeshStandardMaterial({ color: sideColor, roughness: 0.76, metalness: 0.04 })
+    ];
+    var body = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.68, 0.82), bodyMaterials);
+    var lidLineA = new THREE.Mesh(
+      new THREE.BoxGeometry(0.86, 0.022, 0.048),
+      new THREE.MeshStandardMaterial({ color: edgeColor, roughness: 0.48, metalness: 0.12 })
+    );
+    var lidLineB = new THREE.Mesh(
+      new THREE.BoxGeometry(0.048, 0.024, 0.86),
+      new THREE.MeshStandardMaterial({ color: edgeColor, roughness: 0.48, metalness: 0.12 })
+    );
+    body.position.y = 0.34;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    group.add(body);
+    lidLineA.position.y = 0.704;
+    lidLineB.position.y = 0.708;
+    group.add(lidLineA);
+    group.add(lidLineB);
+    return group;
   }
 
   function buildAnimationChildren(tree, nodeIndex, parentFrame, faces, owner) {
@@ -964,8 +1138,8 @@
   }
 
   function createFragmentFace(owner, highlightRoot) {
-    var topColor = owner === "P1" ? 0x5e9992 : 0xa66a61;
-    var sideColor = owner === "P1" ? 0x3a6560 : 0x6e463f;
+    var topColor = owner === "P1" ? 0x86b8b1 : 0xc58d84;
+    var sideColor = owner === "P1" ? 0x5f8f87 : 0x986b66;
     var group = new THREE.Group();
     var body = new THREE.Mesh(
       new THREE.BoxGeometry(0.92, STACK_HEIGHT, 0.92),
@@ -1119,7 +1293,7 @@
 
   function isSelectedPieceCell(uiState, row, col) {
     var piece;
-    if (!(uiState && uiState.selection && uiState.selection.type === "piece")) {
+    if (!(uiState && uiState.selection && (uiState.selection.type === "piece" || uiState.selection.type === "piecePreview"))) {
       return false;
     }
     piece = api.getPieceById(uiState.selection.pieceId);
@@ -1186,7 +1360,14 @@
     var cell = state.board[row][col];
     var mesh = new THREE.Mesh(
       new THREE.BoxGeometry(0.92, 0.08, 0.92),
-      new THREE.MeshStandardMaterial({ color: color, transparent: true, opacity: 0.38 })
+      new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 0.18,
+        transparent: true,
+        opacity: 0.62,
+        roughness: 0.36
+      })
     );
     mesh.position.set(world.x, getCellTopY(cell) + 0.06, world.z);
     return mesh;
@@ -1326,6 +1507,7 @@
     }
     renderPieces(state);
     renderMarkers(state, uiState);
+    updateCoordinateLabels();
   }
 
   function resizeRenderer() {
@@ -1341,6 +1523,7 @@
     sceneData.camera.bottom = -viewHeight / 2;
     sceneData.camera.updateProjectionMatrix();
     syncReviewOverlay();
+    updateCoordinateLabels();
   }
 
   function updateCameraPosition() {
@@ -1348,13 +1531,14 @@
     var side = getViewerSide();
     var viewMode = sceneData.orbit.viewMode || getBoardViewMode();
     if (viewMode === "landscape") {
-      sceneData.camera.up.set(0, 0, side === "P2" ? 1 : -1);
+      sceneData.camera.up.set(0, 0, side === "P2" ? -1 : 1);
     } else {
       sceneData.camera.up.set(side === "P2" ? -1 : 1, 0, 0);
     }
     sceneData.camera.position.set(orbit.targetX, orbit.distance, orbit.targetZ);
     sceneData.camera.lookAt(orbit.targetX, 0, orbit.targetZ);
     syncReviewOverlay();
+    updateCoordinateLabels();
   }
 
   function panCameraByScreenDelta(dx, dy) {
@@ -1442,8 +1626,16 @@
 
   function onSceneContextMenu(event) {
     event.preventDefault();
+    if (typeof api.hasPendingFragmentPiece === "function" && api.hasPendingFragmentPiece()) {
+      return;
+    }
     if (api.hasSelection()) {
-      api.openContextMenu(event.clientX, event.clientY);
+      api.clearSelection();
+      if (typeof api.render === "function") {
+        api.render();
+      } else {
+        renderScene();
+      }
     }
   }
 
