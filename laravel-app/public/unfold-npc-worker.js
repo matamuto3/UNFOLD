@@ -212,7 +212,7 @@
   }
 
   try {
-    importScripts("app.js?v=20260517budget02");
+    importScripts("app.js?v=20260517stats01");
     if (!self.UNFOLD_NPC_ENGINE || typeof self.UNFOLD_NPC_ENGINE.chooseActionForState !== "function") {
       throw new Error("NPC engine API was not exposed: " + (
         self.document.getElementById("testOutput").textContent ||
@@ -281,6 +281,7 @@
         requestId: data.requestId,
         turnToken: data.turnToken,
         action: result ? result.action : null,
+        searchStats: result && result.searchStats ? result.searchStats : null,
         searchMemory: result && result.searchMemory ? result.searchMemory : null,
         thinkMs: Date.now() - startedAt
       });

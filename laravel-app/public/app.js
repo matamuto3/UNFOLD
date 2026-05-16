@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517budget02";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517stats01";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -576,7 +576,8 @@
       thinkStartedAt: null,
       lastThinkMs: 0,
       totalThinkMs: 0,
-      movesThought: 0
+      movesThought: 0,
+      lastSearchStats: null
     },
     ruleMode: "original",
     pieceNotation: getStoredPieceNotation(),
@@ -3089,6 +3090,7 @@
     uiState.npc.lastThinkMs = 0;
     uiState.npc.totalThinkMs = 0;
     uiState.npc.movesThought = 0;
+    uiState.npc.lastSearchStats = null;
   }
 
   function shouldLockHumanActions() {
@@ -15216,6 +15218,10 @@
         var childStateCache = {};
         var targetDepth = normalizeNpcLookaheadDepth(depth);
         var budgetMs = getNpcSearchTimeBudgetMs(targetDepth, emergencyMode);
+        var searchStartedAt = getNpcSearchTimestampMs();
+        var initialRootCandidateCount = candidates.length;
+        var completedDepth = 0;
+        var searchStats = null;
         function getRootChildInfo(action) {
           var key = getNpcActionSearchKey(action);
           var info = childStateCache[key];
@@ -15316,6 +15322,7 @@
             if (!iterationResults.length) {
               break;
             }
+            completedDepth = iterationDepth;
             iterationResults.sort(function (a, b) {
               var delta = b.score - a.score;
               if (delta) {
@@ -15339,6 +15346,19 @@
             writeNpcSearchBound(rootCacheKey, bestScore, -Infinity, Infinity, getNpcActionSearchKey(bestAction));
             recordNpcHistorySuccess(uiState.state, npcPlayer, bestAction, targetDepth, 120);
           }
+          searchStats = {
+            depth: targetDepth,
+            completedDepth: completedDepth,
+            budgetMs: budgetMs,
+            elapsedMs: Math.max(0, getNpcSearchTimestampMs() - searchStartedAt),
+            nodes: activeNpcSearchNodeCount,
+            aborted: !!activeNpcSearchAborted,
+            emergency: !!emergencyMode,
+            initialCandidates: initialRootCandidateCount,
+            finalCandidates: candidates.length,
+            bestActionKey: bestAction ? getNpcActionSearchKey(bestAction) : ""
+          };
+          uiState.npc.lastSearchStats = searchStats;
         } finally {
           activeNpcSearchRootPlayer = previousRootPlayer;
           activeNpcSearchDeadlineAt = previousDeadlineAt;
@@ -19694,6 +19714,7 @@
       action = chooseNpcAction();
       return {
         action: action ? JSON.parse(JSON.stringify(action)) : null,
+        searchStats: uiState.npc.lastSearchStats ? JSON.parse(JSON.stringify(uiState.npc.lastSearchStats)) : null,
         searchMemory: exportNpcSearchMemorySnapshot({
           dirtyOnly: true,
           clearDirty: true,
@@ -19721,6 +19742,7 @@
     uiState.npc.lastThinkMs = 0;
     uiState.npc.totalThinkMs = 0;
     uiState.npc.movesThought = 0;
+    uiState.npc.lastSearchStats = null;
   }
 
   function recordNpcThinkTime(ms) {
@@ -19735,12 +19757,36 @@
     return (Math.max(0, Number(ms) || 0) / 1000).toFixed(2) + "\u79D2";
   }
 
+  function formatNpcSearchStatsText(stats) {
+    var parts = [];
+    if (!stats || !stats.depth) {
+      return "";
+    }
+    parts.push("\u63A2\u7D22 " + stats.depth + "\u624B");
+    if (stats.completedDepth && stats.completedDepth < stats.depth) {
+      parts.push("\u5230\u9054 " + stats.completedDepth);
+    }
+    if (stats.nodes) {
+      parts.push(Math.max(0, Number(stats.nodes) || 0) + "n");
+    }
+    if (stats.initialCandidates || stats.finalCandidates) {
+      parts.push("候補 " + Math.max(0, Number(stats.initialCandidates) || 0) + "\u2192" + Math.max(0, Number(stats.finalCandidates) || 0));
+    }
+    if (stats.aborted) {
+      parts.push("\u4E88\u7B97\u5230\u9054");
+    }
+    return parts.join(" / ");
+  }
+
   function getNpcThinkStatsText() {
+    var searchStatsText;
     if (!uiState.npc || !uiState.npc.movesThought) {
       return "";
     }
+    searchStatsText = formatNpcSearchStatsText(uiState.npc.lastSearchStats);
     return "\u004E\u0050\u0043\u601D\u8003: \u76F4\u8FD1 " + formatNpcThinkSeconds(uiState.npc.lastThinkMs)
-      + " / \u5E73\u5747 " + formatNpcThinkSeconds(uiState.npc.totalThinkMs / uiState.npc.movesThought);
+      + " / \u5E73\u5747 " + formatNpcThinkSeconds(uiState.npc.totalThinkMs / uiState.npc.movesThought)
+      + (searchStatsText ? " / " + searchStatsText : "");
   }
 
   function shouldAllowNpcWorker() {
@@ -19861,6 +19907,9 @@
         if (data.searchMemory) {
           mergeNpcSearchMemoryFromWorker(data.searchMemory);
         }
+        if (data.searchStats) {
+          uiState.npc.lastSearchStats = data.searchStats;
+        }
         callback.resolve(data);
       };
       npcWorkerRuntime.worker.onerror = function (event) {
@@ -19951,6 +20000,9 @@
           uiState.npc.thinkStartedAt = null;
           render();
           return;
+        }
+        if (result.searchStats) {
+          uiState.npc.lastSearchStats = result.searchStats;
         }
         recordNpcThinkTime(Date.now() - startedAt);
         finishNpcTurnAction(result.action || null);
