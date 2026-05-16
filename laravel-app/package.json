@@ -4,7 +4,12 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "check:all": "npm run check:text && npm run check:js",
+        "check:js": "node --check public/app.js && node --check public/three-board.js && node --check public/selfplay-worker.js && node --check public/unfold-npc-worker.js && node --check ../tools/build_unfold_wasm.js && node --check ../tools/run_unfold_selfplay.js && node --check ../tools/run_unfold_tactical_tests.js",
+        "check:text": "node ../tools/check_text_integrity.js",
+        "check:text:all": "node ../tools/check_text_integrity.js --include-generated",
+        "dev": "vite",
+        "install:hooks": "node ../tools/install_git_hooks.js"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

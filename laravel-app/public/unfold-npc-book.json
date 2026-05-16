@@ -1,0 +1,144 @@
+{
+  "version": "20260516a",
+  "generatedAt": "2026-05-16",
+  "source": "unfold-npc-kifu-review",
+  "notes": [
+    "Optional NPC tuning book. Values merge over the embedded defaults in app.js.",
+    "Use this file for future kifu-derived updates without editing the monolithic game script."
+  ],
+  "kifuLearnedWeights": {
+    "dangerousOpeningFragments": {
+      "net04": 0.755,
+      "net01": 0.732,
+      "net04m": 0.728,
+      "net05": 0.71,
+      "net09m": 0.709,
+      "net02m": 0.707,
+      "net10m": 0.695,
+      "net02": 0.691,
+      "net06": 0.69,
+      "net03m": 0.682,
+      "net10": 0.681,
+      "net09": 0.678,
+      "net08": 0.673,
+      "net11m": 0.673,
+      "net05m": 0.668,
+      "net03": 0.666,
+      "net07m": 0.655,
+      "net11": 0.629,
+      "net07": 0.604
+    },
+    "shogiDangerousOpeningFragments": {
+      "net04": 0.778,
+      "net09": 0.769,
+      "net09m": 0.759,
+      "net06": 0.702,
+      "net01": 0.693,
+      "net10": 0.67,
+      "net11": 0.656,
+      "net02": 0.653,
+      "net08": 0.646,
+      "net04m": 0.641,
+      "net10m": 0.638,
+      "net03": 0.63,
+      "net02m": 0.624,
+      "net05": 0.612,
+      "net07m": 0.609,
+      "net07": 0.603,
+      "net11m": 0.601,
+      "net03m": 0.601,
+      "net05m": 0.591
+    },
+    "kingCapturePressurePieces": {
+      "realmKnight": 1,
+      "barrier": 0.935,
+      "destroyer": 0.832,
+      "charger": 0.648,
+      "disruptor": 0.633,
+      "chaosBeast": 0.615,
+      "rider": 0.61,
+      "flanker": 0.445,
+      "guard": 0.283,
+      "decoy": 0.18,
+      "vanguard": 0.18,
+      "king": 0.18
+    },
+    "shogiKingCapturePressurePieces": {
+      "guard": 1,
+      "charger": 0.915,
+      "flanker": 0.672,
+      "decoy": 0.472,
+      "disruptor": 0.424,
+      "rider": 0.413,
+      "vanguard": 0.318,
+      "king": 0.18,
+      "chaosBeast": 0.18,
+      "destroyer": 0.18,
+      "barrier": 0.18
+    }
+  },
+  "openingRescueJoseki": {
+    "setup": {
+      "preferredBandEdges": {
+        "9": 1,
+        "10": 0.96,
+        "8": 0.55
+      },
+      "shieldPieces": {
+        "guard": true,
+        "barrier": true,
+        "realmKnight": true,
+        "flanker": true,
+        "vanguard": true
+      },
+      "attackPieces": {
+        "charger": true,
+        "rider": true,
+        "destroyer": true,
+        "chaosBeast": true,
+        "disruptor": true
+      },
+      "softPieces": {
+        "decoy": true
+      }
+    },
+    "responseWeights": {
+      "move:destroyer:capture": 1,
+      "move:realmKnight:capture": 0.917,
+      "fragment:net07m/rider": 0.917,
+      "fragment:net03m/barrier": 0.875,
+      "fragment:net09m/flanker": 0.864,
+      "fragment:net04/charger": 0.859,
+      "fragment:net03/barrier": 0.825,
+      "fragment:net04m/charger": 0.825,
+      "fragment:net09/flanker": 0.792,
+      "fragment:net11/decoy": 0.786,
+      "fragment:net01/chaosBeast": 0.78,
+      "fragment:net02m/guard": 0.724,
+      "fragment:net05/vanguard": 0.72,
+      "fragment:net08/realmKnight": 0.708
+    }
+  },
+  "counterattackTransitionWeights": {
+    "actions": {
+      "move:disruptor:capture:flanker": 0.677,
+      "move:disruptor:capture:destroyer": 0.6,
+      "fragment:net06/destroyer": 0.542,
+      "move:barrier:capture:rider": 0.514,
+      "move:disruptor:capture:realmKnight": 0.484,
+      "move:king:capture:chaosBeast": 0.478,
+      "move:chaosBeast:capture:realmKnight": 0.476,
+      "move:barrier:capture:disruptor": 0.471,
+      "fragment:net04/charger": 0.467,
+      "fragment:net01/chaosBeast": 0.465,
+      "move:guard:capture:rider": 0.459,
+      "move:disruptor:capture:barrier": 0.45,
+      "fragment:net09m/flanker": 0.371,
+      "fragment:net09/flanker": 0.357,
+      "fragment:net02m/guard": 0.355,
+      "fragment:net07/rider": 0.333,
+      "fragment:net10/disruptor": 0.329,
+      "fragment:net08/realmKnight": 0.318
+    }
+  }
+}

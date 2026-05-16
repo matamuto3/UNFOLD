@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" class="unfold-booting">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-adsense-account" content="ca-pub-2627666305329331">
   <title>UNFOLD | ルール</title>
   <meta name="description" content="UNFOLDのルール関連ページへの導線ページです。">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#20242a">
-  <link rel="stylesheet" href="styles.css?v=20260505advice">
+  <link rel="stylesheet" href="styles.css?v=20260514anim08">
 </head>
 <body>
   <main class="app">
@@ -335,16 +336,18 @@
     <section class="card site-footer-note" aria-label="サイト情報">
       <p class="site-footer-title">UNFOLD Prototype</p>
       <p>個人制作の試作版です。表示やルールは予告なく更新されることがあります。</p>
+      <p class="site-footer-links"><a href="privacy.html">プライバシーポリシー</a></p>
       <p>© 2026 UNFOLD Prototype</p>
     </section>
   </main>
 
   <script>window.__UNFOLD_BOOTED = false;</script>
   <script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
-  <script src="app.js?v=20260509basepieces"></script>
-  <script src="three-board.js?v=20260503c"></script>
+  <script src="app.js?v=20260516t"></script>
+  <script src="three-board.js?v=20260516box01"></script>
   <script>
     if (!window.__UNFOLD_BOOTED) {
+      document.documentElement.classList.remove("unfold-booting");
       var message = document.getElementById("messageLabel");
       var tests = document.getElementById("testOutput");
       if (message) {

@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-adsense-account" content="ca-pub-2627666305329331">
   <title>UNFOLD Self-play Worker</title>
-  <meta name="description" content="UNFOLDの自己対戦検証用ワーカーページです。">
+  <meta name="description" content="UNFOLDの自動対局と棋譜検討用ワーカーページです。">
   <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="styles.css?v=20260505advice">
+  <link rel="stylesheet" href="styles.css?v=20260514anim08">
   <style>
     body {
       min-height: 100vh;
@@ -180,7 +181,7 @@
     <section class="worker-hero card">
       <p class="eyebrow">UNFOLD LAB</p>
       <h1>SELF-PLAY</h1>
-      <p class="lead">この画面をサーバー上で開いておくと、NPC同士の対局を自動で回して棋譜JSONをサーバーへ保存します。</p>
+      <p class="lead">この画面を開いたままにしておくと、NPC同士の対局を自動で回して棋譜JSONを保存できます。検討用の素材を増やすための作業場です。</p>
       <div class="worker-actions">
         <a class="button-link" href="index.html">トップへ</a>
         <a class="button-link" href="joseki.html" target="_blank" rel="noopener noreferrer">定石解説</a>
@@ -192,7 +193,7 @@
         <div>
           <p class="label">RUN SETTINGS</p>
           <h2>自動対局を回す</h2>
-          <p class="scene-note">処理はこのブラウザで行い、保存だけをサーバーに任せます。サーバー単独実行はPHP版AIエンジン化が必要です。</p>
+          <p class="scene-note">計算はこのブラウザで行い、保存だけをサーバーへ送ります。並列数を上げるほど速くなりますが、PCの負荷も増えます。</p>
         </div>
 
         <div class="worker-fields">
@@ -214,6 +215,10 @@
           <label class="worker-field">
             <span>1回の保存単位</span>
             <input id="chunkInput" type="number" min="1" max="20" value="1">
+          </label>
+          <label class="worker-field">
+            <span>並列数</span>
+            <input id="parallelInput" type="number" min="1" max="6" value="2">
           </label>
           <label class="worker-field">
             <span>最大手数</span>
@@ -264,6 +269,10 @@
           <h2>保存済み棋譜</h2>
           <p class="scene-note">サーバーの `storage/app/private/selfplay-kifu` に保存されます。</p>
         </div>
+        <div class="worker-actions">
+          <button id="bookBuildBtn" type="button">定石DB更新案を作る</button>
+        </div>
+        <p id="bookStatus" class="scene-note">保存済み棋譜を集計して、NPC定石DBへ反映しやすいJSON案を出力できます。</p>
         <div id="kifuList" class="worker-list" aria-live="polite"></div>
       </section>
     </section>
@@ -274,6 +283,6 @@
     </section>
   </main>
 
-  <script src="selfplay-worker.js?v=20260506b"></script>
+  <script src="selfplay-worker.js?v=20260516t"></script>
 </body>
 </html>

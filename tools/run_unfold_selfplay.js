@@ -30,6 +30,199 @@ function getArg(args, names, fallback) {
   return fallback;
 }
 
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function writeJson(file, data) {
+  ensureDir(path.dirname(file));
+  fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+}
+
+function writeText(file, text) {
+  ensureDir(path.dirname(file));
+  fs.writeFileSync(file, text, "utf8");
+}
+
+function padNumber(value, width = 3) {
+  return String(value).padStart(width, "0");
+}
+
+function slugText(value) {
+  return String(value || "selfplay")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "selfplay";
+}
+
+function getPerGameDirArg(args) {
+  const dirArg = getArg(args, ["per-game-dir", "game-dir", "kifu-dir"], "");
+  return dirArg ? path.resolve(dirArg) : "";
+}
+
+function getProgressPrefix(args) {
+  const outPath = getArg(args, ["out"], "");
+  return slugText(getArg(args, ["prefix"], outPath ? path.basename(outPath, path.extname(outPath)) : `selfplay-${getArg(args, ["mode"], "original")}`));
+}
+
+function countSavedGames(dir, prefix) {
+  if (!dir || !fs.existsSync(dir)) {
+    return 0;
+  }
+  return fs.readdirSync(dir).filter((name) => {
+    return name.startsWith(`${prefix}-game-`) && name.endsWith(".json");
+  }).length;
+}
+
+function prepareResumeArgs(args) {
+  const target = Number(getArg(args, ["resume-total", "target-count", "targetCount"], 0)) || 0;
+  if (!args.resume || !target) {
+    return { existingGames: 0, remainingGames: Number(getArg(args, ["count", "selfplay"], 5)) || 0 };
+  }
+  const dir = getPerGameDirArg(args);
+  const prefix = getProgressPrefix(args);
+  const existingGames = countSavedGames(dir, prefix);
+  const remainingGames = Math.max(0, target - existingGames);
+  args.count = String(remainingGames);
+  args["start-index"] = String(existingGames);
+  return { existingGames, remainingGames, target };
+}
+
+function summarizeGames(games) {
+  const summary = {
+    games: games.length,
+    wins: { P1: 0, P2: 0, draw: 0 },
+    reasons: {},
+    actionUsage: {},
+    averageTurns: 0,
+    averagePlies: 0,
+    defenderSuccessRate: 0
+  };
+  let turns = 0;
+  let plies = 0;
+  for (const game of games) {
+    const winner = game.winner || "draw";
+    summary.wins[winner] = (summary.wins[winner] || 0) + 1;
+    summary.reasons[game.reason || "unknown"] = (summary.reasons[game.reason || "unknown"] || 0) + 1;
+    turns += Number(game.turns || 0);
+    plies += Number(game.plies || (game.moves ? game.moves.length : 0));
+    for (const move of game.moves || []) {
+      summary.actionUsage[move.type || "unknown"] = (summary.actionUsage[move.type || "unknown"] || 0) + 1;
+    }
+  }
+  summary.averageTurns = games.length ? Math.round((turns / games.length) * 10) / 10 : 0;
+  summary.averagePlies = games.length ? Math.round((plies / games.length) * 10) / 10 : 0;
+  summary.defenderSuccessRate = games.length ? Math.round(((summary.wins.P2 + summary.wins.draw) / games.length) * 1000) / 10 : 0;
+  return summary;
+}
+
+function buildBlockReviewMarkdown(blockNumber, games, summary) {
+  const lines = [];
+  const examples = games.slice(0, 3).map((game) => {
+    const opening = (game.moves || []).slice(0, 6).map((move, index) => `${index + 1}. ${move.label || `${move.player || "?"}:${move.type || "?"}`}`);
+    return {
+      id: game.id,
+      winner: game.winner || "draw",
+      reason: game.reason || "unknown",
+      turns: game.turns || 0,
+      opening
+    };
+  });
+  lines.push(`# UNFOLD selfplay block ${blockNumber}`);
+  lines.push("");
+  lines.push(`- Games: ${summary.games}`);
+  lines.push(`- P1 wins: ${summary.wins.P1 || 0}`);
+  lines.push(`- P2 wins: ${summary.wins.P2 || 0}`);
+  lines.push(`- Draw/hold: ${summary.wins.draw || 0}`);
+  lines.push(`- Defender success: ${summary.defenderSuccessRate}%`);
+  lines.push(`- Average turns: ${summary.averageTurns}`);
+  lines.push(`- Average plies: ${summary.averagePlies}`);
+  lines.push("");
+  lines.push("## Reasons");
+  Object.keys(summary.reasons).sort((a, b) => summary.reasons[b] - summary.reasons[a]).forEach((reason) => {
+    lines.push(`- ${reason}: ${summary.reasons[reason]}`);
+  });
+  lines.push("");
+  lines.push("## Action Usage");
+  Object.keys(summary.actionUsage).sort((a, b) => summary.actionUsage[b] - summary.actionUsage[a]).forEach((type) => {
+    lines.push(`- ${type}: ${summary.actionUsage[type]}`);
+  });
+  lines.push("");
+  lines.push("## Review Notes");
+  if ((summary.wins.P1 || 0) >= Math.ceil(summary.games * 0.7)) {
+    lines.push("- P1 attack is still too decisive in this block. Next tuning should prioritize P2 immediate-loss filters and base-center shield retention.");
+  } else if (summary.defenderSuccessRate >= 60) {
+    lines.push("- P2 defense is holding in this block. Next tuning can add counterattack transition scoring instead of only extending defense.");
+  } else {
+    lines.push("- Results are mixed. Keep candidate pruning stable and inspect the decisive early losses before changing broad weights.");
+  }
+  lines.push("- Keep the 3-ply depth setting; only candidate ordering and tactical filters should be adjusted between blocks.");
+  lines.push("");
+  lines.push("## Sample Openings");
+  examples.forEach((example) => {
+    lines.push(`- Game ${example.id}: ${example.winner} / ${example.reason} / ${example.turns} turns`);
+    example.opening.forEach((move) => lines.push(`  - ${move}`));
+  });
+  lines.push("");
+  return `${lines.join("\n")}\n`;
+}
+
+function createProgressRecorder(args, startedAt) {
+  const dir = getPerGameDirArg(args);
+  if (!dir) {
+    return null;
+  }
+  const prefix = getProgressPrefix(args);
+  const reviewEvery = Math.max(1, Number(getArg(args, ["review-every", "reviewEvery"], 10)) || 10);
+  const startIndex = Math.max(0, Number(getArg(args, ["start-index", "startIndex"], 0)) || 0);
+  const games = [];
+  ensureDir(dir);
+  return {
+    onGame(payload) {
+      const game = payload && payload.game ? payload.game : payload;
+      const index = Number(payload && payload.index) || games.length;
+      const gameNumber = startIndex + index + 1;
+      games.push(game);
+      writeJson(path.join(dir, `${prefix}-game-${padNumber(gameNumber, 4)}.json`), {
+        generatedAt: new Date().toISOString(),
+        elapsedMs: Date.now() - startedAt,
+        gameNumber,
+        total: payload && payload.total,
+        options: payload && payload.options,
+        game
+      });
+      if ((index + 1) % reviewEvery === 0) {
+        const blockNumber = Math.ceil(gameNumber / reviewEvery);
+        const blockGames = games.slice(Math.max(0, games.length - reviewEvery));
+        const summary = summarizeGames(blockGames);
+        writeJson(path.join(dir, `${prefix}-block-${padNumber(blockNumber, 3)}-summary.json`), {
+          generatedAt: new Date().toISOString(),
+          blockNumber,
+          range: [gameNumber - blockGames.length + 1, gameNumber],
+          summary,
+          games: blockGames
+        });
+        writeText(path.join(dir, `${prefix}-block-${padNumber(blockNumber, 3)}-review.md`), buildBlockReviewMarkdown(blockNumber, blockGames, summary));
+      }
+      writeJson(path.join(dir, `${prefix}-progress.json`), {
+        generatedAt: new Date().toISOString(),
+        elapsedMs: Date.now() - startedAt,
+        completedGames: startIndex + games.length,
+        latestGame: gameNumber,
+        summary: summarizeGames(games)
+      });
+    },
+    finalize(output) {
+      writeJson(path.join(dir, `${prefix}-final-summary.json`), {
+        generatedAt: new Date().toISOString(),
+        elapsedMs: Date.now() - startedAt,
+        output,
+        summary: summarizeGames(games)
+      });
+    }
+  };
+}
+
 function makeElement(id = "") {
   return {
     id,
@@ -219,10 +412,27 @@ function addDerivedSummary(result) {
 function main() {
   const startedAt = Date.now();
   const args = parseArgs(process.argv.slice(2));
+  const resumePlan = prepareResumeArgs(args);
+  if (args.resume && resumePlan.remainingGames <= 0) {
+    process.stdout.write(JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      elapsedMs: Date.now() - startedAt,
+      resume: resumePlan,
+      summary: {
+        games: 0,
+        note: "resume target already reached"
+      }
+    }, null, 2) + "\n");
+    return;
+  }
   const query = buildQuery(args);
   const { context, getElementById } = createBrowserShim(query);
+  const progressRecorder = createProgressRecorder(args, startedAt);
   const appPath = path.join(__dirname, "..", "laravel-app", "public", "app.js");
   const code = fs.readFileSync(appPath, "utf8");
+  if (progressRecorder) {
+    context.window.__UNFOLD_SELFPLAY_ON_GAME__ = progressRecorder.onGame;
+  }
   vm.createContext(context);
   vm.runInContext(code, context, { filename: appPath, timeout: Number(getArg(args, ["timeout"], 600000)) });
   const result = context.window.__UNFOLD_SELFPLAY_RESULT__;
@@ -235,6 +445,7 @@ function main() {
     generatedAt: new Date().toISOString(),
     elapsedMs: Date.now() - startedAt,
     query,
+    resume: resumePlan,
     summary: addDerivedSummary(result)
   };
   const outPath = getArg(args, ["out"], "");
@@ -244,6 +455,9 @@ function main() {
   }
   if (args.full) {
     output.games = result.games;
+  }
+  if (progressRecorder) {
+    progressRecorder.finalize(output);
   }
   process.stdout.write(JSON.stringify(output, null, 2) + "\n");
 }

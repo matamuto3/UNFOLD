@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" class="unfold-booting">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-adsense-account" content="ca-pub-2627666305329331">
   <title>UNFOLD | 一人プレイ</title>
   <meta name="description" content="UNFOLDの一人プレイページです。オリジナル駒版と将棋駒版のひとりテストプレイやNPC対戦をブラウザ上で試せます。">
   <meta name="robots" content="max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -22,7 +23,7 @@
   <meta name="twitter:title" content="UNFOLD | 一人プレイ">
   <meta name="twitter:description" content="オリジナル駒版と将棋駒版のテストプレイやNPC対戦をブラウザ上で試せる UNFOLD の一人プレイページ。">
   <meta name="twitter:image" content="https://unfold.sakura.ne.jp/assets/rules/start-state.png">
-  <link rel="stylesheet" href="styles.css?v=20260505advice">
+  <link rel="stylesheet" href="styles.css?v=20260514anim08">
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -202,7 +203,7 @@
             <button id="leaveRoomBtn" type="button" hidden>退出</button>
             <button id="waitApproveBtn" type="button" hidden>待った承認</button>
             <button id="waitRejectBtn" type="button" hidden>待った却下</button>
-            <details class="match-menu">
+            <details class="match-menu" open>
               <summary>メニュー</summary>
               <div class="match-menu-panel">
                 <button id="practiceModeBtn" type="button" hidden>駒タイプ変更</button>
@@ -295,6 +296,7 @@
               <p class="winner-overlay-label">勝利</p>
               <p id="winnerOverlayText" class="winner-overlay-text">-</p>
               <p id="winnerOverlayReason" class="winner-overlay-reason">-</p>
+              <button id="winnerRestartBtn" class="winner-restart-button" type="button" hidden>NPC戦を最初から</button>
             </div>
             <div id="contextMenu" class="context-menu" hidden>
               <button id="contextRotateBtn" type="button">形を回転</button>
@@ -364,16 +366,18 @@
     <section class="card site-footer-note" aria-label="サイト情報">
       <p class="site-footer-title">UNFOLD Prototype</p>
       <p>個人制作の試作版です。表示やルールは予告なく更新されることがあります。</p>
+      <p class="site-footer-links"><a href="privacy.html">プライバシーポリシー</a></p>
       <p>© 2026 UNFOLD Prototype</p>
     </section>
   </main>
 
   <script>window.__UNFOLD_BOOTED = false;</script>
   <script src="https://unpkg.com/three@0.139.2/build/three.min.js"></script>
-  <script src="app.js?v=20260509basepieces"></script>
-  <script src="three-board.js?v=20260503c"></script>
+  <script src="app.js?v=20260516t"></script>
+  <script src="three-board.js?v=20260516box01"></script>
   <script>
     if (!window.__UNFOLD_BOOTED) {
+      document.documentElement.classList.remove("unfold-booting");
       var message = document.getElementById("messageLabel");
       var tests = document.getElementById("testOutput");
       if (message) {
