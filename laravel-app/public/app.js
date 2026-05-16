@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu06";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu07";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -356,6 +356,7 @@
   var NPC_SEARCH_MEMORY_VERSION = "search-v2-20260517";
   var NPC_SEARCH_MEMORY_MAX_STORAGE_ENTRIES = 360;
   var NPC_SEARCH_MEMORY_MAX_STORAGE_HISTORY = 600;
+  var NPC_SEARCH_MEMORY_MAX_PATTERN_HINTS = 420;
   var NPC_SEARCH_MEMORY_FLUSH_INTERVAL_MS = 2500;
   var WASM_BOARD_MAP_PTR = 0;
   var unfoldWasmRuntime = {
@@ -10238,6 +10239,9 @@
   var npcPersistentSearchTable = {};
   var npcPersistentSearchKeys = [];
   var npcPersistentSearchDirtyKeys = {};
+  var npcSearchPatternHints = {};
+  var npcSearchPatternHintKeys = [];
+  var npcSearchPatternHintDirtyKeys = {};
   var npcSearchHistoryScores = {};
   var npcSearchMemoryLoaded = false;
   var npcSearchMemoryFlushTimer = null;
@@ -10267,12 +10271,42 @@
     };
   }
 
+  function normalizeNpcSearchPatternHint(entry) {
+    var score;
+    var depth;
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+    score = Number(entry.score);
+    if (!isFinite(score)) {
+      score = 0;
+    }
+    depth = Math.max(1, Number(entry.depth) || 1);
+    return {
+      actionKey: String(entry.actionKey || "").slice(0, 260),
+      actionPatternKey: String(entry.actionPatternKey || "").slice(0, 260),
+      score: score,
+      depth: depth,
+      hits: Math.max(1, Number(entry.hits) || 1),
+      savedAt: Number(entry.savedAt) || Date.now()
+    };
+  }
+
   function trimNpcPersistentSearchTable(maxEntries) {
     var limit = Math.max(20, Number(maxEntries) || NPC_PERSISTENT_TT_MAX_ENTRIES);
     while (npcPersistentSearchKeys.length > limit) {
       var key = npcPersistentSearchKeys.shift();
       delete npcPersistentSearchTable[key];
       delete npcPersistentSearchDirtyKeys[key];
+    }
+  }
+
+  function trimNpcSearchPatternHints(maxEntries) {
+    var limit = Math.max(20, Number(maxEntries) || NPC_SEARCH_MEMORY_MAX_PATTERN_HINTS);
+    while (npcSearchPatternHintKeys.length > limit) {
+      var key = npcSearchPatternHintKeys.shift();
+      delete npcSearchPatternHints[key];
+      delete npcSearchPatternHintDirtyKeys[key];
     }
   }
 
@@ -10314,7 +10348,32 @@
         }
       });
     }
+    (Array.isArray(snapshot.patternHints) ? snapshot.patternHints : []).forEach(function (pair) {
+      var key;
+      var entry;
+      var current;
+      if (!Array.isArray(pair) || typeof pair[0] !== "string") {
+        return;
+      }
+      key = pair[0];
+      entry = normalizeNpcSearchPatternHint(pair[1]);
+      if (!key || !entry || !entry.actionPatternKey) {
+        return;
+      }
+      current = npcSearchPatternHints[key];
+      if (!current) {
+        npcSearchPatternHintKeys.push(key);
+      }
+      if (!current || entry.depth > current.depth || entry.score >= current.score || entry.hits > current.hits) {
+        npcSearchPatternHints[key] = entry;
+        if (markDirty) {
+          npcSearchPatternHintDirtyKeys[key] = true;
+        }
+        imported += 1;
+      }
+    });
     trimNpcPersistentSearchTable(maxEntries);
+    trimNpcSearchPatternHints(NPC_SEARCH_MEMORY_MAX_PATTERN_HINTS);
     return imported;
   }
 
@@ -10325,6 +10384,7 @@
     var sourceKeys = dirtyOnly ? Object.keys(npcPersistentSearchDirtyKeys) : npcPersistentSearchKeys.slice();
     var entries = [];
     var historyScores = {};
+    var patternHints = [];
     sourceKeys.slice(Math.max(0, sourceKeys.length - maxEntries)).forEach(function (key) {
       var entry = normalizeNpcSearchMemoryEntry(npcPersistentSearchTable[key]);
       if (!entry) {
@@ -10341,14 +10401,33 @@
     }).slice(0, NPC_SEARCH_MEMORY_MAX_STORAGE_HISTORY).forEach(function (key) {
       historyScores[key] = npcSearchHistoryScores[key];
     });
-    if (!entries.length && !Object.keys(historyScores).length) {
+    (dirtyOnly ? Object.keys(npcSearchPatternHintDirtyKeys) : npcSearchPatternHintKeys.slice())
+      .sort(function (a, b) {
+        var left = npcSearchPatternHints[a] || {};
+        var right = npcSearchPatternHints[b] || {};
+        return (right.savedAt || 0) - (left.savedAt || 0);
+      })
+      .slice(0, NPC_SEARCH_MEMORY_MAX_PATTERN_HINTS)
+      .forEach(function (key) {
+        var entry = normalizeNpcSearchPatternHint(npcSearchPatternHints[key]);
+        if (!entry || !entry.actionPatternKey) {
+          delete npcSearchPatternHintDirtyKeys[key];
+          return;
+        }
+        patternHints.push([key, entry]);
+        if (clearDirty) {
+          delete npcSearchPatternHintDirtyKeys[key];
+        }
+      });
+    if (!entries.length && !Object.keys(historyScores).length && !patternHints.length) {
       return null;
     }
     return {
       version: NPC_SEARCH_MEMORY_VERSION,
       savedAt: new Date().toISOString(),
       entries: entries,
-      historyScores: historyScores
+      historyScores: historyScores,
+      patternHints: patternHints
     };
   }
 
@@ -10722,6 +10801,218 @@
       ].join(":");
     }
     return [player, strategy, phase, action.type || ""].join(":");
+  }
+
+  function getNpcActionPatternKey(state, player, action) {
+    var piece;
+    var card;
+    var cell;
+    var targetPiece;
+    var placement;
+    if (!action) {
+      return "none";
+    }
+    if (action.type === "move") {
+      piece = getPiece(state, action.pieceId);
+      cell = state.board[action.row] && state.board[action.row][action.col];
+      targetPiece = cell && cell.pieceId ? getPiece(state, cell.pieceId) : null;
+      return [
+        "move",
+        piece ? piece.kind : "",
+        piece ? piece.row : "",
+        piece ? piece.col : "",
+        action.row,
+        action.col,
+        targetPiece ? targetPiece.kind : ""
+      ].join(":");
+    }
+    if (action.type === "reserve") {
+      return ["reserve", action.pieceType || "", action.row, action.col].join(":");
+    }
+    if (action.type === "fragment" || action.type === "setupFragment") {
+      card = action.card || {};
+      return [
+        action.type,
+        action.source === "fragmentReserve" ? "fragmentReserve" : "hand",
+        card.fragmentType || "",
+        card.pieceType || "",
+        action.rotation || 0,
+        action.anchor ? action.anchor.row : "",
+        action.anchor ? action.anchor.col : "",
+        action.pieceCell ? action.pieceCell.row : "",
+        action.pieceCell ? action.pieceCell.col : ""
+      ].join(":");
+    }
+    if (action.type === "recoverPiece") {
+      piece = getPiece(state, action.pieceId);
+      return [
+        "recoverPiece",
+        piece ? piece.kind : "",
+        piece ? piece.row : "",
+        piece ? piece.col : ""
+      ].join(":");
+    }
+    if (action.type === "recoverFragment") {
+      placement = (state.placements || []).filter(function (item) {
+        return item.id === action.placementId;
+      })[0];
+      card = placement && placement.card ? placement.card : {};
+      return [
+        "recoverFragment",
+        placement ? placement.owner : "",
+        card.fragmentType || "",
+        card.pieceType || "",
+        placement && placement.cells ? placement.cells.map(function (item) {
+          return item.row + "." + item.col;
+        }).join("-") : ""
+      ].join(":");
+    }
+    return action.type || "";
+  }
+
+  function getNpcVisibleCardPatternKey(card) {
+    if (!card) {
+      return "";
+    }
+    return [card.fragmentType || "", card.pieceType || ""].join("/");
+  }
+
+  function getNpcPlayerHandPatternKey(playerState) {
+    return (playerState && playerState.hand ? playerState.hand : [])
+      .map(getNpcVisibleCardPatternKey)
+      .sort()
+      .join(".");
+  }
+
+  function getNpcPlayerReservePatternKey(playerState) {
+    if (!playerState || !playerState.reserve) {
+      return "";
+    }
+    return Object.keys(playerState.reserve).sort().map(function (key) {
+      return key + ":" + playerState.reserve[key];
+    }).join(".");
+  }
+
+  function getNpcPlayerFragmentReservePatternKey(playerState) {
+    if (!playerState || !playerState.fragmentReserve) {
+      return "";
+    }
+    return Object.keys(playerState.fragmentReserve).sort().map(function (key) {
+      var value = playerState.fragmentReserve[key];
+      if (Array.isArray(value)) {
+        return key + ":" + value.map(getNpcVisibleCardPatternKey).sort().join(".");
+      }
+      if (value && typeof value === "object") {
+        return key + ":" + getNpcVisibleCardPatternKey(value.card || value);
+      }
+      return key + ":" + String(value);
+    }).join(".");
+  }
+
+  function getNpcSearchPatternStateKey(state, player) {
+    var setup = state && state.initialSetup ? state.initialSetup : {};
+    var setupPlaced = setup.placed || {};
+    var pieceTokens = [];
+    var placementTokens = [];
+    var currentPlayerState;
+    if (!state || !state.players) {
+      return "null";
+    }
+    ["P1", "P2"].forEach(function (side) {
+      var playerState = state.players[side];
+      Object.keys(playerState.pieces || {}).forEach(function (pieceId) {
+        var piece = playerState.pieces[pieceId];
+        pieceTokens.push([side, piece.kind || "", piece.row, piece.col].join(":"));
+      });
+    });
+    (state.placements || []).forEach(function (placement) {
+      var card = placement.card || {};
+      placementTokens.push([
+        placement.owner || "",
+        card.fragmentType || "",
+        card.pieceType || "",
+        (placement.cells || []).map(function (cell) {
+          return cell.row + "." + cell.col;
+        }).sort().join("-")
+      ].join(":"));
+    });
+    currentPlayerState = state.players[player] || {};
+    return [
+      "pattern",
+      state.ruleMode || "",
+      BOARD_ROWS + "x" + BOARD_COLS,
+      getNpcGamePhase(state),
+      state.currentPlayer || "",
+      player || "",
+      Math.min(18, state.turnNumber || 0),
+      setup.index || 0,
+      setupPlaced.P1 || 0,
+      setupPlaced.P2 || 0,
+      getNpcStrategy("P1"),
+      getNpcStrategy("P2"),
+      getNpcPlayerHandPatternKey(currentPlayerState),
+      getNpcPlayerReservePatternKey(currentPlayerState),
+      getNpcPlayerFragmentReservePatternKey(currentPlayerState),
+      pieceTokens.sort().join(";"),
+      placementTokens.sort().join(";")
+    ].join("||");
+  }
+
+  function readNpcSearchPatternHint(state, player) {
+    if (!shouldUseNpcPersistentSearchTable() || !state || !player) {
+      return null;
+    }
+    return npcSearchPatternHints[getNpcSearchPatternStateKey(state, player)] || null;
+  }
+
+  function writeNpcSearchPatternHint(state, player, action, score, depth) {
+    var key;
+    var entry;
+    var current;
+    if (!shouldUseNpcPersistentSearchTable() || !state || !player || !action) {
+      return;
+    }
+    key = getNpcSearchPatternStateKey(state, player);
+    entry = normalizeNpcSearchPatternHint({
+      actionKey: getNpcActionSearchKey(action),
+      actionPatternKey: getNpcActionPatternKey(state, player, action),
+      score: score,
+      depth: depth,
+      hits: 1,
+      savedAt: Date.now()
+    });
+    if (!entry || !entry.actionPatternKey) {
+      return;
+    }
+    current = npcSearchPatternHints[key];
+    if (!current) {
+      npcSearchPatternHintKeys.push(key);
+    } else if (current.actionPatternKey === entry.actionPatternKey) {
+      entry.hits = Math.min(9999, (current.hits || 1) + 1);
+      entry.depth = Math.max(entry.depth, current.depth || 1);
+      entry.score = Math.max(entry.score, current.score || -Infinity);
+    } else if ((current.depth || 1) > entry.depth && (current.hits || 1) >= 3 && current.score > entry.score) {
+      return;
+    }
+    npcSearchPatternHints[key] = entry;
+    npcSearchPatternHintDirtyKeys[key] = true;
+    trimNpcSearchPatternHints(NPC_SEARCH_MEMORY_MAX_PATTERN_HINTS);
+    scheduleNpcSearchMemoryFlush();
+  }
+
+  function getNpcPatternHintActionScore(state, player, action, patternHint) {
+    var key;
+    if (!patternHint || !action) {
+      return 0;
+    }
+    key = getNpcActionPatternKey(state, player, action);
+    if (patternHint.actionPatternKey && key === patternHint.actionPatternKey) {
+      return 620000 + Math.min(180000, (patternHint.hits || 1) * 16000) + Math.max(0, patternHint.depth || 1) * 9000;
+    }
+    if (patternHint.actionKey && getNpcActionSearchKey(action) === patternHint.actionKey) {
+      return 420000;
+    }
+    return 0;
   }
 
   function getNpcHistoryScore(state, player, action) {
@@ -14339,12 +14630,13 @@
       return score;
     }
 
-    function orderNpcActionsForSearch(state, player, actions, emergencyMode, depth, bestActionKey) {
+    function orderNpcActionsForSearch(state, player, actions, emergencyMode, depth, bestActionKey, patternHint) {
       return (actions || []).map(function (action, index) {
         action.moveOrderScore = getNpcActionMoveOrderScore(state, player, action, emergencyMode);
         if (bestActionKey && getNpcActionSearchKey(action) === bestActionKey) {
           action.moveOrderScore += 1800000;
         }
+        action.moveOrderScore += getNpcPatternHintActionScore(state, player, action, patternHint);
         if (isNpcKillerMove(state, player, action, depth)) {
           action.moveOrderScore += 260000;
         }
@@ -14749,7 +15041,7 @@
       return 4;
     }
 
-    function selectDiverseNpcRootCandidates(state, player, candidates, limit, emergencyMode, bestActionKey) {
+    function selectDiverseNpcRootCandidates(state, player, candidates, limit, emergencyMode, bestActionKey, patternHint) {
       var selected = [];
       var seen = {};
       var opponent = getOpponentPlayer(player);
@@ -14787,6 +15079,11 @@
         }
       });
       candidates.forEach(function (action) {
+        if (getNpcPatternHintActionScore(state, player, action, patternHint) > 0) {
+          addAction(action);
+        }
+      });
+      candidates.forEach(function (action) {
         if (isImmediateWinningActionInState(state, player, action)) {
           addAction(action);
         }
@@ -14812,11 +15109,11 @@
       return selected;
     }
 
-    function getLookaheadCandidateActions(state, player, actions, depth, emergencyMode, bestActionKey) {
+    function getLookaheadCandidateActions(state, player, actions, depth, emergencyMode, bestActionKey, patternHint) {
       var candidates;
       var fullDefense = shouldUseFullDefenseCandidateSet(state, player);
       var threatCreationEmergency = false;
-      actions = orderNpcActionsForSearch(state, player, actions, emergencyMode, depth, bestActionKey);
+      actions = orderNpcActionsForSearch(state, player, actions, emergencyMode, depth, bestActionKey, patternHint);
       if (depth >= 3 || emergencyMode || (state.turnNumber || 1) <= 10) {
         actions = filterBaseCenterOverwriteEmergencyActions(state, player, actions);
         actions = filterOwnBaseCenterRefillActions(state, player, actions);
@@ -14832,26 +15129,26 @@
         if (depth >= 2 || emergencyMode || fullDefense) {
           candidates = filterImmediateBlunderActions(state, player, candidates);
         }
-        candidates = orderNpcActionsForSearch(state, player, candidates, emergencyMode || fullDefense, depth, bestActionKey);
+        candidates = orderNpcActionsForSearch(state, player, candidates, emergencyMode || fullDefense, depth, bestActionKey, patternHint);
         activeLimit = getLookaheadBreadth(depth, emergencyMode);
         if (emergencyMode || fullDefense) {
           activeLimit = Math.max(activeLimit, depth >= 4 ? 5 : 7);
         } else if (depth < 4) {
           activeLimit = Math.max(activeLimit, 5);
         }
-        return selectDiverseNpcRootCandidates(state, player, candidates, Math.min(activeLimit, candidates.length), emergencyMode || fullDefense, bestActionKey);
+        return selectDiverseNpcRootCandidates(state, player, candidates, Math.min(activeLimit, candidates.length), emergencyMode || fullDefense, bestActionKey, patternHint);
       }
       if (fullDefense) {
         candidates = filterImmediateBlunderActions(state, player, actions);
         candidates = filterForcedDefenseActions(state, player, candidates);
-        candidates = orderNpcActionsForSearch(state, player, candidates, true, depth, bestActionKey);
+        candidates = orderNpcActionsForSearch(state, player, candidates, true, depth, bestActionKey, patternHint);
         return candidates.slice(0, Math.min(uiState.npc.bulkSelfPlay ? getLookaheadBreadth(depth, emergencyMode) : Math.max(getLookaheadBreadth(depth, emergencyMode), depth >= 4 ? 6 : 8), candidates.length));
       } else {
         threatCreationEmergency = !uiState.npc.bulkSelfPlay &&
           (state.turnNumber || 1) <= 10 &&
           countImmediateThreatCreatingActionsInStateCached(state, getOpponentPlayer(player), 2) > 0;
         if (threatCreationEmergency) {
-          candidates = orderNpcActionsForSearch(state, player, filterImmediateBlunderActions(state, player, actions), true, depth, bestActionKey);
+          candidates = orderNpcActionsForSearch(state, player, filterImmediateBlunderActions(state, player, actions), true, depth, bestActionKey, patternHint);
           return candidates.slice(0, Math.min(uiState.npc.bulkSelfPlay ? getLookaheadBreadth(depth, emergencyMode) : Math.max(getLookaheadBreadth(depth, emergencyMode), depth >= 4 ? 6 : 10), candidates.length));
         }
         candidates = getNpcCandidateActions(actions, emergencyMode, state, player);
@@ -14860,7 +15157,7 @@
       if (depth >= 3 || emergencyMode) {
         candidates = filterImmediateBlunderActions(state, player, candidates);
       }
-      candidates = orderNpcActionsForSearch(state, player, candidates, emergencyMode, depth, bestActionKey);
+      candidates = orderNpcActionsForSearch(state, player, candidates, emergencyMode, depth, bestActionKey, patternHint);
       return candidates.slice(0, Math.min(getLookaheadBreadth(depth, emergencyMode), candidates.length));
     }
 
@@ -15287,7 +15584,8 @@
           "|depth|" + depth +
           "|strategy|" + getNpcStrategy("P1") + ":" + getNpcStrategy("P2");
         var rootHint = readNpcSearchBound(rootCacheKey, -Infinity, Infinity);
-        var candidates = getLookaheadCandidateActions(uiState.state, npcPlayer, actions, depth, emergencyMode, rootHint && rootHint.bestActionKey);
+        var patternHint = readNpcSearchPatternHint(uiState.state, npcPlayer);
+        var candidates = getLookaheadCandidateActions(uiState.state, npcPlayer, actions, depth, emergencyMode, rootHint && rootHint.bestActionKey, patternHint);
         var candidateMs = Math.max(0, getNpcSearchTimestampMs() - totalStartedAt);
         var bestAction = candidates[0] || actions[0];
         var bestScore = -Infinity;
@@ -15421,6 +15719,7 @@
           }
           if (bestAction && isFinite(bestScore) && !activeNpcSearchAborted) {
             writeNpcSearchBound(rootCacheKey, bestScore, -Infinity, Infinity, getNpcActionSearchKey(bestAction));
+            writeNpcSearchPatternHint(uiState.state, npcPlayer, bestAction, bestScore, targetDepth);
             recordNpcHistorySuccess(uiState.state, npcPlayer, bestAction, targetDepth, 120);
           }
           searchStats = {
@@ -15435,6 +15734,9 @@
             emergency: !!emergencyMode,
             initialCandidates: initialRootCandidateCount,
             finalCandidates: candidates.length,
+            exactHint: !!(rootHint && rootHint.bestActionKey),
+            patternHint: !!(patternHint && patternHint.actionPatternKey),
+            patternHintMatched: !!(bestAction && patternHint && getNpcPatternHintActionScore(uiState.state, npcPlayer, bestAction, patternHint) > 0),
             bestActionKey: bestAction ? getNpcActionSearchKey(bestAction) : ""
           };
           uiState.npc.lastSearchStats = searchStats;
@@ -18867,6 +19169,9 @@
       emergency: !!stats.emergency,
       initialCandidates: Number(stats.initialCandidates) || 0,
       finalCandidates: Number(stats.finalCandidates) || 0,
+      exactHint: !!stats.exactHint,
+      patternHint: !!stats.patternHint,
+      patternHintMatched: !!stats.patternHintMatched,
       bestActionKey: String(stats.bestActionKey || "").slice(0, 260)
     };
   }
@@ -20007,6 +20312,9 @@
     }
     if (stats.initialCandidates || stats.finalCandidates) {
       parts.push("候補 " + Math.max(0, Number(stats.initialCandidates) || 0) + "\u2192" + Math.max(0, Number(stats.finalCandidates) || 0));
+    }
+    if (stats.exactHint || stats.patternHint) {
+      parts.push("hint " + (stats.exactHint ? "TT" : "型") + (stats.patternHintMatched ? "\u2713" : ""));
     }
     if (stats.aborted) {
       parts.push("\u4E88\u7B97\u5230\u9054");
