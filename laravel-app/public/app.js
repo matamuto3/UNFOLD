@@ -348,7 +348,7 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517stats01";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu01";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
@@ -10493,10 +10493,15 @@
   }
 
   function shouldStopNpcSearchForBudget() {
-    if (!activeNpcSearchDeadlineAt || activeNpcSearchAborted) {
+    if (activeNpcSearchAborted) {
       return !!activeNpcSearchAborted;
     }
-    activeNpcSearchNodeCount += 1;
+    if (activeNpcSearchRootPlayer) {
+      activeNpcSearchNodeCount += 1;
+    }
+    if (!activeNpcSearchDeadlineAt) {
+      return false;
+    }
     if (activeNpcSearchNodeCount % 8 !== 0) {
       return false;
     }
@@ -18772,6 +18777,24 @@
     };
   }
 
+  function cloneNpcSearchStats(stats) {
+    if (!stats) {
+      return null;
+    }
+    return {
+      depth: Number(stats.depth) || 0,
+      completedDepth: Number(stats.completedDepth) || 0,
+      budgetMs: Number(stats.budgetMs) || 0,
+      elapsedMs: Number(stats.elapsedMs) || 0,
+      nodes: Number(stats.nodes) || 0,
+      aborted: !!stats.aborted,
+      emergency: !!stats.emergency,
+      initialCandidates: Number(stats.initialCandidates) || 0,
+      finalCandidates: Number(stats.finalCandidates) || 0,
+      bestActionKey: String(stats.bestActionKey || "").slice(0, 260)
+    };
+  }
+
   function summarizeSelfPlayAction(state, action) {
     var player = state.currentPlayer;
     var summary = {
@@ -18960,6 +18983,19 @@
         lowHandFragmentRecoveries: 0,
         examples: []
       },
+      searchStats: {
+        moves: 0,
+        aborted: 0,
+        abortRate: 0,
+        averageNodes: 0,
+        averageElapsedMs: 0,
+        averageCompletedDepth: 0,
+        maxNodes: 0,
+        maxElapsedMs: 0,
+        depthCounts: {},
+        slowestMoves: [],
+        abortedExamples: []
+      },
       pieceUsage: {},
       decisiveGames: 0,
       winRates: { P1: 0, P2: 0, draw: 0 },
@@ -18989,6 +19025,9 @@
     var totalPlies = 0;
     var totalP1Deck = 0;
     var totalP2Deck = 0;
+    var totalSearchNodes = 0;
+    var totalSearchElapsedMs = 0;
+    var totalSearchCompletedDepth = 0;
     function recordDefenderOutcome(map, key, game) {
       if (!key) {
         return;
@@ -19064,9 +19103,37 @@
       }
       actionCounts[getSelfPlayFirstActionKey(game, 8)] = (actionCounts[getSelfPlayFirstActionKey(game, 8)] || 0) + 1;
       game.moves.forEach(function (move) {
+        var stats = move.searchStats || null;
         summary.actionUsage[move.type] = (summary.actionUsage[move.type] || 0) + 1;
         if (move.pieceType) {
           summary.pieceUsage[move.pieceType] = (summary.pieceUsage[move.pieceType] || 0) + 1;
+        }
+        if (stats) {
+          var searchExample = {
+            gameId: game.id,
+            player: move.player,
+            turnNumber: move.turnNumber,
+            type: move.type,
+            label: move.label || "",
+            depth: Number(stats.depth) || 0,
+            completedDepth: Number(stats.completedDepth) || 0,
+            elapsedMs: Number(stats.elapsedMs) || 0,
+            nodes: Number(stats.nodes) || 0,
+            aborted: !!stats.aborted,
+            emergency: !!stats.emergency
+          };
+          summary.searchStats.moves += 1;
+          summary.searchStats.aborted += stats.aborted ? 1 : 0;
+          totalSearchNodes += Number(stats.nodes) || 0;
+          totalSearchElapsedMs += Number(stats.elapsedMs) || 0;
+          totalSearchCompletedDepth += Number(stats.completedDepth) || 0;
+          summary.searchStats.maxNodes = Math.max(summary.searchStats.maxNodes, Number(stats.nodes) || 0);
+          summary.searchStats.maxElapsedMs = Math.max(summary.searchStats.maxElapsedMs, Number(stats.elapsedMs) || 0);
+          summary.searchStats.depthCounts[stats.depth || 0] = (summary.searchStats.depthCounts[stats.depth || 0] || 0) + 1;
+          summary.searchStats.slowestMoves.push(searchExample);
+          if (stats.aborted) {
+            summary.searchStats.abortedExamples.push(searchExample);
+          }
         }
         if (move.type === "recoverPiece" || move.type === "recoverFragment") {
           var recoveryKind = move.type === "recoverPiece" ? "piece" : "fragment";
@@ -19121,6 +19188,18 @@
     summary.averageFinalDecks.P2 = games.length ? Math.round((totalP2Deck / games.length) * 10) / 10 : 0;
     summary.averageCardsDrawn.P1 = games.length ? Math.round((getStarterDeck(games[0] && games[0].mode).length - summary.averageFinalDecks.P1) * 10) / 10 : 0;
     summary.averageCardsDrawn.P2 = games.length ? Math.round((getStarterDeck(games[0] && games[0].mode).length - summary.averageFinalDecks.P2) * 10) / 10 : 0;
+    if (summary.searchStats.moves) {
+      summary.searchStats.abortRate = Math.round((summary.searchStats.aborted / summary.searchStats.moves) * 1000) / 10;
+      summary.searchStats.averageNodes = Math.round((totalSearchNodes / summary.searchStats.moves) * 10) / 10;
+      summary.searchStats.averageElapsedMs = Math.round((totalSearchElapsedMs / summary.searchStats.moves) * 10) / 10;
+      summary.searchStats.averageCompletedDepth = Math.round((totalSearchCompletedDepth / summary.searchStats.moves) * 10) / 10;
+      summary.searchStats.slowestMoves = summary.searchStats.slowestMoves.sort(function (a, b) {
+        return b.elapsedMs - a.elapsedMs;
+      }).slice(0, 10);
+      summary.searchStats.abortedExamples = summary.searchStats.abortedExamples.sort(function (a, b) {
+        return b.elapsedMs - a.elapsedMs;
+      }).slice(0, 10);
+    }
     summary.setupPatterns = Object.keys(setupCounts).sort(function (a, b) {
       return setupCounts[b] - setupCounts[a];
     }).slice(0, 10).map(function (key) {
@@ -19143,6 +19222,7 @@
     summary.notes.push("主指標は defenderResults.attackDefenseGap。未決着は後手が守り切った守備成功として扱う。");
     summary.notes.push("山札消費は副指標。averageFinalDecks と deckExhaustedGames は長期戦化の確認に使う。");
     summary.notes.push("未決着が多い場合は、後手の守備成功として見ながら終盤の勝ち筋評価を調整する。");
+    summary.notes.push("searchStats は読み探索の重さ確認用。abortRate と averageCompletedDepth で読み切り精度を見る。");
     return summary;
   }
 
@@ -19170,15 +19250,24 @@
       var beforeP1PieceCount = Object.keys(state.players.P1.pieces).length;
       var beforeP2PieceCount = Object.keys(state.players.P2.pieces).length;
       var trace = options.traceDecisions ? traceNpcDecisionForCurrentState(options.traceLimit || 12) : null;
-      var action = chooseNpcAction();
+      var action;
+      var searchStats;
+      var moveSummary;
+      uiState.npc.lastSearchStats = null;
+      action = chooseNpcAction();
+      searchStats = cloneNpcSearchStats(uiState.npc.lastSearchStats);
       if (!action) {
         break;
       }
+      moveSummary = summarizeSelfPlayAction(state, action);
+      if (searchStats) {
+        moveSummary.searchStats = searchStats;
+      }
       if (trace) {
-        trace.selected = summarizeSelfPlayAction(state, action);
+        trace.selected = moveSummary;
         traces.push(trace);
       }
-      moves.push(summarizeSelfPlayAction(state, action));
+      moves.push(moveSummary);
       applyNpcActionToState(state, action);
       if (
         state.currentPlayer === beforeCurrentPlayer &&

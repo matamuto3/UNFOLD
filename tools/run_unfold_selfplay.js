@@ -96,10 +96,26 @@ function summarizeGames(games) {
     actionUsage: {},
     averageTurns: 0,
     averagePlies: 0,
-    defenderSuccessRate: 0
+    defenderSuccessRate: 0,
+    searchStats: {
+      moves: 0,
+      aborted: 0,
+      abortRate: 0,
+      averageNodes: 0,
+      averageElapsedMs: 0,
+      averageCompletedDepth: 0,
+      maxNodes: 0,
+      maxElapsedMs: 0,
+      depthCounts: {},
+      slowestMoves: [],
+      abortedExamples: []
+    }
   };
   let turns = 0;
   let plies = 0;
+  let totalSearchNodes = 0;
+  let totalSearchElapsedMs = 0;
+  let totalSearchCompletedDepth = 0;
   for (const game of games) {
     const winner = game.winner || "draw";
     summary.wins[winner] = (summary.wins[winner] || 0) + 1;
@@ -107,12 +123,48 @@ function summarizeGames(games) {
     turns += Number(game.turns || 0);
     plies += Number(game.plies || (game.moves ? game.moves.length : 0));
     for (const move of game.moves || []) {
+      const stats = move.searchStats || null;
       summary.actionUsage[move.type || "unknown"] = (summary.actionUsage[move.type || "unknown"] || 0) + 1;
+      if (stats) {
+        const searchExample = {
+          gameId: game.id,
+          player: move.player,
+          turnNumber: move.turnNumber,
+          type: move.type,
+          label: move.label || "",
+          depth: Number(stats.depth || 0),
+          completedDepth: Number(stats.completedDepth || 0),
+          elapsedMs: Number(stats.elapsedMs || 0),
+          nodes: Number(stats.nodes || 0),
+          aborted: !!stats.aborted,
+          emergency: !!stats.emergency
+        };
+        summary.searchStats.moves += 1;
+        summary.searchStats.aborted += stats.aborted ? 1 : 0;
+        totalSearchNodes += Number(stats.nodes || 0);
+        totalSearchElapsedMs += Number(stats.elapsedMs || 0);
+        totalSearchCompletedDepth += Number(stats.completedDepth || 0);
+        summary.searchStats.maxNodes = Math.max(summary.searchStats.maxNodes, Number(stats.nodes || 0));
+        summary.searchStats.maxElapsedMs = Math.max(summary.searchStats.maxElapsedMs, Number(stats.elapsedMs || 0));
+        summary.searchStats.depthCounts[stats.depth || 0] = (summary.searchStats.depthCounts[stats.depth || 0] || 0) + 1;
+        summary.searchStats.slowestMoves.push(searchExample);
+        if (stats.aborted) {
+          summary.searchStats.abortedExamples.push(searchExample);
+        }
+      }
     }
   }
   summary.averageTurns = games.length ? Math.round((turns / games.length) * 10) / 10 : 0;
   summary.averagePlies = games.length ? Math.round((plies / games.length) * 10) / 10 : 0;
   summary.defenderSuccessRate = games.length ? Math.round(((summary.wins.P2 + summary.wins.draw) / games.length) * 1000) / 10 : 0;
+  if (summary.searchStats.moves) {
+    summary.searchStats.abortRate = Math.round((summary.searchStats.aborted / summary.searchStats.moves) * 1000) / 10;
+    summary.searchStats.averageNodes = Math.round((totalSearchNodes / summary.searchStats.moves) * 10) / 10;
+    summary.searchStats.averageElapsedMs = Math.round((totalSearchElapsedMs / summary.searchStats.moves) * 10) / 10;
+    summary.searchStats.averageCompletedDepth = Math.round((totalSearchCompletedDepth / summary.searchStats.moves) * 10) / 10;
+    summary.searchStats.slowestMoves = summary.searchStats.slowestMoves.sort((a, b) => b.elapsedMs - a.elapsedMs).slice(0, 10);
+    summary.searchStats.abortedExamples = summary.searchStats.abortedExamples.sort((a, b) => b.elapsedMs - a.elapsedMs).slice(0, 10);
+  }
   return summary;
 }
 
@@ -137,6 +189,12 @@ function buildBlockReviewMarkdown(blockNumber, games, summary) {
   lines.push(`- Defender success: ${summary.defenderSuccessRate}%`);
   lines.push(`- Average turns: ${summary.averageTurns}`);
   lines.push(`- Average plies: ${summary.averagePlies}`);
+  if (summary.searchStats && summary.searchStats.moves) {
+    lines.push(`- Search moves: ${summary.searchStats.moves}`);
+    lines.push(`- Search abort rate: ${summary.searchStats.abortRate}%`);
+    lines.push(`- Average search nodes: ${summary.searchStats.averageNodes}`);
+    lines.push(`- Average completed depth: ${summary.searchStats.averageCompletedDepth}`);
+  }
   lines.push("");
   lines.push("## Reasons");
   Object.keys(summary.reasons).sort((a, b) => summary.reasons[b] - summary.reasons[a]).forEach((reason) => {
@@ -147,6 +205,20 @@ function buildBlockReviewMarkdown(blockNumber, games, summary) {
   Object.keys(summary.actionUsage).sort((a, b) => summary.actionUsage[b] - summary.actionUsage[a]).forEach((type) => {
     lines.push(`- ${type}: ${summary.actionUsage[type]}`);
   });
+  if (summary.searchStats && summary.searchStats.slowestMoves && summary.searchStats.slowestMoves.length) {
+    lines.push("");
+    lines.push("## Slowest Search Moves");
+    summary.searchStats.slowestMoves.slice(0, 5).forEach((move) => {
+      lines.push(`- ${move.elapsedMs}ms / nodes ${move.nodes} / d${move.completedDepth}/${move.depth}: ${move.label || `${move.player}:${move.type}`}`);
+    });
+  }
+  if (summary.searchStats && summary.searchStats.abortedExamples && summary.searchStats.abortedExamples.length) {
+    lines.push("");
+    lines.push("## Budget-Aborted Moves");
+    summary.searchStats.abortedExamples.slice(0, 5).forEach((move) => {
+      lines.push(`- ${move.elapsedMs}ms / nodes ${move.nodes} / d${move.completedDepth}/${move.depth}: ${move.label || `${move.player}:${move.type}`}`);
+    });
+  }
   lines.push("");
   lines.push("## Review Notes");
   if ((summary.wins.P1 || 0) >= Math.ceil(summary.games * 0.7)) {
