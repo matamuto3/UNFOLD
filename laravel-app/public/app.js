@@ -348,12 +348,12 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu08";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu09";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
   var NPC_SEARCH_MEMORY_STORAGE_KEY = "unfoldNpcSearchMemoryV2";
-  var NPC_SEARCH_MEMORY_VERSION = "search-v2-20260517";
+  var NPC_SEARCH_MEMORY_VERSION = "search-v2-20260517b";
   var NPC_SEARCH_MEMORY_MAX_STORAGE_ENTRIES = 360;
   var NPC_SEARCH_MEMORY_MAX_STORAGE_HISTORY = 600;
   var NPC_SEARCH_MEMORY_MAX_PATTERN_HINTS = 420;
@@ -556,6 +556,7 @@
     screen: "lobby",
     practiceMode: false,
     tsumeMode: false,
+    tutorialMode: false,
     tsumeStartedAt: null,
     replayOnly: false,
     replayArchive: null,
@@ -2698,13 +2699,22 @@
     }
   }
 
+  function isTutorialRoute() {
+    try {
+      var params = new URLSearchParams(window.location.search || "");
+      return params.get("tutorial") === "1" || params.get("mode") === "tutorial";
+    } catch (error) {
+      return false;
+    }
+  }
+
   function applyInitialLobbyRoute() {
     var route = getLobbyRouteFromLocation();
     uiState.lobbyMenu = route.menu || "home";
     if (route.menu === "online") {
       uiState.lobbyOnlineTab = route.tab || "create";
     } else if (route.menu === "solo") {
-      uiState.lobbySoloTab = route.tab === "study" ? "practice" : (route.tab || "npc");
+      uiState.lobbySoloTab = isTutorialRoute() ? "practice" : (route.tab === "study" ? "practice" : (route.tab || "npc"));
     } else if (route.menu === "rules") {
       uiState.lobbyRulesTab = route.tab || "summary";
     }
@@ -10532,6 +10542,8 @@
       fragmentPlacements: {},
       kingThreats: {},
       baseOverwrites: {},
+      patternBases: typeof WeakMap === "function" ? new WeakMap() : null,
+      patternCellZones: typeof WeakMap === "function" ? new WeakMap() : null,
       searchScores: {},
       searchBounds: {},
       killerMoves: {}
@@ -10563,12 +10575,12 @@
       return 0;
     }
     if (uiState.npc && uiState.npc.bulkSelfPlay) {
-      return emergencyMode ? 1800 : 1200;
+      return emergencyMode ? 1200 : 800;
     }
     if (window.__UNFOLD_NPC_WORKER__) {
-      return emergencyMode ? 7500 : 4200;
+      return emergencyMode ? 3200 : 2000;
     }
-    return emergencyMode ? 5800 : 3400;
+    return emergencyMode ? 2600 : 1600;
   }
 
   function shouldStopNpcSearchForBudget() {
@@ -10803,6 +10815,210 @@
     return [player, strategy, phase, action.type || ""].join(":");
   }
 
+  function getNpcPatternCountKey(tokens) {
+    var counts = {};
+    (tokens || []).forEach(function (token) {
+      if (!token) {
+        return;
+      }
+      counts[token] = (counts[token] || 0) + 1;
+    });
+    return Object.keys(counts).sort().map(function (token) {
+      return token + "x" + counts[token];
+    }).join(";");
+  }
+
+  function getNpcPatternBasePair(state, player) {
+    var stateCache;
+    var pair;
+    if (!state || !player) {
+      return { ownBase: null, enemyBase: null };
+    }
+    if (activeNpcSearchCache && activeNpcSearchCache.patternBases) {
+      stateCache = activeNpcSearchCache.patternBases.get(state);
+      if (!stateCache) {
+        stateCache = {};
+        activeNpcSearchCache.patternBases.set(state, stateCache);
+      }
+      if (stateCache[player]) {
+        return stateCache[player];
+      }
+    }
+    pair = {
+      ownBase: findBaseCenterInState(state, player),
+      enemyBase: findBaseCenterInState(state, getOpponentPlayer(player))
+    };
+    if (stateCache) {
+      stateCache[player] = pair;
+    }
+    return pair;
+  }
+
+  function getNpcPatternCellZone(state, player, row, col) {
+    var bases;
+    var ownDistance;
+    var enemyDistance;
+    var rowBand;
+    var colBand;
+    var dr;
+    var dc;
+    var lengthSq;
+    var progress;
+    var cross;
+    var lane;
+    var stateCache;
+    var cacheKey;
+
+    function finish(zone) {
+      if (stateCache) {
+        stateCache[cacheKey] = zone;
+      }
+      return zone;
+    }
+
+    if (!state || typeof row !== "number" || typeof col !== "number" || !isFinite(row) || !isFinite(col)) {
+      return "unknown";
+    }
+    if (activeNpcSearchCache && activeNpcSearchCache.patternCellZones) {
+      stateCache = activeNpcSearchCache.patternCellZones.get(state);
+      if (!stateCache) {
+        stateCache = {};
+        activeNpcSearchCache.patternCellZones.set(state, stateCache);
+      }
+      cacheKey = player + ":" + row + ":" + col;
+      if (Object.prototype.hasOwnProperty.call(stateCache, cacheKey)) {
+        return stateCache[cacheKey];
+      }
+    }
+    bases = getNpcPatternBasePair(state, player);
+    if (!bases.ownBase || !bases.enemyBase) {
+      rowBand = row < BOARD_ROWS / 3 ? "r0" : (row < BOARD_ROWS * 2 / 3 ? "r1" : "r2");
+      colBand = col < BOARD_COLS / 3 ? "c0" : (col < BOARD_COLS * 2 / 3 ? "c1" : "c2");
+      return finish(rowBand + "." + colBand);
+    }
+    ownDistance = getWeightedDistance(row, col, bases.ownBase.row, bases.ownBase.col);
+    enemyDistance = getWeightedDistance(row, col, bases.enemyBase.row, bases.enemyBase.col);
+    if (ownDistance <= 1) {
+      return finish("own-core");
+    }
+    if (ownDistance <= 3) {
+      return finish("own-ring");
+    }
+    if (enemyDistance <= 1) {
+      return finish("enemy-core");
+    }
+    if (enemyDistance <= 3) {
+      return finish("enemy-ring");
+    }
+    dr = bases.enemyBase.row - bases.ownBase.row;
+    dc = bases.enemyBase.col - bases.ownBase.col;
+    lengthSq = dr * dr + dc * dc || 1;
+    progress = ((row - bases.ownBase.row) * dr + (col - bases.ownBase.col) * dc) / lengthSq;
+    if (progress < 0.25) {
+      rowBand = "back";
+    } else if (progress < 0.45) {
+      rowBand = "home";
+    } else if (progress < 0.65) {
+      rowBand = "mid";
+    } else if (progress < 0.82) {
+      rowBand = "front";
+    } else {
+      rowBand = "enemy-front";
+    }
+    cross = ((row - bases.ownBase.row) * dc - (col - bases.ownBase.col) * dr) / Math.max(1, Math.sqrt(lengthSq));
+    lane = Math.abs(cross) <= 1.5 ? "center" : (cross < 0 ? "left" : "right");
+    return finish(rowBand + "." + lane);
+  }
+
+  function getNpcPatternGoalDistanceBucket(state, player, row, col) {
+    var bases;
+    var distance;
+    if (!state || typeof row !== "number" || typeof col !== "number") {
+      return "g?";
+    }
+    bases = getNpcPatternBasePair(state, player);
+    if (!bases.enemyBase) {
+      return "g?";
+    }
+    distance = getWeightedDistance(row, col, bases.enemyBase.row, bases.enemyBase.col);
+    if (distance <= 1) {
+      return "g0";
+    }
+    if (distance <= 3) {
+      return "g1";
+    }
+    if (distance <= 6) {
+      return "g2";
+    }
+    return "g3";
+  }
+
+  function getNpcActionCellPatternSummary(state, player, cells) {
+    var tokens = [];
+    var rowSum = 0;
+    var colSum = 0;
+    var count = 0;
+    (cells || []).forEach(function (cell) {
+      if (!cell || typeof cell.row !== "number" || typeof cell.col !== "number") {
+        return;
+      }
+      tokens.push(getNpcPatternCellZone(state, player, cell.row, cell.col));
+      rowSum += cell.row;
+      colSum += cell.col;
+      count += 1;
+    });
+    if (!count) {
+      return "empty";
+    }
+    return [
+      count + "c",
+      getNpcPatternCellZone(state, player, Math.round(rowSum / count), Math.round(colSum / count)),
+      getNpcPatternCountKey(tokens)
+    ].join("@");
+  }
+
+  function getNpcPiecePatternToken(state, searchPlayer, side, piece) {
+    var role = side === searchPlayer ? "self" : "opp";
+    if (!piece) {
+      return role + ":none";
+    }
+    return [
+      role,
+      piece.kind || "",
+      getNpcPatternCellZone(state, side, piece.row, piece.col),
+      getNpcPatternGoalDistanceBucket(state, side, piece.row, piece.col)
+    ].join(":");
+  }
+
+  function getNpcPlacementPatternToken(state, searchPlayer, placement) {
+    var owner;
+    var role;
+    var card;
+    var cells;
+    if (!placement) {
+      return "none";
+    }
+    owner = placement.owner || searchPlayer;
+    role = owner === searchPlayer ? "self" : "opp";
+    card = placement.card || {};
+    cells = placement.cells || [];
+    return [
+      role,
+      card.fragmentType || "",
+      card.pieceType || "",
+      getNpcActionCellPatternSummary(state, owner, cells)
+    ].join(":");
+  }
+
+  function getNpcSearchPatternTurnBucket(state) {
+    var setup = state && state.initialSetup ? state.initialSetup : {};
+    var turn = state && state.turnNumber ? state.turnNumber : 1;
+    if (state && isInitialStandbyPhase(state)) {
+      return "setup-" + (setup.index || 0);
+    }
+    return "t" + Math.min(12, Math.floor(Math.max(0, turn - 1) / 4));
+  }
+
   function getNpcActionPatternKey(state, player, action) {
     var piece;
     var card;
@@ -10819,15 +11035,19 @@
       return [
         "move",
         piece ? piece.kind : "",
-        piece ? piece.row : "",
-        piece ? piece.col : "",
-        action.row,
-        action.col,
-        targetPiece ? targetPiece.kind : ""
+        piece ? getNpcPatternCellZone(state, player, piece.row, piece.col) : "",
+        getNpcPatternCellZone(state, player, action.row, action.col),
+        getNpcPatternGoalDistanceBucket(state, player, action.row, action.col),
+        targetPiece ? (targetPiece.owner === player ? "own" : "opp") + "." + targetPiece.kind : "empty"
       ].join(":");
     }
     if (action.type === "reserve") {
-      return ["reserve", action.pieceType || "", action.row, action.col].join(":");
+      return [
+        "reserve",
+        action.pieceType || "",
+        getNpcPatternCellZone(state, player, action.row, action.col),
+        getNpcPatternGoalDistanceBucket(state, player, action.row, action.col)
+      ].join(":");
     }
     if (action.type === "fragment" || action.type === "setupFragment") {
       card = action.card || {};
@@ -10837,10 +11057,9 @@
         card.fragmentType || "",
         card.pieceType || "",
         action.rotation || 0,
-        action.anchor ? action.anchor.row : "",
-        action.anchor ? action.anchor.col : "",
-        action.pieceCell ? action.pieceCell.row : "",
-        action.pieceCell ? action.pieceCell.col : ""
+        action.anchor ? getNpcPatternCellZone(state, player, action.anchor.row, action.anchor.col) : "",
+        getNpcActionCellPatternSummary(state, player, action.cells || []),
+        action.pieceCell ? getNpcPatternCellZone(state, player, action.pieceCell.row, action.pieceCell.col) : "noPiece"
       ].join(":");
     }
     if (action.type === "recoverPiece") {
@@ -10848,23 +11067,16 @@
       return [
         "recoverPiece",
         piece ? piece.kind : "",
-        piece ? piece.row : "",
-        piece ? piece.col : ""
+        piece ? getNpcPatternCellZone(state, player, piece.row, piece.col) : ""
       ].join(":");
     }
     if (action.type === "recoverFragment") {
       placement = (state.placements || []).filter(function (item) {
         return item.id === action.placementId;
       })[0];
-      card = placement && placement.card ? placement.card : {};
       return [
         "recoverFragment",
-        placement ? placement.owner : "",
-        card.fragmentType || "",
-        card.pieceType || "",
-        placement && placement.cells ? placement.cells.map(function (item) {
-          return item.row + "." + item.col;
-        }).join("-") : ""
+        getNpcPlacementPatternToken(state, player, placement)
       ].join(":");
     }
     return action.type || "";
@@ -10922,19 +11134,11 @@
       var playerState = state.players[side];
       Object.keys(playerState.pieces || {}).forEach(function (pieceId) {
         var piece = playerState.pieces[pieceId];
-        pieceTokens.push([side, piece.kind || "", piece.row, piece.col].join(":"));
+        pieceTokens.push(getNpcPiecePatternToken(state, player, side, piece));
       });
     });
     (state.placements || []).forEach(function (placement) {
-      var card = placement.card || {};
-      placementTokens.push([
-        placement.owner || "",
-        card.fragmentType || "",
-        card.pieceType || "",
-        (placement.cells || []).map(function (cell) {
-          return cell.row + "." + cell.col;
-        }).sort().join("-")
-      ].join(":"));
+      placementTokens.push(getNpcPlacementPatternToken(state, player, placement));
     });
     currentPlayerState = state.players[player] || {};
     return [
@@ -10942,9 +11146,9 @@
       state.ruleMode || "",
       BOARD_ROWS + "x" + BOARD_COLS,
       getNpcGamePhase(state),
-      state.currentPlayer || "",
+      state.currentPlayer === player ? "selfTurn" : "oppTurn",
       player || "",
-      Math.min(18, state.turnNumber || 0),
+      getNpcSearchPatternTurnBucket(state),
       setup.index || 0,
       setupPlaced.P1 || 0,
       setupPlaced.P2 || 0,
@@ -10953,8 +11157,8 @@
       getNpcPlayerHandPatternKey(currentPlayerState),
       getNpcPlayerReservePatternKey(currentPlayerState),
       getNpcPlayerFragmentReservePatternKey(currentPlayerState),
-      pieceTokens.sort().join(";"),
-      placementTokens.sort().join(";")
+      getNpcPatternCountKey(pieceTokens),
+      getNpcPatternCountKey(placementTokens)
     ].join("||");
   }
 
@@ -11007,10 +11211,10 @@
     }
     key = getNpcActionPatternKey(state, player, action);
     if (patternHint.actionPatternKey && key === patternHint.actionPatternKey) {
-      return 620000 + Math.min(180000, (patternHint.hits || 1) * 16000) + Math.max(0, patternHint.depth || 1) * 9000;
+      return 260000 + Math.min(120000, (patternHint.hits || 1) * 9000) + Math.max(0, patternHint.depth || 1) * 5000;
     }
     if (patternHint.actionKey && getNpcActionSearchKey(action) === patternHint.actionKey) {
-      return 420000;
+      return 180000;
     }
     return 0;
   }
@@ -13183,6 +13387,79 @@
     return findImmediateWinningThreatsShallow(nextState, player, limit || 3).length > 0;
   }
 
+  function getClosingGoalActionScore(state, action, player, urgency) {
+    var opponent = getOpponentPlayer(player);
+    var enemyBase = state ? findBaseCenterInState(state, opponent) : null;
+    var enemyKing = state ? findKingInState(state, opponent) : null;
+    var score = 0;
+    var piece;
+    var targetPiece;
+    var card;
+    var cell;
+
+    function scoreCell(row, col, weight, pieceType) {
+      var baseDistance;
+      var kingDistance;
+      if (typeof row !== "number" || typeof col !== "number") {
+        return;
+      }
+      if (enemyBase) {
+        baseDistance = getWeightedDistance(row, col, enemyBase.row, enemyBase.col);
+        if (baseDistance === 0) {
+          score += 180000 * weight;
+        } else if (baseDistance === 1) {
+          score += 62000 * weight;
+        } else if (baseDistance <= 3) {
+          score += Math.max(0, 4 - baseDistance) * 18000 * weight;
+        } else if (baseDistance <= 6) {
+          score += Math.max(0, 7 - baseDistance) * 3600 * weight;
+        }
+      }
+      if (enemyKing) {
+        kingDistance = getWeightedDistance(row, col, enemyKing.row, enemyKing.col);
+        if (kingDistance <= 1) {
+          score += (62000 + getPieceStrategicValue(pieceType || "vanguard") * 120) * weight;
+        } else if (kingDistance <= 3) {
+          score += Math.max(0, 4 - kingDistance) * (16000 + getPieceStrategicValue(pieceType || "vanguard") * 42) * weight;
+        }
+      }
+    }
+
+    if (!state || !action) {
+      return 0;
+    }
+    if (action.type === "move") {
+      piece = getPiece(state, action.pieceId);
+      cell = state.board[action.row] && state.board[action.row][action.col];
+      targetPiece = cell && cell.pieceId ? getPiece(state, cell.pieceId) : null;
+      scoreCell(action.row, action.col, 1, piece ? piece.kind : null);
+      if (piece && enemyBase) {
+        score += Math.max(
+          -36000,
+          Math.min(
+            90000,
+            (getWeightedDistance(piece.row, piece.col, enemyBase.row, enemyBase.col) -
+              getWeightedDistance(action.row, action.col, enemyBase.row, enemyBase.col)) * 18000
+          )
+        );
+      }
+      if (targetPiece && targetPiece.owner === opponent) {
+        score += targetPiece.kind === "king" ? 480000 : 42000 + getPieceStrategicValue(targetPiece.kind) * 380;
+      }
+    } else if (action.type === "reserve") {
+      scoreCell(action.row, action.col, 0.88, action.pieceType);
+    } else if (action.type === "fragment" || action.type === "setupFragment") {
+      card = action.card || {};
+      (action.cells || []).forEach(function (fragmentCell) {
+        scoreCell(fragmentCell.row, fragmentCell.col, 0.56, card.pieceType);
+      });
+      if (action.pieceCell) {
+        scoreCell(action.pieceCell.row, action.pieceCell.col, 0.82, card.pieceType);
+      }
+    }
+    return score;
+  }
+
   function getGameClosingActionBias(state, action, player, nextState, emergencyMode) {
     var opponent = getOpponentPlayer(player);
     var urgency = getGameClosingUrgency(state);
@@ -13194,7 +13471,11 @@
     var opponentThreats = nextState.winner ? 0 : findImmediateWinningThreatsShallow(nextState, opponent, 4).length;
     var score = (afterPressure - beforePressure) * (0.28 + urgency * 0.14);
     score += ownThreats * (14000 + urgency * 9000);
+    if (ownThreats >= 2) {
+      score += 26000 + ownThreats * (9000 + urgency * 4200);
+    }
     score -= opponentThreats * (9000 + urgency * 6000);
+    score += getClosingGoalActionScore(state, action, player, urgency) * (0.34 + urgency * 0.08);
     if (isKingUnderThreatInState(nextState, opponent)) {
       score += 12000 + urgency * 7000;
     }
@@ -14578,6 +14859,7 @@
         score += action.forceDefenseScore * 0.32;
       }
       score += getNpcMovePickerTerritoryActionScore(state, player, action, emergencyMode);
+      score += getClosingGoalActionScore(state, action, player, getGameClosingUrgency(state)) * (phase === "late" ? 0.34 : 0.16);
       score += getOpeningRescueResponseScore(state, player, action) * 1.8;
       score += getNpcOpeningBookActionBias(state, player, action, null, emergencyMode) * 0.35;
       if (action.type === "move") {
@@ -15717,10 +15999,14 @@
               break;
             }
           }
-          if (bestAction && isFinite(bestScore) && !activeNpcSearchAborted) {
-            writeNpcSearchBound(rootCacheKey, bestScore, -Infinity, Infinity, getNpcActionSearchKey(bestAction));
-            writeNpcSearchPatternHint(uiState.state, npcPlayer, bestAction, bestScore, targetDepth);
-            recordNpcHistorySuccess(uiState.state, npcPlayer, bestAction, targetDepth, 120);
+          if (bestAction && isFinite(bestScore)) {
+            if (!activeNpcSearchAborted) {
+              writeNpcSearchBound(rootCacheKey, bestScore, -Infinity, Infinity, getNpcActionSearchKey(bestAction));
+            }
+            if (!activeNpcSearchAborted || completedDepth >= Math.min(4, targetDepth)) {
+              writeNpcSearchPatternHint(uiState.state, npcPlayer, bestAction, bestScore, completedDepth || targetDepth);
+              recordNpcHistorySuccess(uiState.state, npcPlayer, bestAction, completedDepth || targetDepth, activeNpcSearchAborted ? 48 : 120);
+            }
           }
           searchStats = {
             depth: targetDepth,
@@ -20871,6 +21157,17 @@
     if (uiState.tsumeMode) {
       return "詰将棋です。先手の1手勝ちを探してください。";
     }
+    if (uiState.tutorialMode && isInitialStandbyPhase(uiState.state)) {
+      if (uiState.pendingFragmentPiece) {
+        return "チュートリアル: 展開図の設置が終わったら、光っているマスから対応駒を置く場所を選びます。";
+      }
+      if (uiState.pendingAnchor) {
+        return uiState.previewLegal
+          ? "チュートリアル: 置ける形です。展開図の候補マスをクリックして確定してください。"
+          : "チュートリアル: 本陣に1辺で接する位置へ動かしてください。角だけ接する位置や本陣に重なる位置は置けません。";
+      }
+      return "チュートリアル: 手札から展開図を1枚選び、本陣に1辺で接する形で置きます。そのあと対応駒を展開図上に置きます。";
+    }
     if (isInitialStandbyPhase(uiState.state)) {
       if (isInitialStandbyBasePieceRule(uiState.state)) {
         if (uiState.selection && uiState.selection.type === "setupPiece") {
@@ -20906,6 +21203,9 @@
     }
     if (!uiState.selection) {
       var npcThinkStats = isNpcGame() ? getNpcThinkStatsText() : "";
+      if (uiState.tutorialMode) {
+        return "チュートリアル: 手札や持ち展開図で陣地を広げ、駒を動かして相手本陣へ迫ります。青いマスが選択中の候補です。";
+      }
       return "\u99D2\u3092\u52D5\u304B\u3059\u304B\u3001\u6301\u3061\u99D2\u3092\u6253\u3064\u304B\u3001\u624B\u672D\u3084\u6301\u3061\u5C55\u958B\u56F3\u3092\u914D\u7F6E\u3057\u3066\u304F\u3060\u3055\u3044\u3002" + (npcThinkStats ? "\u3000" + npcThinkStats : "");
     }
     if (uiState.selection.type === "piece") {
@@ -21254,13 +21554,15 @@
     return state;
   }
 
-  function startPracticeGame(modeOverride) {
+  function startPracticeGame(modeOverride, options) {
+    var startOptions = options || {};
     var viewerSide = resolveStartSidePreference(getSelectedStartSidePreference());
     clearNpcTurnTimer();
     resetNpcState();
     clearReplayViewerState();
     uiState.practiceMode = true;
     uiState.tsumeMode = false;
+    uiState.tutorialMode = !!startOptions.tutorial;
     uiState.tsumeStartedAt = null;
     uiState.ruleMode = modeOverride || uiState.ruleMode || (els.onlineModeSelect ? els.onlineModeSelect.value : "original");
     uiState.timeControl = getSelectedTimeControl();
@@ -21276,7 +21578,7 @@
     uiState.replayIndex = uiState.state.history.length - 1;
     clearSelection();
     saveLatestReplayArchive(uiState.state);
-    pushLog("\u3072\u3068\u308A\u30C6\u30B9\u30C8\u30D7\u30EC\u30A4\u3092\u958B\u59CB (" + PLAYER_LABELS[viewerSide] + "\u5074\u3092\u624B\u524D)");
+    pushLog((uiState.tutorialMode ? "チュートリアルプレイを開始" : "\u3072\u3068\u308A\u30C6\u30B9\u30C8\u30D7\u30EC\u30A4\u3092\u958B\u59CB") + " (" + PLAYER_LABELS[viewerSide] + "\u5074\u3092\u624B\u524D)");
     uiState.screen = "game";
     resetBoardCameraView();
     render();
@@ -21285,12 +21587,19 @@
     syncClockTicker();
   }
 
+  function startTutorialPractice(modeOverride) {
+    startPracticeGame(modeOverride || "original", { tutorial: true });
+    pushLog("チュートリアル: まずは手札から展開図を1枚選び、初期スタンバイを進めます");
+    render();
+  }
+
   function startTsumeTraining(modeOverride) {
     clearNpcTurnTimer();
     resetNpcState();
     clearReplayViewerState();
     uiState.practiceMode = true;
     uiState.tsumeMode = true;
+    uiState.tutorialMode = false;
     uiState.ruleMode = modeOverride || uiState.ruleMode || (els.onlineModeSelect ? els.onlineModeSelect.value : "original");
     uiState.timeControl = DEFAULT_TIME_CONTROL;
     uiState.startSidePreference = "P1";
@@ -21321,6 +21630,7 @@
     clearReplayViewerState();
     uiState.practiceMode = false;
     uiState.tsumeMode = false;
+    uiState.tutorialMode = false;
     uiState.tsumeStartedAt = null;
     uiState.npc.enabled = true;
     uiState.npc.side = getOpponentPlayer(humanSide);
@@ -22110,6 +22420,7 @@
         resetNpcState();
         uiState.practiceMode = false;
         uiState.tsumeMode = false;
+        uiState.tutorialMode = false;
         uiState.screen = "lobby";
         applyInitialLobbyRoute();
         render();
