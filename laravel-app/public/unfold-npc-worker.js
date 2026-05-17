@@ -212,7 +212,7 @@
   }
 
   try {
-    importScripts("app.js?v=20260517kifu09");
+    importScripts("app.js?v=20260517npc12");
     if (!self.UNFOLD_NPC_ENGINE || typeof self.UNFOLD_NPC_ENGINE.chooseActionForState !== "function") {
       throw new Error("NPC engine API was not exposed: " + (
         self.document.getElementById("testOutput").textContent ||

@@ -348,12 +348,12 @@
   var INITIAL_STANDBY_PLACEMENTS = 3;
   var REPLAY_FILE_FORMAT = "unfold-kifu";
   var REPLAY_FILE_VERSION = 1;
-  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517kifu09";
+  var NPC_WORKER_SCRIPT_URL = "unfold-npc-worker.js?v=20260517npc12";
   var NPC_BOOK_URL = "api?action=npc.book.current";
   var NPC_BOOK_STATIC_URL = "unfold-npc-book.json?v=20260516a";
   var UNFOLD_WASM_URL = "unfold-engine.wasm?v=20260516c";
   var NPC_SEARCH_MEMORY_STORAGE_KEY = "unfoldNpcSearchMemoryV2";
-  var NPC_SEARCH_MEMORY_VERSION = "search-v2-20260517b";
+  var NPC_SEARCH_MEMORY_VERSION = "search-v2-20260517d";
   var NPC_SEARCH_MEMORY_MAX_STORAGE_ENTRIES = 360;
   var NPC_SEARCH_MEMORY_MAX_STORAGE_HISTORY = 600;
   var NPC_SEARCH_MEMORY_MAX_PATTERN_HINTS = 420;
@@ -7335,6 +7335,7 @@
     var detailBtn;
     var josekiBtn;
     var formationsBtn;
+    var tutorialBtn;
 
     if (menu === "solo" && activeSoloTab === "tsume") {
       uiState.lobbySoloTab = "npc";
@@ -7889,10 +7890,18 @@
       window.location.href = "formations.html";
     });
 
+    tutorialBtn = document.createElement("button");
+    tutorialBtn.type = "button";
+    tutorialBtn.textContent = "チュートリアルプレイ";
+    tutorialBtn.addEventListener("click", function () {
+      window.location.href = "solo.html?tutorial=1";
+    });
+
     actionGrid.appendChild(summaryBtn);
     actionGrid.appendChild(detailBtn);
     actionGrid.appendChild(josekiBtn);
     actionGrid.appendChild(formationsBtn);
+    actionGrid.appendChild(tutorialBtn);
     stageStack.appendChild(actionGrid);
     stageLayout.appendChild(stageStack);
     hubBody.appendChild(stageLayout);
@@ -10575,12 +10584,12 @@
       return 0;
     }
     if (uiState.npc && uiState.npc.bulkSelfPlay) {
-      return emergencyMode ? 1200 : 800;
+      return emergencyMode ? 1200 : 650;
     }
     if (window.__UNFOLD_NPC_WORKER__) {
-      return emergencyMode ? 3200 : 2000;
+      return emergencyMode ? 3200 : 1500;
     }
-    return emergencyMode ? 2600 : 1600;
+    return emergencyMode ? 2600 : 1200;
   }
 
   function shouldStopNpcSearchForBudget() {
@@ -11468,7 +11477,7 @@
     if (turn <= 10) {
       return "early";
     }
-    if (turn >= 60 || Math.min(p1Deck, p2Deck) <= 5) {
+    if (turn >= 36 || Math.min(p1Deck, p2Deck) <= 7) {
       return "late";
     }
     return "mid";
@@ -13290,6 +13299,14 @@
     if (!deckCount || action.winsImmediately) {
       return 0;
     }
+    if ((state.turnNumber || 1) >= 28) {
+      if (action.type === "fragment") {
+        return getClosingGoalActionScore(state, action, player, getGameClosingUrgency(state)) >= 30000 ? 2600 : -6200;
+      }
+      if (action.type === "move" || action.type === "reserve") {
+        return 2800;
+      }
+    }
     if (action.type === "fragment") {
       return 9000 + Math.min(10, deckCount) * 650;
     }
@@ -13316,9 +13333,9 @@
   function getGameClosingUrgency(state) {
     var turn = state && state.turnNumber ? state.turnNumber : 1;
     var totalDeck = (state.players.P1.deck ? state.players.P1.deck.length : 0) + (state.players.P2.deck ? state.players.P2.deck.length : 0);
-    var turnPressure = Math.max(0, turn - 48) / 70;
-    var deckPressure = Math.max(0, 16 - totalDeck) / 18;
-    return Math.min(2.4, 0.45 + turnPressure + deckPressure);
+    var turnPressure = Math.max(0, turn - 24) / 34;
+    var deckPressure = Math.max(0, 20 - totalDeck) / 16;
+    return Math.min(3.2, 0.62 + turnPressure + deckPressure);
   }
 
   function getClosingPressureScoreForPlayer(state, player) {
@@ -13327,46 +13344,46 @@
     var enemyBase = findBaseCenterInState(state, opponent);
     var attackMap = getAttackMapForStateCached(state, player);
     var immediateThreats = findImmediateWinningThreatsShallow(state, player, 8).length;
-    var score = immediateThreats * 64000;
+    var score = immediateThreats * 128000;
     var pieceIds = Object.keys(state.players[player].pieces);
     if (enemyKing) {
       var safeEscapes = countKingSafeEscapeSquares(state, opponent);
-      score += Math.max(0, 5 - safeEscapes) * 12500;
+      score += Math.max(0, 5 - safeEscapes) * 24000;
       if (safeEscapes === 0) {
-        score += 30000;
+        score += 82000;
       }
       if (isKingUnderThreatInState(state, opponent)) {
-        score += 56000;
+        score += 136000;
       }
       pieceIds.forEach(function (pieceId) {
         var piece = state.players[player].pieces[pieceId];
         var distance = getWeightedDistance(piece.row, piece.col, enemyKing.row, enemyKing.col);
         if (distance <= 7) {
-          score += Math.max(0, 8 - distance) * (420 + getPieceStrategicValue(piece.kind) * 4);
+          score += Math.max(0, 8 - distance) * (840 + getPieceStrategicValue(piece.kind) * 7);
         }
         if (distance <= 3 && piece.kind !== "king") {
-          score += getPieceStrategicValue(piece.kind) * 75;
+          score += getPieceStrategicValue(piece.kind) * 132;
         }
       });
     }
     if (enemyBase) {
       var basePiece = enemyBase.pieceId ? getPiece(state, enemyBase.pieceId) : null;
-      score += Math.min(4, attackMap.counts[enemyBase.row][enemyBase.col]) * 18000;
+      score += Math.min(4, attackMap.counts[enemyBase.row][enemyBase.col]) * 46000;
       if (enemyBase.controller === player) {
-        score += 42000;
+        score += 98000;
       }
       if (!basePiece || basePiece.owner !== opponent) {
-        score += 18000;
+        score += 52000;
       }
       pieceIds.forEach(function (pieceId) {
         var piece = state.players[player].pieces[pieceId];
         var distance = getWeightedDistance(piece.row, piece.col, enemyBase.row, enemyBase.col);
         if (distance <= 6) {
-          score += Math.max(0, 7 - distance) * (360 + getPieceStrategicValue(piece.kind) * 3);
+          score += Math.max(0, 7 - distance) * (760 + getPieceStrategicValue(piece.kind) * 6);
         }
       });
     }
-    score += getDeploymentFrontierProfile(state, player).nearEnemyBase * 900;
+    score += getDeploymentFrontierProfile(state, player).nearEnemyBase * 2200;
     return score;
   }
 
@@ -13396,31 +13413,48 @@
     var targetPiece;
     var card;
     var cell;
+    var ownAttack;
+    var opponentAttack;
 
     function scoreCell(row, col, weight, pieceType) {
       var baseDistance;
       var kingDistance;
+      var closingZone = false;
       if (typeof row !== "number" || typeof col !== "number") {
         return;
       }
       if (enemyBase) {
         baseDistance = getWeightedDistance(row, col, enemyBase.row, enemyBase.col);
+        closingZone = closingZone || baseDistance <= 4;
         if (baseDistance === 0) {
-          score += 180000 * weight;
+          score += 340000 * weight;
         } else if (baseDistance === 1) {
-          score += 62000 * weight;
+          score += 132000 * weight;
         } else if (baseDistance <= 3) {
-          score += Math.max(0, 4 - baseDistance) * 18000 * weight;
+          score += Math.max(0, 4 - baseDistance) * 36000 * weight;
         } else if (baseDistance <= 6) {
-          score += Math.max(0, 7 - baseDistance) * 3600 * weight;
+          score += Math.max(0, 7 - baseDistance) * 7200 * weight;
         }
       }
       if (enemyKing) {
         kingDistance = getWeightedDistance(row, col, enemyKing.row, enemyKing.col);
+        closingZone = closingZone || kingDistance <= 4;
         if (kingDistance <= 1) {
-          score += (62000 + getPieceStrategicValue(pieceType || "vanguard") * 120) * weight;
+          score += (118000 + getPieceStrategicValue(pieceType || "vanguard") * 180) * weight;
         } else if (kingDistance <= 3) {
-          score += Math.max(0, 4 - kingDistance) * (16000 + getPieceStrategicValue(pieceType || "vanguard") * 42) * weight;
+          score += Math.max(0, 4 - kingDistance) * (30000 + getPieceStrategicValue(pieceType || "vanguard") * 68) * weight;
+        }
+      }
+      if (closingZone) {
+        ownAttack = ownAttack || getAttackMapForStateCached(state, player).counts;
+        opponentAttack = opponentAttack || getAttackMapForStateCached(state, opponent).counts;
+        score += Math.min(3, ownAttack[row][col] || 0) * 26000 * weight;
+        score -= Math.min(3, opponentAttack[row][col] || 0) * 18000 * weight;
+        if ((opponentAttack[row][col] || 0) > (ownAttack[row][col] || 0)) {
+          score -= Math.min(4, (opponentAttack[row][col] || 0) - (ownAttack[row][col] || 0)) * 32000 * weight;
+        }
+        if ((opponentAttack[row][col] || 0) >= 2 && !(ownAttack[row][col] || 0)) {
+          score -= 90000 * weight;
         }
       }
     }
@@ -13470,9 +13504,9 @@
     var ownThreats = nextState.winner === player ? 4 : findImmediateWinningThreatsShallow(nextState, player, 4).length;
     var opponentThreats = nextState.winner ? 0 : findImmediateWinningThreatsShallow(nextState, opponent, 4).length;
     var score = (afterPressure - beforePressure) * (0.28 + urgency * 0.14);
-    score += ownThreats * (14000 + urgency * 9000);
+    score += ownThreats * (42000 + urgency * 18000);
     if (ownThreats >= 2) {
-      score += 26000 + ownThreats * (9000 + urgency * 4200);
+      score += 86000 + ownThreats * (22000 + urgency * 8200);
     }
     score -= opponentThreats * (9000 + urgency * 6000);
     score += getClosingGoalActionScore(state, action, player, urgency) * (0.34 + urgency * 0.08);
@@ -14195,8 +14229,17 @@
 
   function collectNpcInitialSetupActions(player) {
     var actions = collectNpcInitialSetupCandidateActionsForState(uiState.state, player);
+    var completableActions;
     var penaltyAction;
     if (actions.length) {
+      if (getInitialStandbyPlacedCount(uiState.state, player) < INITIAL_STANDBY_PLACEMENTS - 1) {
+        completableActions = actions.filter(function (action) {
+          return doesInitialSetupActionKeepCompletion(player, action);
+        });
+        if (completableActions.length) {
+          return completableActions;
+        }
+      }
       return actions;
     }
     penaltyAction = createInitialStandbyPenaltyActionForState(uiState.state, player);
@@ -15945,7 +15988,7 @@
           if (!nextState.winner) {
             score += Math.max(-180000, Math.min(180000, (action.refinedScore || action.score || 0) * 0.16));
             score += getNpcStrategyActionBias(uiState.state, action, npcPlayer, nextState, emergencyMode) * 0.38;
-            score += getGameClosingActionBias(uiState.state, action, npcPlayer, nextState, emergencyMode) * 0.24;
+            score += getGameClosingActionBias(uiState.state, action, npcPlayer, nextState, emergencyMode) * 0.42;
             if (!emergencyMode) {
               score += getLongGameActionBias(uiState.state, action, npcPlayer) * 0.45;
             }
@@ -16048,15 +16091,6 @@
         targetPiece = cell && cell.pieceId ? getPiece(state, cell.pieceId) : null;
         if (targetPiece && targetPiece.owner === opponent && targetPiece.kind === "king") {
           return "kingCapture";
-        }
-        if (cell && cell.isBaseCenter && cell.baseOwner === opponent) {
-          return "baseOccupation";
-        }
-      }
-      if (action.type === "reserve") {
-        cell = state.board[action.row][action.col];
-        if (cell && cell.isBaseCenter && cell.baseOwner === opponent && !cell.pieceId) {
-          return "baseOccupation";
         }
       }
       if (action.type === "fragment") {
@@ -22885,6 +22919,7 @@
       window.__UNFOLD_BOOTED = true;
       return;
     }
+    var launchTutorialFromRoute = isTutorialRoute();
     loadUnfoldWasmEngine();
     loadNpcBookOverrides();
     if (runOpeningRescueSearchFromQueryIfRequested() || runTacticalScenarioFromQueryIfRequested() || runSelfPlayFromQueryIfRequested()) {
@@ -22893,14 +22928,16 @@
       return;
     }
     els.testOutput.textContent = runTests();
-    render();
     loadSiteInfo(true);
-    refreshRoomList({ silent: true });
-    restoreOnlineSession().then(function (restored) {
-      if (!restored) {
-        render();
-      }
-    });
+    if (!launchTutorialFromRoute) {
+      render();
+      refreshRoomList({ silent: true });
+      restoreOnlineSession().then(function (restored) {
+        if (!restored) {
+          render();
+        }
+      });
+    }
     window.UNFOLD_3D_API = {
       boardRows: BOARD_ROWS,
       boardCols: BOARD_COLS,
@@ -22967,7 +23004,11 @@
       };
     }
     window.UNFOLD_REVIEW_OVERLAY_SYNC = renderReviewArrowOverlay;
-    render();
+    if (launchTutorialFromRoute) {
+      startTutorialPractice("original");
+    } else {
+      render();
+    }
     window.__UNFOLD_BOOTED = true;
     document.documentElement.classList.remove("unfold-booting");
   }
